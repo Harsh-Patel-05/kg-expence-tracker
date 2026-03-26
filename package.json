@@ -1,0 +1,31 @@
+{
+  "name": "kg-expense-tracker",
+  "version": "3.0.0",
+  "description": "Restaurant expense & sales tracker — React + Firebase",
+  "main": "index.html",
+  "scripts": {
+    "start": "serve -s . -l 3000",
+    "dev": "serve -s . -l 3000",
+    "build": "echo 'Build completed - static files ready'",
+    "firebase:login": "firebase login",
+    "firebase:deploy": "firebase deploy --only hosting",
+    "firebase:deploy:all": "firebase deploy",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "keywords": ["react", "firebase", "restaurant", "expense", "tracker"],
+  "author": "",
+  "license": "ISC",
+  "dependencies": {
+    "firebase": "^10.8.0",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.8.0",
+    "recharts": "^2.10.0",
+    "lucide-react": "^0.263.0",
+    "date-fns": "^2.30.0"
+  },
+  "devDependencies": {
+    "serve": "^14.2.0",
+    "firebase-tools": "^15.11.0"
+  }
+}

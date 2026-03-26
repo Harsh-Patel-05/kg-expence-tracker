@@ -1,0 +1,1800 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KG Restaurant Expense Tracker</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+    
+    * { 
+      box-sizing: border-box; 
+      margin: 0; 
+      padding: 0; 
+    }
+    
+    body {
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: #f6f8fb;
+      color: #0f172a;
+      min-height: 100vh;
+      padding: 20px;
+      line-height: 1.6;
+    }
+    
+    :root{
+      /* Backgrounds (light, POS-style) */
+      --bg-main: #f6f8fb;
+      --bg-secondary: #eef2f7;
+      --bg-card: #ffffff;
+      --bg-sidebar: #ffffff;
+
+      /* Primary (Green like reference) */
+      --primary: #10b981;
+      --primary-hover: #0ea371;
+      --primary-glow: rgba(16, 185, 129, 0.12);
+      --primary-shadow: 0 18px 38px rgba(16, 185, 129, 0.18);
+
+      /* Accent (soft slate) */
+      --accent: #0f172a;
+      --accent-glow: rgba(15, 23, 42, 0.08);
+
+      /* Text */
+      --text-primary: #0f172a;
+      --text-secondary: #334155;
+      --text-muted: #64748b;
+
+      /* Status */
+      --profit: #10b981;
+      --expense: #ef4444;
+      --neutral: #2563eb;
+      --cash: #10b981;
+
+      /* UI */
+      --border: rgba(15, 23, 42, 0.10);
+      --shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
+      --shadow-hover: 0 12px 34px rgba(15, 23, 42, 0.12);
+      --radius: 16px;
+      --radius-small: 12px;
+      --transition: all 0.2s ease;
+    }
+
+    .page { 
+      max-width: 1320px; 
+      margin: 0 auto; 
+      display: flex; 
+      gap: 20px; 
+      min-height: 100vh; 
+    }
+    
+    .sidebar {
+      width: 260px;
+      flex-shrink: 0;
+    }
+    
+    .sidebar .card {
+      background: var(--bg-sidebar);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      border-radius: var(--radius);
+      padding: 24px;
+      box-shadow: var(--shadow);
+      height: calc(100vh - 40px);
+      display: flex;
+      flex-direction: column;
+      backdrop-filter: blur(10px);
+      overflow: hidden;
+    }
+
+    .nav-list{
+      display:flex;
+      flex-direction:column;
+      gap: 0px;
+      flex: 1;
+      overflow: auto;
+      padding-bottom: 8px; /* ensures last item stays inside */
+    }
+
+    .nav-item{ flex-shrink: 0; }
+    
+    .nav-item {
+      padding: 14px 18px;
+      border-radius: var(--radius-small);
+      cursor: pointer;
+      transition: var(--transition);
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      font-weight: 500;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+    
+    .nav-item:hover {
+      background: var(--primary-glow);
+      color: #065f46;
+      transform: translateX(4px);
+    }
+    
+    .nav-item.active {
+      background: var(--primary-glow);
+      color: #065f46;
+      border-left: 3px solid var(--primary);
+      font-weight: 700;
+    }
+
+    /* POS (clean, light theme like reference) */
+    .pos-shell{
+      background: #f6f8fb;
+      border: 1px solid rgba(15, 23, 42, 0.08);
+      border-radius: 20px;
+      padding: 16px;
+      color: #0f172a;
+    }
+    .pos-topbar{
+      display:flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items:center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .pos-topbar .left{
+      display:flex;
+      gap: 10px;
+      align-items:center;
+      flex: 1;
+      min-width: 280px;
+    }
+    .pos-search{
+      flex: 1;
+      min-width: 240px;
+      background:#fff;
+      border:1px solid rgba(15,23,42,0.10);
+      border-radius: 14px;
+      padding: 12px 14px;
+      outline:none;
+      font-size: 14px;
+    }
+    .pos-actionsbar{ display:flex; gap: 10px; align-items:center; flex-wrap: wrap; }
+    .pos-chiprow{ display:flex; gap: 10px; flex-wrap: wrap; margin: 12px 0; }
+    .pos-chip{
+      background:#fff;
+      border:1px solid rgba(15,23,42,0.10);
+      color:#0f172a;
+      padding: 10px 14px;
+      border-radius: 14px;
+      cursor:pointer;
+      font-weight: 700;
+      font-size: 13px;
+      transition: var(--transition);
+      display:flex;
+      align-items:center;
+      gap: 10px;
+    }
+    .pos-chip.active{
+      border-color: rgba(16, 185, 129, 0.35);
+      background: rgba(16, 185, 129, 0.10);
+      color: #065f46;
+    }
+    .pos-grid{
+      display:grid;
+      grid-template-columns: 1fr 420px;
+      gap: 16px;
+      align-items:start;
+    }
+    .pos-card{
+      background:#fff;
+      border:1px solid rgba(15,23,42,0.10);
+      border-radius: 20px;
+      padding: 14px;
+      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+    }
+    .pos-menu-grid{
+      display:grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 14px;
+    }
+    .pos-item{
+      border:1px solid rgba(15,23,42,0.10);
+      border-radius: 20px;
+      overflow:hidden;
+      background:#fff;
+      box-shadow: 0 8px 22px rgba(15, 23, 42, 0.06);
+      transition: var(--transition);
+      position: relative;
+    }
+    .pos-item:hover{ transform: translateY(-2px); box-shadow: 0 12px 28px rgba(15, 23, 42, 0.10); }
+    .pos-item.disabled{ opacity: 0.55; filter: grayscale(1); }
+    .pos-item img{
+      width: 100%;
+      height: 120px;
+      object-fit: cover;
+      background: #eef2f7;
+      display:block;
+    }
+    .pos-item-body{ padding: 12px; }
+    .pos-item-name{ font-weight: 900; font-size: 14px; color: #0f172a; line-height: 1.2; }
+    .pos-item-sub{ margin-top: 6px; display:flex; justify-content:space-between; gap: 10px; align-items:center; color:#475569; font-size: 12px; }
+    .pos-item-price{ font-weight: 900; color:#0f172a; }
+    .pos-item-btn{
+      margin-top: 10px;
+      width: 100%;
+      border:none;
+      border-radius: 14px;
+      padding: 10px 12px;
+      cursor:pointer;
+      font-weight: 900;
+      background: #10b981;
+      color: #fff;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap: 10px;
+    }
+    .pos-item-btn:disabled{ opacity: 0.6; cursor:not-allowed; }
+    .pos-right{ position: sticky; top: 16px; }
+    .pos-kpi-row{ display:grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+    .pos-kpi{
+      background: #f8fafc;
+      border: 1px solid rgba(15,23,42,0.08);
+      border-radius: 16px;
+      padding: 10px;
+    }
+    .pos-kpi .label{ font-size: 11px; color:#64748b; }
+    .pos-kpi .value{ font-size: 16px; font-weight: 900; color:#0f172a; margin-top: 4px; }
+    .pos-cart-list{ display:flex; flex-direction:column; gap: 10px; margin-top: 10px; }
+    .pos-cart-row{
+      border: 1px solid rgba(15,23,42,0.10);
+      border-radius: 18px;
+      padding: 10px;
+      background:#fff;
+    }
+    .pos-cart-top{ display:flex; justify-content:space-between; align-items:flex-start; gap: 10px; }
+    .pos-qty{
+      display:flex;
+      align-items:center;
+      gap: 8px;
+    }
+    .pos-qty button{
+      width: 30px; height: 30px;
+      border-radius: 12px;
+      border: 1px solid rgba(15,23,42,0.12);
+      background:#f8fafc;
+      cursor:pointer;
+      font-weight: 900;
+    }
+    .pos-qty .pill{
+      min-width: 34px;
+      text-align:center;
+      padding: 4px 10px;
+      border-radius: 999px;
+      background: rgba(16,185,129,0.12);
+      border: 1px solid rgba(16,185,129,0.25);
+      font-weight: 900;
+      color:#065f46;
+    }
+    .pos-note{
+      margin-top: 8px;
+      width: 100%;
+      border-radius: 14px;
+      border: 1px solid rgba(15,23,42,0.10);
+      padding: 10px 12px;
+      outline:none;
+      font-size: 13px;
+      background:#fff;
+    }
+    .pos-pay-row{ display:grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+    .pos-btn{
+      border:none;
+      border-radius: 16px;
+      padding: 12px 14px;
+      font-weight: 900;
+      cursor:pointer;
+    }
+    .pos-btn.green{ background:#10b981; color:#fff; }
+    .pos-btn.gray{ background:#f1f5f9; color:#0f172a; border:1px solid rgba(15,23,42,0.10); }
+    .pos-btn.red{ background:#ef4444; color:#fff; }
+    .pos-small{ font-size: 12px; color:#64748b; }
+
+    @media (max-width: 1200px){
+      .pos-menu-grid{ grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+    @media (max-width: 980px){
+      .pos-grid{ grid-template-columns: 1fr; }
+      .pos-right{ position: relative; top:auto; }
+      .pos-menu-grid{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    /* Print */
+    @media print{
+      body{ background:#fff; color:#000; padding:0; }
+      .page, .sidebar, .main-content, #toastRoot, #appLoading{ display:none !important; }
+      #printArea{ display:block !important; padding: 12px; font-family: Arial, sans-serif; }
+    }
+    #printArea{ display:none; }
+
+    .nav-icon{
+      width: 22px;
+      height: 22px;
+      flex-shrink: 0;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      border-radius: 8px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.06);
+    }
+
+    .nav-icon svg{ width: 18px; height: 18px; display:block; }
+    .nav-icon .stroke{ stroke: rgba(255,255,255,0.88); }
+    .nav-icon .fill{ fill: rgba(255,255,255,0.88); }
+    .nav-icon .accent{ fill: var(--primary); }
+
+    .nav-item.active .nav-icon{
+      background: rgba(65,105,225,0.18);
+      border-color: rgba(65,105,225,0.35);
+    }
+    .nav-item.active .nav-icon .accent{ fill: #fff; }
+    
+    .nav-item.secondary {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+      box-shadow: none;
+    }
+    
+    .main-content { 
+      flex: 1; 
+      display: grid; 
+      gap: 20px; 
+    }
+
+    body.sidebar-collapsed .sidebar{ display:none; }
+    body.sidebar-collapsed .page{ max-width: 1600px; }
+    
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 24px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+      transition: var(--transition);
+    }
+    
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-hover);
+      border-color: rgba(16, 185, 129, 0.25);
+    }
+    
+    /* Dashboard premium layout */
+    .dash-hero{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:20px;
+      padding: 8px 0 16px;
+      animation: dashIn .6s cubic-bezier(.2,.8,.2,1) both;
+    }
+    
+    @keyframes dashIn{
+      from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}
+    }
+    
+    .dash-title{
+      font-size: 32px; 
+      font-weight: 800; 
+      letter-spacing: -0.02em; 
+      color: #0f172a;
+    }
+    
+    .dash-sub{
+      margin-top: 8px; 
+      color: var(--text-muted);
+      font-size: 14px;
+      font-weight: 400;
+    }
+    
+    .dash-right{
+      display:flex; 
+      align-items:center; 
+      gap:12px;
+    }
+    
+    .seg{
+      display:flex; 
+      gap:6px; 
+      padding:8px;
+      border-radius: 50px; 
+      background: var(--bg-secondary);
+      border:1px solid var(--border);
+    }
+    
+    .seg button{
+      width:auto; 
+      padding:10px 16px; 
+      border-radius: 50px;
+      background:transparent; 
+      color: var(--text-secondary);
+      font-size: 12px; 
+      font-weight: 600;
+      transition: var(--transition);
+      border: none;
+      cursor: pointer;
+    }
+    
+    .seg button:hover{
+      transform: translateY(-2px); 
+      background: var(--primary-glow); 
+      color: #065f46;
+    }
+    
+    .seg button.active{
+      background: var(--primary); 
+      color: #ffffff;
+      box-shadow: var(--primary-shadow);
+    }
+    
+    .profile-pill{
+      display:flex; 
+      align-items:center; 
+      gap:12px;
+      padding:10px 14px; 
+      border-radius: 50px;
+      border:1px solid var(--border);
+      background: var(--bg-card);
+      box-shadow: var(--shadow);
+    }
+    
+    .profile-pill img{
+      width:32px;
+      height:32px;
+      border-radius: 50px;
+      object-fit:cover;
+      border: 2px solid var(--primary);
+    }
+    
+    .profile-pill .name{
+      font-weight: 700; 
+      font-size: 13px; 
+      color: var(--text-primary)
+    }
+    
+    .profile-pill .brand{
+      font-size: 11px; 
+      color: var(--text-muted); 
+      margin-top: 2px;
+    }
+
+    .kpi-grid{
+      display:grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+    
+    .kpi-card{
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+      backdrop-filter: blur(10px);
+      transition: var(--transition);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-height: 120px;
+    }
+    
+    .kpi-card:hover{ 
+      transform: translateY(-6px); 
+      box-shadow: var(--shadow-hover);
+      border-color: var(--primary-glow);
+    }
+    
+    .kpi-card::before{
+      content:"";
+      position:absolute;
+      inset:-40px -60px auto auto;
+      width:200px;
+      height:200px;
+      background: radial-gradient(circle at 30% 30%, var(--primary-glow), transparent 60%);
+      pointer-events:none;
+    }
+    
+    .kpi-top{
+      display:flex; 
+      align-items:center; 
+      justify-content: flex-start;
+      margin-bottom: 8px;
+      gap: 16px;
+    }
+    
+    .kpi-ic{
+      width:56px;
+      height:56px;
+      border-radius: var(--radius-small);
+      display:flex; 
+      align-items:center; 
+      justify-content:center;
+      border:1px solid var(--border);
+      background: var(--primary-glow);
+      font-size: 24px;
+      flex-shrink: 0;
+    }
+    
+    .kpi-meta{
+      display:flex; 
+      flex-direction:column; 
+      gap: 4px;
+      flex: 1;
+      text-align: left;
+    }
+    
+    .kpi-label{
+      color: var(--text-muted); 
+      font-weight: 600; 
+      font-size: 12px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .kpi-value{
+      font-size: 22px; 
+      font-weight: 800; 
+      letter-spacing: -0.02em; 
+      color: var(--text-primary);
+    }
+    
+    .kpi-hint{
+      color: var(--text-muted); 
+      font-size: 12px;
+    }
+    
+    .trend{
+      display:flex; 
+      align-items:center; 
+      gap:6px; 
+      font-weight: 700; 
+      font-size: 12px;
+    }
+    
+    .trend.up{color: var(--profit)}
+    .trend.down{color: var(--expense)}
+
+    /* KPI Color Classes */
+    .kpi-card.positive .kpi-value { color: var(--profit); }
+    .kpi-card.negative .kpi-value { color: var(--expense); }
+
+    .span-4{grid-column: span 4}
+    .span-3{grid-column: span 3}
+    .span-12{grid-column: span 12}
+    
+    @media (max-width: 900px){ 
+      .span-4,.span-3{grid-column: span 6} 
+      .span-12{grid-column: span 12} 
+    }
+    
+    @media (max-width: 560px){ 
+      .span-4,.span-3,.span-12{grid-column: span 12} 
+      .dash-hero{flex-direction:column; align-items:flex-start} 
+    }
+
+    .content-grid{
+      display:grid;
+      grid-template-columns: minmax(0, 7fr) minmax(0, 3fr);
+      gap: 16px;
+      margin-top: 20px;
+      align-items:start;
+    }
+    
+    .content-col{display:grid; gap:16px}
+    
+    @media (max-width: 980px){ 
+      .content-grid{grid-template-columns:1fr} 
+    }
+
+    .chart-wrap{
+      background: var(--bg-secondary); 
+      border:1px solid var(--border); 
+      border-radius: var(--radius); 
+      padding:16px; 
+      height: 300px;
+    }
+
+    .pulse-bell{ 
+      position:relative; 
+      display:inline-flex; 
+      align-items:center; 
+      justify-content:center; 
+      width:36px; 
+      height:36px; 
+      border-radius: 50px; 
+      background: var(--primary-glow); 
+      border:1px solid var(--primary); 
+    }
+    
+    .pulse-bell::after{
+      content:""; 
+      position:absolute; 
+      inset:-6px; 
+      border-radius: 50px; 
+      border:2px solid var(--primary); 
+      opacity:0; 
+      animation:pulse 1.6s ease-out infinite; 
+      pointer-events:none;
+    }
+    
+    @keyframes pulse{ 
+      0%{transform:scale(.96);opacity:0} 
+      25%{opacity:1} 
+      100%{transform:scale(1.08);opacity:0} 
+    }
+    
+    .list { 
+      margin-top: 12px; 
+      display: grid; 
+      gap: 8px; 
+      max-height: 260px; 
+      overflow: auto; 
+    }
+    
+    .list .row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-small);
+      font-size: 14px;
+      transition: var(--transition);
+    }
+    
+    .list .row:hover { 
+      background: var(--primary-glow); 
+      border-color: var(--primary);
+    }
+    
+    .pill {
+      display: inline-block;
+      padding: 6px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      background: var(--primary-glow);
+      color: var(--primary);
+      margin: 0 2px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .row { 
+      display: grid; 
+      grid-template-columns: 1fr auto; 
+      gap: 8px; 
+      align-items: center; 
+      background: var(--bg-secondary); 
+      border: 1px solid var(--border); 
+      border-radius: var(--radius-small); 
+      padding: 12px; 
+      color: var(--text-primary); 
+      transition: var(--transition);
+    }
+    
+    .row:hover {
+      background: var(--primary-glow);
+      border-color: var(--primary);
+    }
+    
+    .table-row { 
+      display: grid; 
+      grid-template-columns: 1.3fr 1fr 1fr 1fr; 
+      gap: 8px; 
+      padding: 10px; 
+      border-radius: var(--radius-small); 
+      background: var(--bg-secondary); 
+      border: 1px solid var(--border); 
+    }
+    
+    .table-like { 
+      margin-top: 12px; 
+      display: grid; 
+      gap: 6px; 
+      max-height: 240px; 
+      overflow: auto; 
+    }
+    
+    #appLoading { 
+      position: fixed; 
+      inset: 0; 
+      background: rgba(13, 13, 13, 0.95); 
+      display: none; 
+      align-items: center; 
+      justify-content: center; 
+      z-index: 9998; 
+      backdrop-filter: blur(10px);
+    }
+    
+    #appLoading.active { display: flex; }
+    
+    .spinner { 
+      width: 44px; 
+      height: 44px; 
+      border: 3px solid var(--border); 
+      border-top-color: var(--primary); 
+      border-radius: 50%; 
+      animation: spin 0.8s linear infinite; 
+    }
+    
+    @keyframes spin { to { transform: rotate(360deg); } }
+    
+    #toastRoot { 
+      position: fixed; 
+      bottom: 20px; 
+      right: 20px; 
+      z-index: 9999; 
+      display: flex; 
+      flex-direction: column; 
+      gap: 8px; 
+      max-width: 360px; 
+    }
+    
+    .toast { 
+      padding: 14px 16px; 
+      border-radius: var(--radius-small); 
+      background: var(--bg-card); 
+      border: 1px solid var(--border); 
+      font-size: 14px; 
+      color: var(--text-primary); 
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+    
+    .toast-ok { 
+      border-color: var(--profit); 
+      background: rgba(34, 197, 94, 0.1); 
+    }
+    
+    .toast-error { 
+      border-color: var(--expense); 
+      background: rgba(239, 68, 68, 0.1); 
+    }
+    
+    .toast-out { 
+      opacity: 0; 
+      transition: opacity 0.25s; 
+    }
+    
+    .welcome-screen { 
+      position: fixed; 
+      inset: 0; 
+      background: linear-gradient(135deg, var(--bg-main) 0%, var(--bg-secondary) 100%); 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      z-index: 9999; 
+      opacity: 0; 
+      animation: welcomeIn 0.5s ease forwards; 
+    }
+    
+    @keyframes welcomeIn { to { opacity: 1; } }
+    
+    .welcome-content { 
+      text-align: center; 
+      color: var(--text-primary); 
+    }
+    
+    .welcome-title { 
+      font-size: 44px; 
+      font-weight: 800; 
+      margin-bottom: 14px; 
+    }
+    
+    .welcome-subtitle { 
+      font-size: 18px; 
+      opacity: 0.8; 
+    }
+    
+    .welcome-logo { 
+      width: 110px; 
+      height: 110px; 
+      margin: 0 auto 22px; 
+      background: var(--primary-glow); 
+      border-radius: 50%; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      font-size: 42px; 
+      border: 2px solid var(--primary);
+    }
+    
+    .dashboard-section { display: none; }
+    .dashboard-section.active { display: block; }
+
+    /* Light theme text defaults (fix white-on-white) */
+    .muted{ color: var(--text-muted) !important; }
+    .card .kpi-value,
+    .card .kpi-label,
+    .card .kpi-hint,
+    .card h2,
+    .card .row,
+    .card .list .row,
+    .table-row,
+    .section-title h2 {
+      color: var(--text-primary) !important;
+    }
+    
+    /* Section Titles */
+    .section-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    
+    .section-title h2 {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin: 0;
+    }
+    
+    .section-title .muted {
+      font-size: 13px;
+      color: var(--text-muted);
+      font-weight: 400;
+    }
+
+    /* Form Styles */
+    input, select, button {
+      font-family: 'Inter', sans-serif;
+      font-size: 14px;
+    }
+    
+    input, select {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      padding: 12px 16px;
+      border-radius: var(--radius-small);
+      transition: var(--transition);
+    }
+
+    input::placeholder{ color: rgba(100,116,139,0.85); }
+    
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-glow);
+    }
+    
+    button {
+      background: var(--primary);
+      color: #FFFFFF;
+      border: none;
+      padding: 12px 20px;
+      border-radius: var(--radius-small);
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      box-shadow: var(--primary-shadow);
+    }
+    
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--primary-shadow);
+      color: #FFFFFF;
+    }
+    
+    button.secondary {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+      box-shadow: none;
+    }
+    
+    button.secondary:hover {
+      background: var(--primary-glow);
+      border-color: var(--primary);
+      color: #065f46 !important;
+    }
+    
+    button.warn {
+      background: var(--expense);
+      color: #FFFFFF;
+      box-shadow: 0 0 12px rgba(239, 68, 68, 0.3);
+    }
+    
+    /* Grid layouts */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+    .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; }
+    .grid-5 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; gap: 12px; }
+
+    /* Dark scrollbars */
+    ::-webkit-scrollbar{width:10px;height:10px}
+    ::-webkit-scrollbar-thumb{background:rgba(16,185,129,0.65);border-radius:50px;border:3px solid transparent;background-clip:padding-box}
+    ::-webkit-scrollbar-track{background:var(--bg-secondary)}
+
+    /* --- Suppliers UX upgrades --- */
+    .actions{display:flex;gap:10px;align-items:center;justify-content:flex-end}
+    .btn-sm{padding:10px 14px;border-radius:10px;font-size:12px;font-weight:700}
+    .btn-ghost{background:transparent;border:1px solid var(--border);box-shadow:none}
+    .btn-ghost:hover{background:var(--primary-glow);border-color:var(--primary)}
+
+    .tabsBar{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      padding:10px;
+      border:1px solid var(--border);
+      border-radius: 999px;
+      background: var(--bg-secondary);
+      margin-bottom: 14px;
+    }
+    .tabBtn{
+      padding:10px 14px;
+      border-radius: 999px;
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: var(--transition);
+      box-shadow: none;
+    }
+    .tabBtn:hover{ background: var(--primary-glow); border-color: rgba(16,185,129,.35); transform: translateY(-1px); color:#065f46; }
+    .tabBtn.active{ background: var(--primary); border-color: rgba(16,185,129,.55); color:#fff; }
+
+    /* Legacy "dark" blocks should look like light cards now */
+    .dark{
+      background: var(--bg-card) !important;
+      color: var(--text-primary) !important;
+      border-color: var(--border) !important;
+    }
+    .tabPanel{ display:none; }
+    .tabPanel.active{ display:block; }
+
+    .supplierCard{
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+    }
+    .supplierCardHeader{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom:10px;
+    }
+    .supplierTitle{font-weight:800;color:var(--text-primary)}
+    .supplierMeta{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+    .supplierEntries{display:grid;gap:8px}
+
+    /* Modal */
+    .modalOverlay{
+      position:fixed; inset:0;
+      background: rgba(0,0,0,.6);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index: 10000;
+      padding: 18px;
+      backdrop-filter: blur(6px);
+    }
+    .modalOverlay.open{display:flex;}
+    .modal{
+      width: min(720px, 100%);
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: var(--shadow-hover);
+      padding: 16px;
+    }
+    .modalHeader{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}
+    .modalTitle{font-size:18px;font-weight:900;color:var(--text-primary)}
+    .modalBody{display:grid;gap:12px}
+    .modalFooter{display:flex;gap:10px;justify-content:flex-end;margin-top:12px}
+    .itemGrid{display:grid;grid-template-columns: 1.2fr .8fr auto; gap:10px; align-items:center}
+    .itemGrid input{width:100%}
+    .divider{height:1px;background:var(--border);margin:6px 0}
+
+    /* Logo bouncing animation */
+    .logo-bounce {
+      animation: logoBounce 2.5s ease-in-out infinite;
+    }
+    
+    @keyframes logoBounce {
+      0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+      40% { transform: translateY(-8px); }
+      60% { transform: translateY(-4px); }
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      .page {
+        flex-direction: column;
+      }
+      .sidebar {
+        width: 100%;
+      }
+      .sidebar .card {
+        height: auto;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div id="appLoading"><div class="spinner" aria-label="Loading"></div></div>
+  <div id="toastRoot" aria-live="polite"></div>
+
+  <div class="page">
+    <div class="sidebar">
+      <div class="card dark">
+        <div class="section-title" style="margin-bottom:25px; padding: 20px 0;">
+          <div style="display:flex; flex-direction:column; align-items:center; gap:15px;">
+            <img src="assets/the-kilogram-logo.png" alt="The Kilogram logo" class="logo-bounce" style="width:80%;height:auto;border-radius:0px;object-fit:cover;border:none;" />
+          </div>
+        </div>
+        <div class="nav-list">
+          <div class="nav-item active" onclick="showSection('dashboard')">
+            <span class="nav-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <rect x="3" y="3" width="8" height="8" rx="2" class="stroke" stroke-width="2"/>
+                <rect x="13" y="3" width="8" height="5" rx="2" class="stroke" stroke-width="2"/>
+                <rect x="13" y="10" width="8" height="11" rx="2" class="stroke" stroke-width="2"/>
+                <rect x="3" y="13" width="8" height="8" rx="2" class="stroke" stroke-width="2"/>
+              </svg>
+            </span>
+            <span>Dashboard</span>
+          </div>
+          <div class="nav-item" onclick="showSection('sales')">
+            <span class="nav-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M4 20V4" class="stroke" stroke-width="2" stroke-linecap="round"/>
+                <path d="M4 20H20" class="stroke" stroke-width="2" stroke-linecap="round"/>
+                <rect x="6.5" y="12" width="3" height="6" rx="1" class="accent"/>
+                <rect x="11" y="9" width="3" height="9" rx="1" class="fill" opacity="0.6"/>
+                <rect x="15.5" y="6" width="3" height="12" rx="1" class="fill" opacity="0.75"/>
+                <path d="M8 8l4 3 4-5 4 3" class="stroke" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
+              </svg>
+            </span>
+            <span>Sales</span>
+          </div>
+          <div class="nav-item" onclick="showSection('supplier')">
+            <span class="nav-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M4 7l8-4 8 4v10l-8 4-8-4V7z" class="stroke" stroke-width="2" stroke-linejoin="round"/>
+                <path d="M12 3v18" class="stroke" stroke-width="2" opacity="0.45"/>
+                <path d="M4 7l8 4 8-4" class="stroke" stroke-width="2" stroke-linejoin="round"/>
+              </svg>
+            </span>
+            <span>Suppliers</span>
+          </div>
+          <div class="nav-item" onclick="showSection('expenses')">
+            <span class="nav-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M7 3h10v3H7V3z" class="fill" opacity="0.6"/>
+                <path d="M6 6h12v15a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V6z" class="stroke" stroke-width="2"/>
+                <path d="M8.5 10h7" class="stroke" stroke-width="2" stroke-linecap="round"/>
+                <path d="M8.5 14h7" class="stroke" stroke-width="2" stroke-linecap="round"/>
+                <path d="M8.5 18h4.5" class="stroke" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
+              </svg>
+            </span>
+            <span>Expenses</span>
+          </div>
+          <div class="nav-item" onclick="showSection('staff')">
+            <span class="nav-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M9 11a3 3 0 1 1 6 0" class="stroke" stroke-width="2" stroke-linecap="round"/>
+                <path d="M6 20a6 6 0 0 1 12 0" class="stroke" stroke-width="2" stroke-linecap="round"/>
+                <path d="M12 2.5l1.2 2.5 2.8.4-2 2 .5 2.8-2.5-1.3-2.5 1.3.5-2.8-2-2 2.8-.4L12 2.5z" class="accent" opacity="0.85"/>
+              </svg>
+            </span>
+            <span>Manage Staff</span>
+          </div>
+          <div class="nav-item" onclick="showSection('analytics')">
+            <span class="nav-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <rect x="4" y="12" width="3" height="8" rx="1" class="fill" opacity="0.55"/>
+                <rect x="10.5" y="9" width="3" height="11" rx="1" class="fill" opacity="0.75"/>
+                <rect x="17" y="5" width="3" height="15" rx="1" class="accent"/>
+                <path d="M4 20h16" class="stroke" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </span>
+            <span>Analytics</span>
+          </div>
+          <div class="nav-item" onclick="showSection('menu')">
+            <span class="nav-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M4 6h16" class="stroke" stroke-width="2" stroke-linecap="round"/>
+                <path d="M4 12h16" class="stroke" stroke-width="2" stroke-linecap="round"/>
+                <path d="M4 18h16" class="stroke" stroke-width="2" stroke-linecap="round"/>
+                <circle cx="7" cy="6" r="1.5" class="accent"/>
+                <circle cx="7" cy="12" r="1.5" class="fill" opacity="0.7"/>
+                <circle cx="7" cy="18" r="1.5" class="fill" opacity="0.7"/>
+              </svg>
+            </span>
+            <span>Menu</span>
+          </div>
+          <div class="nav-item" onclick="showSection('pos')">
+            <span class="nav-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M7 4h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" class="stroke" stroke-width="2"/>
+                <path d="M8 9h8" class="stroke" stroke-width="2" stroke-linecap="round"/>
+                <path d="M8 13h5" class="stroke" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
+                <path d="M15.5 13h.5" class="stroke" stroke-width="3" stroke-linecap="round"/>
+              </svg>
+            </span>
+            <span>POS Billing</span>
+          </div>
+          <div class="nav-item" onclick="showSection('backup')">
+            <span class="nav-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M7 3h10v5H7V3z" class="stroke" stroke-width="2" stroke-linejoin="round"/>
+                <path d="M6 8h12v13H6V8z" class="stroke" stroke-width="2" stroke-linejoin="round"/>
+                <path d="M9 12h6" class="stroke" stroke-width="2" stroke-linecap="round"/>
+                <path d="M9 15h6" class="stroke" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
+              </svg>
+            </span>
+            <span>Backup</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="main-content">
+      <div id="dashboard-section" class="dashboard-section active">
+        <div class="dash-hero">
+          <div>
+            <div class="dash-title">Welcome back, Mihir 👋</div>
+            <div class="dash-sub">Here's your restaurant performance today</div>
+          </div>
+          <div class="dash-right">
+            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
+              <div class="muted" id="todayLabel"></div>
+            </div>
+          </div>
+        </div>
+          <div class="kpi-grid" aria-label="KPIs">
+          <!-- First Row: 3 main balance cards -->
+          <div class="kpi-card span-4 positive">
+            <div class="kpi-top"><div class="kpi-ic">💰</div></div>
+            <div class="kpi-meta"><div class="kpi-label">Cash Balance</div><div class="kpi-value" id="kpiCashBalance">Rs 0</div><div class="kpi-hint">Available cash today</div></div>
+          </div>
+          <div class="kpi-card span-4 positive">
+            <div class="kpi-top"><div class="kpi-ic">🏦</div></div>
+            <div class="kpi-meta"><div class="kpi-label">Bank Balance</div><div class="kpi-value" id="kpiBankBalance">Rs 0</div><div class="kpi-hint">Online collections</div></div>
+          </div>
+          <div class="kpi-card span-4 positive">
+            <div class="kpi-top"><div class="kpi-ic">🧾</div></div>
+            <div class="kpi-meta"><div class="kpi-label">Total Balance</div><div class="kpi-value" id="kpiTotalBalance">Rs 0</div><div class="kpi-hint">Cash + bank combined</div></div>
+          </div>
+
+          <!-- Second Row: 4 sales/expense cards in one row -->
+          <div class="kpi-card span-3 positive">
+            <div class="kpi-top"><div class="kpi-ic">📈</div></div>
+            <div class="kpi-meta"><div class="kpi-label">Total Revenue</div><div class="kpi-value" id="kpiTotalRevenue">Rs 0</div><div class="kpi-hint">All sales</div></div>
+          </div>
+          <div class="kpi-card span-3 positive">
+            <div class="kpi-top"><div class="kpi-ic" style="display: flex; align-items: center; justify-content: center; gap: 6px;"><img src="assets/swiggy.jpeg" style="width: 24px; height: 24px; object-fit: contain;" /><img src="assets/zomato.png" style="width: 24px; height: 24px; object-fit: contain;" /></div></div>
+            <div class="kpi-meta"><div class="kpi-label">Online Sales</div><div class="kpi-value" id="kpiOnlineSales">Rs 0</div><div class="kpi-hint">Swiggy + Zomato</div></div>
+          </div>
+          <div class="kpi-card span-3 positive">
+            <div class="kpi-top"><div class="kpi-ic">🏪</div></div>
+            <div class="kpi-meta"><div class="kpi-label">Retail Sales</div><div class="kpi-value" id="kpiRetailSales">Rs 0</div><div class="kpi-hint">Cash + Other Online</div></div>
+          </div>
+          <div class="kpi-card span-3 positive">
+            <div class="kpi-top"><div class="kpi-ic">📄</div></div>
+            <div class="kpi-meta"><div class="kpi-label">Total Expenses</div><div class="kpi-value" id="kpiTotalExpenses">Rs 0</div><div class="kpi-hint">All expenses</div></div>
+          </div>
+
+          <!-- Third Row: Net Profit card in full width -->
+          <div class="kpi-card span-12" id="netProfitCard">
+            <div class="kpi-top"><div class="kpi-ic">💎</div></div>
+            <div class="kpi-meta"><div class="kpi-label">Net Profit</div><div class="kpi-value" id="kpiNetProfit">Rs 0</div><div class="kpi-hint">Revenue - Expenses</div></div>
+          </div>
+        </div>
+
+        <div class="content-grid">
+          <div class="content-col">
+            <div class="card">
+              <div class="section-title"><h2>Sales Overview</h2><div class="muted">Cash (green) vs Online (blue)</div></div>
+              <div class="chart-wrap"><canvas id="salesOverviewChart"></canvas></div>
+            </div>
+            <div class="card">
+              <div class="section-title"><h2>Recent Activity</h2><div class="muted">Last 5</div></div>
+              <div id="recentTransactionsList" class="list"></div>
+            </div>
+          </div>
+          <div class="content-col">
+            <div class="card">
+              <div class="section-title"><h2>Expense Breakdown</h2><div class="muted">Staff / Suppliers / Rent / Others</div></div>
+              <div class="chart-wrap"><canvas id="expenseBreakdownChart"></canvas></div>
+            </div>
+            <div class="card">
+              <div class="section-title"><h2>Upcoming Payments</h2><div class="muted"><span class="pulse-bell" aria-hidden="true">🔔</span></div></div>
+              <div id="upcomingPaymentsList" class="list"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="sales-section" class="dashboard-section">
+        <div class="card">
+          <div class="section-title"><h2>Add Daily Sales</h2></div>
+          <div class="grid-5">
+            <input id="saleDate" type="date" />
+            <input id="saleCashAmount" type="number" placeholder="Cash amount" />
+            <input id="saleSwiggyAmount" type="number" placeholder="Swiggy amount" />
+            <input id="saleZomatoAmount" type="number" placeholder="Zomato amount" />
+            <input id="saleOtherOnlineAmount" type="number" placeholder="Other online amount" />
+            <input id="saleNote" placeholder="Notes (optional)" />
+            <button onclick="addSale()">Save Sale</button>
+          </div>
+          <div id="salesList" class="list"></div>
+        </div>
+      </div>
+
+      <div id="supplier-section" class="dashboard-section">
+        <div class="tabsBar" role="tablist" aria-label="Suppliers tabs">
+          <button type="button" class="tabBtn active" data-sup-tab="manage" onclick="showSupplierTab('manage')">Add supplier</button>
+          <button type="button" class="tabBtn" data-sup-tab="bills" onclick="showSupplierTab('bills')">Add bills</button>
+          <button type="button" class="tabBtn" data-sup-tab="pay" onclick="showSupplierTab('pay')">Pay bills</button>
+          <button type="button" class="tabBtn" data-sup-tab="history" onclick="showSupplierTab('history')">History</button>
+        </div>
+
+        <div id="supplierTab-manage" class="tabPanel active">
+        <div class="card">
+          <div class="section-title"><h2>Supplier Management</h2><button class="secondary" type="button" onclick="toggleAddSupplier()">+ Add Supplier</button></div>
+          <div id="addSupplierBox" style="display:none;">
+            <div class="grid-2">
+              <input id="newSupplierName" placeholder="Supplier name" />
+              <button onclick="addSupplier()">Add Supplier</button>
+            </div>
+            <div class="grid-3" style="margin-top: 10px;">
+              <input id="newSupplierItemName" placeholder="Supplier item (e.g., Milk)" />
+              <input id="newSupplierItemRate" type="number" placeholder="Rate (optional)" />
+              <button class="secondary" type="button" onclick="addTempSupplierItem()">Add Item</button>
+            </div>
+            <div class="muted" style="margin-top: 8px;">Add items + rates before creating supplier (item-wise expenses).</div>
+            <div id="tempSupplierItems" class="list"></div>
+          </div>
+          <div id="supplierList" class="list"></div>
+        </div>
+        </div>
+
+        <div id="supplierTab-bills" class="tabPanel">
+        <div class="card">
+          <div class="section-title"><h2>Supplier Bills</h2></div>
+          <div class="grid-5">
+            <input id="purchaseDate" type="date" />
+            <select id="purchaseSellerSelect"></select>
+            <select id="purchaseItemSelect"></select>
+            <input id="purchaseRate" type="number" placeholder="Rate (optional)" />
+            <input id="purchasePrice" type="number" placeholder="Amount" />
+            <select id="purchasePaidStatus" onchange="onPurchasePaidStatusChanged()">
+              <option value="unpaid" selected>Unpaid</option>
+              <option value="paid">Paid</option>
+            </select>
+          </div>
+          <div class="grid-5" style="margin-top: 10px;">
+            <input id="purchaseQty" type="number" placeholder="Qty (optional)" />
+            <button type="button" class="secondary" onclick="addTempPurchaseItem()">+ Add item</button>
+            <input id="purchaseTotalAmount" type="number" placeholder="Total amount (optional)" />
+            <div id="purchasePayMethodWrap" style="display:none">
+              <select id="purchasePaymentMethod">
+                <option value="cash">Cash</option>
+                <option value="online">Online</option>
+              </select>
+            </div>
+            <button onclick="addPurchase()">Save Bill</button>
+            <div class="muted">Unpaid bills count toward “Unpaid Bills” KPI</div>
+          </div>
+          <div class="card" style="padding:14px;margin-top:12px;">
+            <div class="section-title"><h2 style="font-size:14px;">Selected items</h2><div class="muted">Add multiple items then save once</div></div>
+            <div id="tempPurchaseItems" class="list"></div>
+          </div>
+          <div id="purchaseList" class="list"></div>
+        </div>
+        </div>
+
+        <div id="supplierTab-pay" class="tabPanel">
+        <div class="card">
+          <div class="section-title">
+            <h2>Supplier Remaining</h2>
+            <button type="button" class="secondary" onclick="openPaySupplier()">Record Payment</button>
+          </div>
+          <div class="muted">Remaining = total bills − total payments.</div>
+          <div id="supplierRemainingList" class="list" style="margin-top:12px;"></div>
+        </div>
+        </div>
+
+        <div id="supplierTab-history" class="tabPanel">
+        <div class="card">
+          <div class="section-title">
+            <h2>Supplier History</h2>
+            <div class="grid-3" style="gap:10px; align-items:center;">
+              <select id="supplierHistoryRange" onchange="renderSupplierHistory()">
+                <option value="week">This week</option>
+                <option value="month" selected>This month</option>
+                <option value="year">This year</option>
+                <option value="all">All time</option>
+              </select>
+              <select id="supplierHistorySupplier" onchange="renderSupplierHistory()">
+                <option value="">All suppliers</option>
+              </select>
+              <button type="button" class="secondary" onclick="renderSupplierHistory()">Refresh</button>
+            </div>
+          </div>
+          <div class="muted">Shows bills + lump-sum payments in one timeline (latest first).</div>
+          <div id="supplierHistoryCards" class="list" style="margin-top:12px;"></div>
+        </div>
+        </div>
+      </div>
+
+      <!-- Edit Supplier Modal -->
+      <div id="editSupplierOverlay" class="modalOverlay" role="dialog" aria-modal="true" aria-label="Edit Supplier">
+        <div class="modal">
+          <div class="modalHeader">
+            <div>
+              <div class="modalTitle">Edit supplier</div>
+              <div class="muted">Update supplier name and items. Rates are optional.</div>
+            </div>
+            <button type="button" class="secondary btn-sm" onclick="closeEditSupplier()">Close</button>
+          </div>
+          <div class="modalBody">
+            <input id="editSupplierName" placeholder="Supplier name" />
+            <div class="divider"></div>
+            <div class="section-title" style="margin-bottom:6px;">
+              <h2 style="font-size:14px;">Items</h2>
+              <button type="button" class="secondary btn-sm" onclick="editSupplierAddItem()">+ Add item</button>
+            </div>
+            <div id="editSupplierItems"></div>
+          </div>
+          <div class="modalFooter">
+            <button type="button" class="btn-ghost btn-sm" onclick="closeEditSupplier()">Cancel</button>
+            <button type="button" class="btn-sm" onclick="saveEditSupplier()">Save changes</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pay Supplier Modal -->
+      <div id="paySupplierOverlay" class="modalOverlay" role="dialog" aria-modal="true" aria-label="Record Supplier Payment">
+        <div class="modal">
+          <div class="modalHeader">
+            <div>
+              <div class="modalTitle">Record payment</div>
+              <div class="muted">Add a lump-sum payment (reduces remaining balance).</div>
+            </div>
+            <button type="button" class="secondary btn-sm" onclick="closePaySupplier()">Close</button>
+          </div>
+          <div class="modalBody">
+            <div class="grid-3">
+              <input id="paySupplierDate" type="date" />
+              <select id="paySupplierName"></select>
+              <input id="paySupplierAmount" type="number" placeholder="Amount paid" />
+            </div>
+            <div class="grid-2">
+              <select id="paySupplierMethod">
+                <option value="cash">Cash</option>
+                <option value="online">Online</option>
+              </select>
+              <input id="paySupplierNote" placeholder="Note (optional)" />
+            </div>
+          </div>
+          <div class="modalFooter">
+            <button type="button" class="btn-ghost btn-sm" onclick="closePaySupplier()">Cancel</button>
+            <button type="button" class="btn-sm" onclick="savePaySupplier()">Save payment</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="expenses-section" class="dashboard-section">
+        <div class="card">
+          <div class="section-title"><h2>Expenses</h2></div>
+          <div class="grid-5">
+            <input id="billDate" type="date" />
+            <select id="billType"><option value="rent">Rent</option><option value="utilities">Utilities</option><option value="misc">Misc</option></select>
+            <input id="billAmount" type="number" placeholder="Amount" />
+            <select id="billStatus"><option value="unpaid">Unpaid</option><option value="paid">Paid</option></select>
+            <select id="billPaymentMethod">
+              <option value="cash">Cash</option>
+              <option value="online">Online</option>
+            </select>
+          </div>
+          <div class="grid-2" style="margin-top: 10px;">
+            <input id="billNote" placeholder="Note (optional)" />
+            <div class="muted">Choose cash/online (affects balances when marked paid).</div>
+          </div>
+          <button onclick="addBill()" style="margin-top: 10px;">Save Expense</button>
+          <div id="billsList" class="list"></div>
+        </div>
+      </div>
+
+      <div id="staff-section" class="dashboard-section">
+        <div class="tabsBar" role="tablist" aria-label="Staff tabs">
+          <button type="button" class="tabBtn active" data-staff-tab="add" onclick="showStaffTab('add')">Add Staff</button>
+          <button type="button" class="tabBtn" data-staff-tab="attendance" onclick="showStaffTab('attendance')">Attendance</button>
+          <button type="button" class="tabBtn" data-staff-tab="salary" onclick="showStaffTab('salary')">Salary</button>
+        </div>
+
+        <div id="staffTab-add" class="tabPanel active">
+          <div class="card">
+          <div class="section-title">
+            <h2>Manage Staff</h2>
+            <button type="button" class="secondary" onclick="toggleAddStaff()" style="max-width:56px;border-radius:14px;font-size:18px;font-weight:900;">+</button>
+          </div>
+
+          <div id="addStaffBox" style="display:none;">
+            <div class="grid-3">
+              <input id="newStaffName" placeholder="Employee name" />
+              <input id="newStaffSalary" type="number" placeholder="Monthly salary" />
+              <button onclick="addStaff()">Add Employee</button>
+            </div>
+            <div class="muted" style="margin-top:8px;">Salary is used for 30-day salary calculation: daily = monthly / 30.</div>
+          </div>
+
+          <div id="staffList" class="list"></div>
+        </div>
+        <div class="card">
+          <div class="section-title"><h2>Fixed Salary Setup</h2><div class="muted">Edit salary (optional)</div></div>
+          <div class="grid-3">
+            <select id="fixedSalaryStaff"></select>
+            <input id="fixedSalaryAmount" type="number" placeholder="Monthly Salary" />
+            <button onclick="setFixedSalary()">Set Fixed Salary</button>
+          </div>
+          <div id="fixedSalaryList" class="list"></div>
+        </div>
+        </div>
+
+        <div id="staffTab-attendance" class="tabPanel">
+          <div class="card">
+          <div class="section-title"><h2>Daily Attendance</h2><div class="muted">Select multiple employees</div></div>
+          <div class="grid-3">
+            <input id="attDate" type="date" />
+            <button type="button" class="secondary" onclick="markAllAttendance(true)">All Present</button>
+            <button type="button" class="secondary" onclick="markAllAttendance(false)">Clear</button>
+          </div>
+          <div id="attendanceChecklist" class="list" style="margin-top:10px;"></div>
+          <button style="margin-top:10px;" onclick="saveBulkAttendance()">Save Attendance</button>
+          <div class="muted" style="margin-top:8px;">Present is counted in salary calculation. Absent is saved as history too.</div>
+          <div class="section-title" style="margin-top:14px;"><h2>Attendance History</h2><div class="muted">Last 25</div></div>
+          <div id="attendanceList" class="list"></div>
+        </div>
+        </div>
+
+        <div id="staffTab-salary" class="tabPanel">
+          <div class="card">
+          <div class="section-title"><h2>Salary & Advances</h2><div class="muted">Employee summary + attendance %</div></div>
+          <div class="grid-2">
+            <div>
+              <div class="muted" style="margin-bottom:6px;">Month</div>
+              <input id="salMonth" type="month" onchange="renderSalaryOverview()" />
+            </div>
+            <div>
+              <div class="muted" style="margin-bottom:6px;">Attendance % shown is based on marked days for the month.</div>
+              <button class="secondary" type="button" onclick="renderSalaryOverview()">Refresh Summary</button>
+            </div>
+          </div>
+
+          <div class="section-title" style="margin-top:14px;"><h2>All Employees</h2><div class="muted">Salary • Attendance % • Advances • Payable</div></div>
+          <div id="salaryOverviewList" class="table-like"></div>
+
+          <div class="section-title" style="margin-top:14px;"><h2>Add Staff Advance</h2><div class="muted">Directly reflects in payable</div></div>
+          <div class="grid-5" style="margin-top: 10px;">
+            <input id="advDate" type="date" />
+            <input id="advMonth" type="month" />
+            <select id="advStaff"></select>
+            <select id="advMethod">
+              <option value="cash">Cash</option>
+              <option value="online">Online</option>
+            </select>
+            <input id="advAmount" type="number" placeholder="Advance amount" />
+          </div>
+          <button class="secondary" onclick="addAdvance()" style="margin-top: 10px;">Add Staff Advance</button>
+          <div class="section-title" style="margin-top:14px;">
+            <h2>Advances History</h2>
+            <div style="display:flex;gap:10px;align-items:center;justify-content:flex-end;flex-wrap:wrap;">
+              <select id="advancesFilterStaff" onchange="renderAdvances()">
+                <option value="">All staff</option>
+              </select>
+              <div class="muted">Latest 25</div>
+            </div>
+          </div>
+          <div id="advancesList" class="list"></div>
+
+          <div class="section-title" style="margin-top:14px;"><h2>Salary Payments</h2><div class="muted">Mark paid with cash/online</div></div>
+          <div id="salaryList" class="list"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="analytics-section" class="dashboard-section">
+        <div class="card dark">
+          <div class="section-title">
+            <h2>Restaurant Analytics</h2>
+            <div class="grid-4" style="gap:10px;align-items:center;">
+              <select id="analyticsRange" onchange="renderAnalytics()">
+                <option value="daily">Daily</option>
+                <option value="weekly">Weekly</option>
+                <option value="monthly" selected>Monthly</option>
+                <option value="3m">3 Months</option>
+                <option value="6m">6 Months</option>
+                <option value="yearly">Yearly</option>
+                <option value="custom">Custom Range</option>
+              </select>
+              <input id="analyticsFrom" type="date" style="display:none" onchange="renderAnalytics()" />
+              <input id="analyticsTo" type="date" style="display:none" onchange="renderAnalytics()" />
+              <button type="button" class="secondary" onclick="renderAnalytics()">Apply</button>
+            </div>
+          </div>
+
+          <div class="kpi-grid" style="margin-top:10px;">
+            <div class="kpi-card span-3 positive"><div class="kpi-meta"><div class="kpi-label">Total Revenue</div><div class="kpi-value" id="anKpiRevenue">Rs 0</div><div class="kpi-hint">Selected range</div></div></div>
+            <div class="kpi-card span-3"><div class="kpi-meta"><div class="kpi-label">Total Expenses</div><div class="kpi-value" id="anKpiExpenses">Rs 0</div><div class="kpi-hint">Paid outflows</div></div></div>
+            <div class="kpi-card span-3"><div class="kpi-meta"><div class="kpi-label">Net Profit</div><div class="kpi-value" id="anKpiProfit">Rs 0</div><div class="kpi-hint">Revenue − Expenses</div></div></div>
+            <div class="kpi-card span-3"><div class="kpi-meta"><div class="kpi-label">Salary Paid</div><div class="kpi-value" id="anKpiSalaryPaid">Rs 0</div><div class="kpi-hint">Paid salaries</div></div></div>
+            <div class="kpi-card span-3"><div class="kpi-meta"><div class="kpi-label">Supplier Payments</div><div class="kpi-value" id="anKpiSupplierPaid">Rs 0</div><div class="kpi-hint">Payments recorded</div></div></div>
+            <div class="kpi-card span-3"><div class="kpi-meta"><div class="kpi-label">Grocery Expenses</div><div class="kpi-value" id="anKpiGrocery">Rs 0</div><div class="kpi-hint">Supplier bills total</div></div></div>
+          </div>
+
+          <div class="grid-3" style="margin-top:14px;">
+            <div class="card dark" style="padding: 14px;">
+              <div class="muted" style="margin-bottom: 6px;">Revenue vs Expenses vs Profit</div>
+              <div class="chart-wrap"><canvas id="anLineRevExpProfit"></canvas></div>
+            </div>
+            <div class="card dark" style="padding: 14px;">
+              <div class="muted" style="margin-bottom: 6px;">Expense Breakdown</div>
+              <div class="chart-wrap"><canvas id="anPieExpenseBreakdown"></canvas></div>
+            </div>
+            <div class="card dark" style="padding: 14px;">
+              <div class="muted" style="margin-bottom: 6px;">Sales Breakdown (Cash/Swiggy/Zomato/Online)</div>
+              <div class="chart-wrap"><canvas id="anBarSalesBreakdown"></canvas></div>
+            </div>
+          </div>
+
+          <div class="grid-3" style="margin-top:12px;">
+            <div class="card dark" style="padding: 14px;">
+              <div class="muted" style="margin-bottom: 6px;">Monthly Salary Payments</div>
+              <div class="chart-wrap"><canvas id="anBarSalaryMonthly"></canvas></div>
+            </div>
+            <div class="card dark" style="padding: 14px;">
+              <div class="muted" style="margin-bottom: 6px;">Supplier Payments Trend</div>
+              <div class="chart-wrap"><canvas id="anLineSupplierPayments"></canvas></div>
+            </div>
+            <div class="card dark" style="padding: 14px;">
+              <div class="muted" style="margin-bottom: 6px;">Profit Trend</div>
+              <div class="chart-wrap"><canvas id="anLineProfitTrend"></canvas></div>
+            </div>
+          </div>
+
+          <div class="card dark" style="margin-top:12px;padding:14px;">
+            <div class="section-title"><h2>Insights</h2><div class="muted">Auto-generated</div></div>
+            <div class="grid-3">
+              <div class="card dark" style="padding:14px;"><div class="muted">Highest expense category</div><div style="font-weight:900;margin-top:6px;" id="anInsightHighestExpense">—</div></div>
+              <div class="card dark" style="padding:14px;"><div class="muted">Most profitable day</div><div style="font-weight:900;margin-top:6px;" id="anInsightBestDay">—</div></div>
+              <div class="card dark" style="padding:14px;"><div class="muted">Loss days</div><div style="font-weight:900;margin-top:6px;" id="anInsightLossDays">—</div></div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="section-title"><h2>Staff Payable (Salary - Advances)</h2></div>
+          <div id="staffPayableTable" class="table-like"></div>
+        </div>
+        <div class="card">
+          <div class="section-title"><h2>Inventory</h2></div>
+          <div class="grid-5">
+            <input id="invItem" placeholder="Item" />
+            <input id="invUnit" placeholder="Unit (kg, pcs...)" />
+            <input id="invQty" type="number" placeholder="Qty" />
+            <input id="invThreshold" type="number" placeholder="Low stock alert" />
+            <button onclick="addInventory()">Save Item</button>
+          </div>
+          <div id="inventoryList" class="list"></div>
+        </div>
+      </div>
+
+      <div id="backup-section" class="dashboard-section">
+        <div class="card">
+          <div class="section-title"><h2>Backup</h2></div>
+          <div class="grid-3">
+            <button onclick="exportData()">Export JSON</button>
+            <label class="card" style="padding: 10px; background: rgba(51, 65, 85, 0.35); color: #e5e7eb;">
+              <div class="muted" style="margin-bottom: 6px;">Import JSON</div>
+              <input type="file" accept="application/json" onchange="restoreData(event)" />
+            </label>
+            <button class="warn" onclick="resetAll()">Reset All Data</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="menu-section" class="dashboard-section">
+        <div class="card">
+          <div class="section-title">
+            <h2>Menu Management</h2>
+            <div class="muted">Add / edit / delete items for POS</div>
+          </div>
+
+          <div class="content-grid" style="grid-template-columns: 1fr; gap: 14px;">
+            <div class="card dark" style="padding: 14px;">
+              <div style="display:flex; gap: 12px; flex-wrap: wrap; align-items:flex-end;">
+                <div style="flex: 1; min-width: 180px;">
+                  <label class="label">Name</label>
+                  <input id="menuName" class="input" placeholder="e.g. Paneer Tikka" />
+                </div>
+                <div style="width: 160px;">
+                  <label class="label">Price</label>
+                  <input id="menuPrice" class="input" type="number" min="0" step="1" placeholder="e.g. 180" />
+                </div>
+                <div style="width: 200px;">
+                  <label class="label">Category</label>
+                  <input id="menuCategory" class="input" placeholder="e.g. Starters" />
+                </div>
+                <div style="flex: 1; min-width: 240px;">
+                  <label class="label">Image (upload)</label>
+                  <input id="menuImageFile" type="file" accept="image/*" class="input" onchange="onMenuImagePicked(event)" />
+                </div>
+                <div style="width: 84px;">
+                  <label class="label">Preview</label>
+                  <img id="menuImagePreview" src="assets/the-kilogram-logo.png" alt="preview" style="width:84px;height:48px;border-radius:12px;object-fit:cover;border:1px solid rgba(255,255,255,0.08);" />
+                </div>
+                <div style="width: 170px;">
+                  <label class="label">Available</label>
+                  <select id="menuAvailable" class="input">
+                    <option value="true">Yes</option>
+                    <option value="false">No</option>
+                  </select>
+                </div>
+                <button class="btn" onclick="saveMenuItem()">Save Item</button>
+                <button class="btn btn-secondary" onclick="resetMenuForm()">Clear</button>
+              </div>
+              <div class="muted" style="margin-top:10px; font-size: 12px;">
+                Tip: Excel columns supported: <b>name</b>, <b>price</b>, <b>category</b>, <b>available</b> (image upload is manual)
+              </div>
+              <div style="display:flex; gap: 10px; flex-wrap: wrap; align-items:center; margin-top: 10px;">
+                <input id="menuExcelFile" type="file" accept=".xlsx,.xls" class="input" style="max-width: 340px;" />
+                <button class="btn btn-secondary" onclick="importMenuExcel()">Import Excel</button>
+                <button class="btn btn-secondary" onclick="refreshMenu()">Refresh</button>
+              </div>
+            </div>
+
+            <div class="card dark" style="padding: 14px;">
+              <div style="display:flex; gap: 12px; flex-wrap: wrap; align-items:flex-end;">
+                <div style="flex: 1; min-width: 240px;">
+                  <label class="label">Search</label>
+                  <input id="menuSearch" class="input" placeholder="Search by name..." oninput="renderMenuList()" />
+                </div>
+                <div style="width: 240px;">
+                  <label class="label">Filter category</label>
+                  <select id="menuCategoryFilter" class="input" onchange="renderMenuList()">
+                    <option value="">All</option>
+                  </select>
+                </div>
+              </div>
+
+              <div id="menuList" class="list" style="margin-top: 12px;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="pos-section" class="dashboard-section">
+        <div class="pos-shell">
+          <div class="pos-topbar">
+            <div class="left">
+              <input id="posSearch" class="pos-search" placeholder="Search menu..." oninput="renderPosMenu()" />
+              <div class="pos-actionsbar">
+                <button class="pos-btn gray" onclick="toggleSidebar()"><span id="posSidebarBtnText">Hide Sidebar</span></button>
+                <button class="pos-btn gray" onclick="posRefreshTodaySales()">Today sales</button>
+              </div>
+            </div>
+            <div class="pos-small">Tap items to add • Fast billing</div>
+          </div>
+
+          <div id="posCategoryChips" class="pos-chiprow"></div>
+
+          <div class="pos-grid">
+            <div class="pos-card">
+              <div id="posMenuGrid" class="pos-menu-grid"></div>
+            </div>
+
+            <div class="pos-card pos-right">
+              <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;">
+                <div>
+                  <div style="font-weight:900;font-size:18px;">Current Order</div>
+                  <div class="pos-small" id="posCartCount">0 items</div>
+                </div>
+                <button class="pos-btn gray" onclick="posClearCart()">Reset</button>
+              </div>
+
+              <div class="pos-kpi-row">
+                <div class="pos-kpi">
+                  <div class="label">Today Cash</div>
+                  <div class="value" id="posTodaySalesCash">Rs 0</div>
+                </div>
+                <div class="pos-kpi">
+                  <div class="label">Today Online</div>
+                  <div class="value" id="posTodaySalesOnline">Rs 0</div>
+                </div>
+              </div>
+              <div class="pos-kpi" style="margin-top:10px;">
+                <div class="label" id="posTodaySalesMeta">Today</div>
+                <div class="value" id="posTodaySalesTotal">Rs 0</div>
+              </div>
+              <div id="posTodaySalesList" class="list" style="margin-top: 10px; max-height: 150px; overflow:auto;"></div>
+
+              <div class="pos-cart-list" id="posCartList"></div>
+
+              <div style="margin-top: 10px;">
+                <div class="pos-small">Order note (optional)</div>
+                <input id="posOrderNote" class="pos-note" placeholder="e.g. table 3 / no onion" />
+              </div>
+
+              <div class="pos-pay-row">
+                <div>
+                  <div class="pos-small">Tax (optional)</div>
+                  <input id="posTax" class="pos-note" type="number" min="0" step="1" value="0" oninput="renderPosCart()" />
+                </div>
+                <div>
+                  <div class="pos-small">Payment mode</div>
+                  <select id="posPayMode" class="pos-note" onchange="renderPosPayment()">
+                    <option value="cash">Cash</option>
+                    <option value="online">Online</option>
+                    <option value="split">Split</option>
+                  </select>
+                </div>
+              </div>
+
+              <div id="posPaySplit" style="display:none; margin-top: 10px;">
+                <div class="pos-pay-row">
+                  <div>
+                    <div class="pos-small">Cash</div>
+                    <input id="posPayCash" class="pos-note" type="number" min="0" step="1" value="0" oninput="renderPosPayment()" />
+                  </div>
+                  <div>
+                    <div class="pos-small">Online</div>
+                    <input id="posPayOnline" class="pos-note" type="number" min="0" step="1" value="0" oninput="renderPosPayment()" />
+                  </div>
+                </div>
+                <div class="pos-small" id="posPayHint" style="margin-top: 8px;"></div>
+              </div>
+
+              <div style="margin-top: 12px;">
+                <div class="pos-small">Subtotal: <b id="posSubtotal">Rs 0</b> • Total: <b id="posTotal">Rs 0</b></div>
+              </div>
+
+              <div style="display:flex; gap: 10px; flex-wrap: wrap; margin-top: 12px;">
+                <button class="pos-btn gray" onclick="posPrintKOT()">Print KOT</button>
+                <button class="pos-btn gray" onclick="posPrintBill()">Print Bill</button>
+                <button class="pos-btn green" onclick="posGenerateBill()">Charge</button>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div id="printArea"></div>
+
+  <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="js/config.js"></script>
+    <script src="js/firebase.js"></script>
+    <script src="js/api.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
