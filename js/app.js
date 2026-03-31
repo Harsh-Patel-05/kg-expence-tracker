@@ -164,7 +164,7 @@ function uniq(arr) {
 
 function sidebarCollapsed() {
   try {
-    return localStorage.getItem("kg_sidebar_collapsed") === "1";
+    return false; // Always show sidebar by default
   } catch {
     return false;
   }
@@ -1409,12 +1409,12 @@ window.posRefreshTodaySales = async function () {
 
 function posStartLiveSales() {
   if (posSalesInterval) return;
-  // render immediately, then poll
+  // render immediately, no auto-refresh
   renderPosTodaySales();
-  posSalesInterval = setInterval(() => {
-    if (activeSection !== "pos") return;
-    window.posRefreshTodaySales?.();
-  }, 12000);
+  // posSalesInterval = setInterval(() => {
+  //   if (activeSection !== "pos") return;
+  //   window.posRefreshTodaySales?.();
+  // }, 12000);
 }
 
 function posStopLiveSales() {
