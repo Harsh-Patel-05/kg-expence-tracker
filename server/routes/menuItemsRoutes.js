@@ -13,6 +13,7 @@ router.post(
   "/",
   [
     body("name").isString().trim().notEmpty(),
+    body("nameHi").optional().isString(),
     body("price").isNumeric(),
     body("category").optional().isString(),
     body("imageUrl").optional().isString(),
@@ -22,10 +23,12 @@ router.post(
   controller.create
 );
 router.post("/bulk", controller.bulkCreate);
+router.delete("/all", controller.deleteAll);
 router.put(
   "/:id",
   [
     body("name").optional().isString(),
+    body("nameHi").optional().isString(),
     body("price").optional().isNumeric(),
     body("category").optional().isString(),
     body("imageUrl").optional().isString(),

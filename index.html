@@ -17,45 +17,45 @@
     
     body {
       font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
-      background: #f6f8fb;
-      color: #0f172a;
+      background: var(--bg-main);
+      color: var(--text-primary);
       min-height: 100vh;
       padding: 20px;
       line-height: 1.6;
     }
     
     :root{
-      /* Backgrounds (light, POS-style) */
-      --bg-main: #f6f8fb;
-      --bg-secondary: #eef2f7;
-      --bg-card: #ffffff;
-      --bg-sidebar: #ffffff;
+      /* SaaS POS theme (Kilogram / QuickFlow style) */
+      --bg-main: #F7FAFC;
+      --bg-secondary: #EDF2F7;
+      --bg-card: #FFFFFF;
+      --bg-sidebar: #FFFFFF;
 
-      /* Primary (Green like reference) */
-      --primary: #10b981;
-      --primary-hover: #0ea371;
-      --primary-glow: rgba(16, 185, 129, 0.12);
-      --primary-shadow: 0 18px 38px rgba(16, 185, 129, 0.18);
+      --primary: #2F855A;
+      --primary-light: #38A169;
+      --primary-hover: #276749;
+      --primary-glow: rgba(47, 133, 90, 0.14);
+      --primary-shadow: 0 18px 38px rgba(47, 133, 90, 0.16);
+      --nav-active-bg: #E8F5E9;
 
-      /* Accent (soft slate) */
-      --accent: #0f172a;
-      --accent-glow: rgba(15, 23, 42, 0.08);
+      --accent-yellow: #ECC94B;
+      --accent-yellow-soft: #F7EFD2;
 
-      /* Text */
-      --text-primary: #0f172a;
-      --text-secondary: #334155;
-      --text-muted: #64748b;
+      --accent: #1A202C;
+      --accent-glow: rgba(26, 32, 44, 0.06);
 
-      /* Status */
-      --profit: #10b981;
-      --expense: #ef4444;
-      --neutral: #2563eb;
-      --cash: #10b981;
+      --text-primary: #1A202C;
+      --text-secondary: #718096;
+      --text-muted: #718096;
 
-      /* UI */
-      --border: rgba(15, 23, 42, 0.10);
-      --shadow: 0 8px 24px rgba(15, 23, 42, 0.08);
-      --shadow-hover: 0 12px 34px rgba(15, 23, 42, 0.12);
+      --profit: #2F855A;
+      --expense: #F56565;
+      --neutral: #3182CE;
+      --cash: #2F855A;
+
+      --border: #E2E8F0;
+      --shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
+      --shadow-hover: 0 12px 34px rgba(0, 0, 0, 0.08);
       --radius: 16px;
       --radius-small: 12px;
       --transition: all 0.2s ease;
@@ -95,8 +95,11 @@
       gap: 0px;
       flex: 1;
       overflow: auto;
+      scrollbar-width: none; /* Firefox */
+      -ms-overflow-style: none; /* IE/Edge legacy */
       padding-bottom: 8px; /* ensures last item stays inside */
     }
+    .nav-list::-webkit-scrollbar{ display:none; } /* Chrome/Safari */
 
     .nav-item{ flex-shrink: 0; }
     
@@ -116,24 +119,24 @@
     
     .nav-item:hover {
       background: var(--primary-glow);
-      color: #065f46;
+      color: var(--primary);
       transform: translateX(4px);
     }
     
     .nav-item.active {
-      background: var(--primary-glow);
-      color: #065f46;
-      border-left: 3px solid var(--primary);
+      background: var(--nav-active-bg);
+      color: var(--text-primary);
+      border-left: 4px solid var(--primary);
       font-weight: 700;
     }
 
     /* POS (clean, light theme like reference) */
     .pos-shell{
-      background: #f6f8fb;
-      border: 1px solid rgba(15, 23, 42, 0.08);
+      background: #fff;
+      border: 1px solid var(--border);
       border-radius: 20px;
       padding: 16px;
-      color: #0f172a;
+      color: var(--text-primary);
     }
     .pos-topbar{
       display:flex;
@@ -153,21 +156,26 @@
     .pos-search{
       flex: 1;
       min-width: 240px;
-      background:#fff;
-      border:1px solid rgba(15,23,42,0.10);
+      background: var(--bg-card);
+      border: 1px solid var(--border);
       border-radius: 14px;
-      padding: 12px 14px;
+      padding: 10px 12px;
       outline:none;
-      font-size: 14px;
+      font-size: 13px;
+      box-shadow: var(--shadow);
+    }
+    .pos-search:focus{
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-glow);
     }
     .pos-actionsbar{ display:flex; gap: 10px; align-items:center; flex-wrap: wrap; }
     .pos-chiprow{ display:flex; gap: 10px; flex-wrap: wrap; margin: 12px 0; }
     .pos-chip{
-      background:#fff;
-      border:1px solid rgba(15,23,42,0.10);
-      color:#0f172a;
-      padding: 10px 14px;
-      border-radius: 14px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      padding: 10px 16px;
+      border-radius: 999px;
       cursor:pointer;
       font-weight: 700;
       font-size: 13px;
@@ -177,116 +185,435 @@
       gap: 10px;
     }
     .pos-chip.active{
-      border-color: rgba(16, 185, 129, 0.35);
-      background: rgba(16, 185, 129, 0.10);
-      color: #065f46;
+      border-color: var(--primary);
+      background: var(--primary);
+      color: #fff;
     }
     .pos-grid{
       display:grid;
-      grid-template-columns: 1fr 420px;
+      grid-template-columns: 1fr minmax(300px, 340px);
       gap: 16px;
       align-items:start;
     }
     .pos-card{
-      background:#fff;
-      border:1px solid rgba(15,23,42,0.10);
+      background: var(--bg-card);
+      border: 1px solid var(--border);
       border-radius: 20px;
       padding: 14px;
-      box-shadow: 0 8px 24px rgba(15, 23, 42, 0.06);
+      box-shadow: var(--shadow);
     }
     .pos-menu-grid{
       display:grid;
       grid-template-columns: repeat(4, minmax(0, 1fr));
-      gap: 14px;
+      gap: 10px;
     }
     .pos-item{
-      border:1px solid rgba(15,23,42,0.10);
-      border-radius: 20px;
+      border: 1px solid var(--border);
+      border-radius: 14px;
       overflow:hidden;
-      background:#fff;
-      box-shadow: 0 8px 22px rgba(15, 23, 42, 0.06);
+      background: var(--bg-card);
+      box-shadow: var(--shadow);
       transition: var(--transition);
       position: relative;
+      cursor: pointer;
     }
-    .pos-item:hover{ transform: translateY(-2px); box-shadow: 0 12px 28px rgba(15, 23, 42, 0.10); }
+    .pos-item:hover{ transform: translateY(-2px); box-shadow: var(--shadow-hover); }
     .pos-item.disabled{ opacity: 0.55; filter: grayscale(1); }
-    .pos-item img{
-      width: 100%;
-      height: 120px;
+    /* POS product card style (like reference screenshot) */
+    .pos-item{
+      border: 1px solid rgba(47,133,90,0.22);
+      border-radius: 18px;
+      overflow:hidden;
+      background: var(--bg-card);
+      box-shadow: var(--shadow);
+      transition: var(--transition);
+      position: relative;
+      cursor: default;
+    }
+    .pos-item:hover{
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-hover);
+      background: var(--nav-active-bg);
+      border-color: rgba(47,133,90,0.35);
+    }
+    .pos-item-media{
+      padding: 16px 10px 8px;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+    }
+    .pos-item-media img{
+      width: 92px;
+      height: 92px;
+      border-radius: 999px;
       object-fit: cover;
-      background: #eef2f7;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
       display:block;
     }
-    .pos-item-body{ padding: 12px; }
-    .pos-item-name{ font-weight: 900; font-size: 14px; color: #0f172a; line-height: 1.2; }
-    .pos-item-sub{ margin-top: 6px; display:flex; justify-content:space-between; gap: 10px; align-items:center; color:#475569; font-size: 12px; }
-    .pos-item-price{ font-weight: 900; color:#0f172a; }
+    .pos-item-body{
+      padding: 0 12px 12px;
+      text-align:center;
+    }
+    .pos-item-name{
+      font-weight: 650;
+      font-size: 13px;
+      color: var(--text-primary);
+      line-height: 1.2;
+      margin-top: 2px;
+      text-wrap: balance;
+    }
+    .pos-item-price{
+      margin-top: 6px;
+      font-weight: 750;
+      color: var(--primary);
+      font-size: 12px;
+    }
+    .pos-add-fab{ display:none; }
     .pos-item-btn{
       margin-top: 10px;
       width: 100%;
       border:none;
-      border-radius: 14px;
+      border-radius: 12px;
       padding: 10px 12px;
       cursor:pointer;
-      font-weight: 900;
-      background: #10b981;
+      font-weight: 800;
+      background: var(--primary);
       color: #fff;
       display:flex;
       align-items:center;
       justify-content:center;
       gap: 10px;
+      letter-spacing: 0.03em;
+      box-shadow: var(--shadow);
+    }
+    .pos-item-btn .pos-item-btn-plus{
+      width: 26px;
+      height: 26px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.22);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
     }
     .pos-item-btn:disabled{ opacity: 0.6; cursor:not-allowed; }
+    .pos-variant-row{
+      display:flex;
+      gap:10px;
+      flex-wrap:nowrap;
+      margin-top:10px;
+      justify-content:center;
+      align-items:center;
+    }
+    .pos-variant-chip{
+      padding: 10px 14px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: #EEF2F7;
+      color: #111827;
+      font-weight: 700;
+      font-size: 13px;
+      cursor: pointer;
+      box-shadow: none;
+      line-height: 1;
+    }
+    .pos-variant-chip.active{
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+    }
     .pos-right{ position: sticky; top: 16px; }
-    .pos-kpi-row{ display:grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
-    .pos-kpi{
-      background: #f8fafc;
-      border: 1px solid rgba(15,23,42,0.08);
+    .pos-today-total{
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
       border-radius: 16px;
       padding: 10px;
+      margin-top: 10px;
+      position: relative;
     }
-    .pos-kpi .label{ font-size: 11px; color:#64748b; }
-    .pos-kpi .value{ font-size: 16px; font-weight: 900; color:#0f172a; margin-top: 4px; }
-    .pos-cart-list{ display:flex; flex-direction:column; gap: 10px; margin-top: 10px; }
-    .pos-cart-row{
-      border: 1px solid rgba(15,23,42,0.10);
-      border-radius: 18px;
+    .pos-today-total .label{ font-size: 11px; color: var(--text-muted); }
+    .pos-today-total .value{ font-size: 16px; font-weight: 700; color: var(--primary); margin-top: 4px; }
+    .pos-today-hover{
+      display:none;
+      position:absolute;
+      right: 10px;
+      top: 10px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 12px;
+      box-shadow: var(--shadow);
+      font-size: 12px;
+      color: var(--text-primary);
+      min-width: 180px;
+      z-index: 5;
+    }
+    .pos-today-total:hover .pos-today-hover{ display:block; }
+
+    /* Pending / preparing tickets */
+    .posTicketsBar{
+      margin-top: 10px;
       padding: 10px;
-      background:#fff;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: #fff;
+      box-shadow: var(--shadow);
     }
-    .pos-cart-top{ display:flex; justify-content:space-between; align-items:flex-start; gap: 10px; }
-    .pos-qty{
+    .posTicketsTop{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .posTicketsTitle{
+      font-size: 12px;
+      font-weight: 800;
+      color: #B45309; /* amber */
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .posTicketsCount{
+      font-size: 12px;
+      font-weight: 900;
+      color: #B91C1C; /* red */
+      background: #FEE2E2;
+      border: 1px solid #FCA5A5;
+      padding: 6px 10px;
+      border-radius: 999px;
+    }
+    .posTicketRow{
+      display:flex;
+      gap: 8px;
+      overflow:auto;
+      padding-bottom: 2px;
+      scrollbar-width: none;
+    }
+    .posTicketRow::-webkit-scrollbar{ display:none; }
+    .posTicket{
+      flex: 0 0 auto;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid #FED7AA;
+      background: #FFFBEB;
+      color: #92400E;
+      font-weight: 800;
+      font-size: 12px;
+      cursor: pointer;
       display:flex;
       align-items:center;
       gap: 8px;
+      box-shadow: none;
+      white-space: nowrap;
+    }
+    .posTicket.preparing{
+      border-color: #FDBA74;
+      background: #FFF7ED;
+    }
+    .posTicket.active{
+      border-color: #FB7185;
+      background: #FFF1F2;
+      color: #9F1239;
+    }
+    .posTicketMeta{
+      opacity: 0.8;
+      font-weight: 800;
+    }
+    .posTicketDot{
+      width: 8px; height: 8px; border-radius: 99px; background:#FB7185;
+    }
+    .posTicket.preparing .posTicketDot{ background:#F59E0B; }
+    .posTicketActions{
+      display:flex;
+      gap: 8px;
+    }
+    .posTicketBtn{
+      padding: 8px 10px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--bg-secondary);
+      font-weight: 800;
+      font-size: 12px;
+      cursor:pointer;
+      box-shadow:none;
+    }
+
+    /* Celebration overlay */
+    .celebrateOverlay{
+      position: fixed;
+      inset: 0;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index: 10050;
+      pointer-events:none;
+      background: rgba(17, 24, 39, 0.10);
+      backdrop-filter: blur(2px);
+    }
+    .celebrateOverlay.show{ display:flex; }
+    .celebrateCard{
+      width: min(520px, calc(100vw - 32px));
+      border-radius: 22px;
+      padding: 22px 22px 18px;
+      background: rgba(255,255,255,0.92);
+      border: 1px solid rgba(226,232,240,0.9);
+      box-shadow: 0 18px 60px rgba(0,0,0,0.16);
+      text-align:center;
+      position: relative;
+      overflow:hidden;
+      transform: scale(.96);
+      animation: popIn .22s cubic-bezier(.2,.9,.2,1) forwards;
+    }
+    @keyframes popIn { to { transform: scale(1); } }
+    .celebrateTitle{ font-size: 18px; font-weight: 800; color: var(--text-primary); }
+    .celebrateSub{ margin-top: 6px; font-size: 13px; color: var(--text-muted); font-weight: 600; }
+    .firework{
+      width: 86px; height: 86px;
+      margin: 10px auto 6px;
+      position: relative;
+      filter: drop-shadow(0 10px 18px rgba(47,133,90,0.20));
+    }
+    .burst{
+      position:absolute;
+      inset: 50% auto auto 50%;
+      width: 10px; height: 10px;
+      margin-left: -5px; margin-top: -5px;
+      border-radius: 999px;
+      background: var(--primary);
+      animation: burstCore .9s ease-out infinite;
+    }
+    @keyframes burstCore{
+      0%{ transform: scale(.4); opacity:.65; }
+      40%{ transform: scale(1.2); opacity:1; }
+      100%{ transform: scale(.6); opacity:.0; }
+    }
+    .spark{
+      position:absolute;
+      inset: 50% auto auto 50%;
+      width: 6px; height: 6px;
+      margin-left:-3px; margin-top:-3px;
+      border-radius: 999px;
+      background: var(--accent-yellow);
+      opacity: 0;
+    }
+    .spark:nth-child(2){ background: #60A5FA; animation: spark 0.9s ease-out infinite; --a:0deg; }
+    .spark:nth-child(3){ background: #34D399; animation: spark 0.9s ease-out infinite; --a:60deg; }
+    .spark:nth-child(4){ background: #F472B6; animation: spark 0.9s ease-out infinite; --a:120deg; }
+    .spark:nth-child(5){ background: #FBBF24; animation: spark 0.9s ease-out infinite; --a:180deg; }
+    .spark:nth-child(6){ background: #A78BFA; animation: spark 0.9s ease-out infinite; --a:240deg; }
+    .spark:nth-child(7){ background: #FB7185; animation: spark 0.9s ease-out infinite; --a:300deg; }
+    @keyframes spark{
+      0%{ transform: rotate(var(--a)) translateX(0px); opacity: 0; }
+      18%{ opacity: 1; }
+      100%{ transform: rotate(var(--a)) translateX(46px); opacity: 0; }
+    }
+    .confetti{
+      position:absolute;
+      inset: -40px 0 auto 0;
+      height: 180px;
+      pointer-events:none;
+      overflow:hidden;
+    }
+    .confetti i{
+      position:absolute;
+      top: -20px;
+      width: 10px; height: 16px;
+      border-radius: 3px;
+      opacity: 0.9;
+      animation: fall 1.35s linear infinite;
+      transform: translateY(-20px) rotate(0deg);
+    }
+    @keyframes fall{
+      to{ transform: translateY(240px) rotate(320deg); opacity: 0.2; }
+    }
+    .pos-cart-list{ display:flex; flex-direction:column; gap: 10px; margin-top: 10px; }
+    .pos-cart-row{
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 8px;
+      background: var(--bg-card);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .pos-cart-head{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap: 10px;
+    }
+    .pos-cart-meta{
+      margin-top: 8px;
+      display:flex;
+      flex-direction:column;
+      gap: 8px;
+    }
+    .pos-qty{
+      display:flex;
+      align-items:center;
+      gap: 6px;
+      flex-shrink: 0;
     }
     .pos-qty button{
-      width: 30px; height: 30px;
-      border-radius: 12px;
-      border: 1px solid rgba(15,23,42,0.12);
-      background:#f8fafc;
+      width: 28px; height: 28px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--bg-secondary);
       cursor:pointer;
-      font-weight: 900;
+      font-weight: 800;
+      color: var(--text-primary);
+      flex: 0 0 28px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      padding: 0;
     }
     .pos-qty .pill{
-      min-width: 34px;
+      min-width: 30px;
       text-align:center;
-      padding: 4px 10px;
+      padding: 3px 8px;
       border-radius: 999px;
-      background: rgba(16,185,129,0.12);
-      border: 1px solid rgba(16,185,129,0.25);
-      font-weight: 900;
-      color:#065f46;
+      background: var(--primary-glow);
+      border: 1px solid rgba(47, 133, 90, 0.25);
+      font-weight: 800;
+      color: var(--primary);
+    }
+    .pos-cart-title{
+      flex: 1;
+      min-width: 0;
+      font-weight: 700;
+      font-size: 14px;
+      line-height: 1.2;
+      word-break: break-word;
+    }
+    .pos-cart-sub{ margin-top: 6px; }
+    .pos-prep-row{ margin-top: 8px; display:flex; gap: 8px; flex-wrap:nowrap; }
+    .pos-prep-btn{
+      padding: 7px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      font-weight: 600;
+      font-size: 12px;
+      cursor:pointer;
+      box-shadow: none;
+    }
+    .pos-prep-btn.active{
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
     }
     .pos-note{
       margin-top: 8px;
       width: 100%;
       border-radius: 14px;
-      border: 1px solid rgba(15,23,42,0.10);
+      border: 1px solid var(--border);
       padding: 10px 12px;
       outline:none;
       font-size: 13px;
-      background:#fff;
+      background: var(--bg-card);
     }
     .pos-pay-row{ display:grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
     .pos-btn{
@@ -296,10 +623,73 @@
       font-weight: 900;
       cursor:pointer;
     }
-    .pos-btn.green{ background:#10b981; color:#fff; }
-    .pos-btn.gray{ background:#f1f5f9; color:#0f172a; border:1px solid rgba(15,23,42,0.10); }
-    .pos-btn.red{ background:#ef4444; color:#fff; }
-    .pos-small{ font-size: 12px; color:#64748b; }
+    button.pos-btn{
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 800;
+    }
+    button.pos-btn:hover{
+      transform: translateY(-1px);
+      opacity: 0.96;
+    }
+    .pos-btn.green{ background: var(--primary); color:#fff; box-shadow: var(--shadow); }
+    .pos-btn.gray{ background: var(--bg-secondary); color: var(--text-primary); border:1px solid var(--border); box-shadow: none; }
+    .pos-btn.hold{ background: var(--accent-yellow-soft); color: var(--text-primary); border:1px solid var(--accent-yellow); box-shadow: none; }
+    .pos-btn.gold{ background: var(--accent-yellow); color: var(--text-primary); border:1px solid rgba(0,0,0,0.06); box-shadow: var(--shadow); }
+    .pos-btn.red{ background: var(--expense); color:#fff; }
+    .pos-small{ font-size: 12px; color: var(--text-muted); }
+    .pos-totals-box{
+      margin-top: 16px;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+    }
+    .pos-total-line{
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+    .pos-total-line b{
+      color: var(--text-primary);
+      font-weight: 800;
+      font-size: 15px;
+    }
+    .pos-total-big{
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 2px;
+      padding-top: 10px;
+      border-top: 2px solid var(--border);
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+    .pos-total-big b{
+      font-size: 24px;
+      font-weight: 900;
+      color: var(--primary);
+      letter-spacing: -0.02em;
+    }
+    .pos-cart-empty{
+      padding: 16px 10px;
+      text-align: center;
+      font-size: 14px;
+      color: var(--text-muted);
+      font-style: italic;
+    }
+    .pos-section-label{
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin: 12px 0 8px;
+    }
 
     @media (max-width: 1200px){
       .pos-menu-grid{ grid-template-columns: repeat(3, minmax(0, 1fr)); }
@@ -326,20 +716,22 @@
       align-items:center;
       justify-content:center;
       border-radius: 8px;
-      background: rgba(255,255,255,0.04);
-      border: 1px solid rgba(255,255,255,0.06);
+      background: var(--primary-glow);
+      border: 1px solid rgba(47, 133, 90, 0.12);
     }
 
     .nav-icon svg{ width: 18px; height: 18px; display:block; }
-    .nav-icon .stroke{ stroke: rgba(255,255,255,0.88); }
-    .nav-icon .fill{ fill: rgba(255,255,255,0.88); }
+    .nav-icon .stroke{ stroke: var(--text-secondary); }
+    .nav-icon .fill{ fill: var(--text-secondary); }
     .nav-icon .accent{ fill: var(--primary); }
 
     .nav-item.active .nav-icon{
-      background: rgba(65,105,225,0.18);
-      border-color: rgba(65,105,225,0.35);
+      background: rgba(47, 133, 90, 0.12);
+      border-color: rgba(47, 133, 90, 0.28);
     }
-    .nav-item.active .nav-icon .accent{ fill: #fff; }
+    .nav-item.active .nav-icon .stroke{ stroke: var(--primary); }
+    .nav-item.active .nav-icon .fill{ fill: var(--primary); opacity: 0.85; }
+    .nav-item.active .nav-icon .accent{ fill: var(--primary); }
     
     .nav-item.secondary {
       background: var(--bg-secondary);
@@ -354,7 +746,22 @@
       gap: 20px; 
     }
 
-    body.sidebar-collapsed .sidebar{ display:none; }
+    /* Sidebar collapse: show icon-only rail (not fully hidden) */
+    body.sidebar-collapsed .sidebar{ display:block; width: 84px; }
+    body.sidebar-collapsed .sidebar .card{ padding: 16px 10px; }
+    body.sidebar-collapsed .sidebar .section-title{ margin-bottom: 14px !important; padding: 8px 0 !important; }
+    body.sidebar-collapsed .sidebar img{ display:none; }
+    body.sidebar-collapsed .nav-list{ padding-bottom: 0; }
+    body.sidebar-collapsed .nav-item{
+      justify-content: center;
+      padding: 12px 10px;
+      gap: 0;
+      margin-bottom: 10px;
+      transform: none;
+    }
+    body.sidebar-collapsed .nav-item:hover{ transform: none; }
+    body.sidebar-collapsed .nav-item span:last-child{ display:none; }
+    body.sidebar-collapsed .nav-icon{ width: 36px; height: 36px; border-radius: 12px; }
     body.sidebar-collapsed .page{ max-width: 1600px; }
     
     .card {
@@ -370,7 +777,7 @@
     .card:hover {
       transform: translateY(-4px);
       box-shadow: var(--shadow-hover);
-      border-color: rgba(16, 185, 129, 0.25);
+      border-color: rgba(47, 133, 90, 0.22);
     }
     
     /* Dashboard premium layout */
@@ -391,7 +798,7 @@
       font-size: 32px; 
       font-weight: 800; 
       letter-spacing: -0.02em; 
-      color: #0f172a;
+      color: var(--text-primary);
     }
     
     .dash-sub{
@@ -432,7 +839,7 @@
     .seg button:hover{
       transform: translateY(-2px); 
       background: var(--primary-glow); 
-      color: #065f46;
+      color: var(--primary);
     }
     
     .seg button.active{
@@ -906,7 +1313,7 @@
     button.secondary:hover {
       background: var(--primary-glow);
       border-color: var(--primary);
-      color: #065f46 !important;
+      color: var(--primary) !important;
     }
     
     button.warn {
@@ -923,7 +1330,7 @@
 
     /* Dark scrollbars */
     ::-webkit-scrollbar{width:10px;height:10px}
-    ::-webkit-scrollbar-thumb{background:rgba(16,185,129,0.65);border-radius:50px;border:3px solid transparent;background-clip:padding-box}
+    ::-webkit-scrollbar-thumb{background:rgba(47,133,90,0.55);border-radius:50px;border:3px solid transparent;background-clip:padding-box}
     ::-webkit-scrollbar-track{background:var(--bg-secondary)}
 
     /* --- Suppliers UX upgrades --- */
@@ -954,8 +1361,8 @@
       transition: var(--transition);
       box-shadow: none;
     }
-    .tabBtn:hover{ background: var(--primary-glow); border-color: rgba(16,185,129,.35); transform: translateY(-1px); color:#065f46; }
-    .tabBtn.active{ background: var(--primary); border-color: rgba(16,185,129,.55); color:#fff; }
+    .tabBtn:hover{ background: var(--primary-glow); border-color: rgba(47,133,90,.35); transform: translateY(-1px); color: var(--primary); }
+    .tabBtn.active{ background: var(--primary); border-color: rgba(47,133,90,.45); color:#fff; }
 
     /* Legacy "dark" blocks should look like light cards now */
     .dark{
@@ -1044,8 +1451,8 @@
     <div class="sidebar">
       <div class="card dark">
         <div class="section-title" style="margin-bottom:25px; padding: 20px 0;">
-          <div style="display:flex; flex-direction:column; align-items:center; gap:15px;">
-            <img src="assets/the-kilogram-logo.png" alt="The Kilogram logo" class="logo-bounce" style="width:80%;height:auto;border-radius:0px;object-fit:cover;border:none;" />
+          <div style="display:flex; flex-direction:column; align-items:center; gap:12px;">
+            <img src="assets/the-kilogram-logo.png" alt="The Kilogram logo" class="logo-bounce" style="width:68%;height:auto;border-radius:0px;object-fit:cover;border:none;" />
           </div>
         </div>
         <div class="nav-list">
@@ -1635,6 +2042,10 @@
                   <label class="label">Name</label>
                   <input id="menuName" class="input" placeholder="e.g. Paneer Tikka" />
                 </div>
+                <div style="flex: 1; min-width: 180px;">
+                  <label class="label">Hindi name (optional)</label>
+                  <input id="menuNameHi" class="input" placeholder="e.g. पनीर टिक्का" />
+                </div>
                 <div style="width: 160px;">
                   <label class="label">Price</label>
                   <input id="menuPrice" class="input" type="number" min="0" step="1" placeholder="e.g. 180" />
@@ -1662,12 +2073,15 @@
                 <button class="btn btn-secondary" onclick="resetMenuForm()">Clear</button>
               </div>
               <div class="muted" style="margin-top:10px; font-size: 12px;">
-                Tip: Excel columns supported: <b>name</b>, <b>price</b>, <b>category</b>, <b>available</b> (image upload is manual)
+                Import <b>.xlsx</b>: columns <b>name</b> + <b>price</b> (also accepts <b>Rate</b>, <b>MRP</b>, <b>Amount</b>, <b>Rs</b>).
+                Prices can be <b>120</b>, <b>Rs 120</b>, <b>₹1,200</b>, or <b>200/-</b>. Optional: <b>category</b>, <b>available</b>. Images: add manually per item.
+                Starter file: <b>data/kilogram-takeaway-menu-template.csv</b> (open in Excel, save as .xlsx).
               </div>
               <div style="display:flex; gap: 10px; flex-wrap: wrap; align-items:center; margin-top: 10px;">
-                <input id="menuExcelFile" type="file" accept=".xlsx,.xls" class="input" style="max-width: 340px;" />
-                <button class="btn btn-secondary" onclick="importMenuExcel()">Import Excel</button>
+                <input id="menuExcelFile" type="file" accept=".xlsx,.xls,.csv" class="input" style="max-width: 340px;" />
+                <button class="btn btn-secondary" onclick="importMenuExcel()">Import Excel / CSV</button>
                 <button class="btn btn-secondary" onclick="refreshMenu()">Refresh</button>
+                <button class="warn" type="button" onclick="clearAllMenuItems()">Clear entire menu</button>
               </div>
             </div>
 
@@ -1692,13 +2106,14 @@
       </div>
 
       <div id="pos-section" class="dashboard-section">
-        <div class="pos-shell">
+        <div class="pos-shell" style="position:relative;">
           <div class="pos-topbar">
             <div class="left">
               <input id="posSearch" class="pos-search" placeholder="Search menu..." oninput="renderPosMenu()" />
               <div class="pos-actionsbar">
                 <button class="pos-btn gray" onclick="toggleSidebar()"><span id="posSidebarBtnText">Hide Sidebar</span></button>
-                <button class="pos-btn gray" onclick="posRefreshTodaySales()">Today sales</button>
+                <button class="pos-btn gray" type="button" onclick="posShowHistory()">History</button>
+                <button class="pos-btn gray" type="button" onclick="clearAppCache()">Clear cache</button>
               </div>
             </div>
             <div class="pos-small">Tap items to add • Fast billing</div>
@@ -1720,22 +2135,28 @@
                 <button class="pos-btn gray" onclick="posClearCart()">Reset</button>
               </div>
 
-              <div class="pos-kpi-row">
-                <div class="pos-kpi">
-                  <div class="label">Today Cash</div>
-                  <div class="value" id="posTodaySalesCash">Rs 0</div>
+              <div class="posTicketsBar" id="posTicketsBar" style="display:none;">
+                <div class="posTicketsTop">
+                  <div class="posTicketsTitle">Pending / Preparing</div>
+                  <div class="posTicketsCount"><span id="posTicketsCount">0</span> pending</div>
                 </div>
-                <div class="pos-kpi">
-                  <div class="label">Today Online</div>
-                  <div class="value" id="posTodaySalesOnline">Rs 0</div>
+                <div class="posTicketRow" id="posTicketsRow"></div>
+                <div class="posTicketActions" style="margin-top:10px;">
+                  <button class="posTicketBtn" type="button" onclick="posNewTicket()">New order</button>
+                  <button class="posTicketBtn" type="button" onclick="posClearTickets()">Clear tickets</button>
                 </div>
               </div>
-              <div class="pos-kpi" style="margin-top:10px;">
-                <div class="label" id="posTodaySalesMeta">Today</div>
-                <div class="value" id="posTodaySalesTotal">Rs 0</div>
-              </div>
-              <div id="posTodaySalesList" class="list" style="margin-top: 10px; max-height: 150px; overflow:auto;"></div>
 
+              <div class="pos-today-total" id="posTodayTotalBox" title="Hover to see cash/online split">
+                <div class="label" id="posTodaySalesMeta">Today total sales</div>
+                <div class="value" id="posTodaySalesTotal">Rs 0</div>
+                <div class="pos-today-hover" id="posTodayHover">
+                  <div style="display:flex;justify-content:space-between;gap:10px;"><span>Cash</span><b id="posTodaySalesCash">Rs 0</b></div>
+                  <div style="display:flex;justify-content:space-between;gap:10px;margin-top:6px;"><span>Online</span><b id="posTodaySalesOnline">Rs 0</b></div>
+                </div>
+              </div>
+
+              <div class="pos-section-label">Cart</div>
               <div class="pos-cart-list" id="posCartList"></div>
 
               <div style="margin-top: 10px;">
@@ -1743,11 +2164,7 @@
                 <input id="posOrderNote" class="pos-note" placeholder="e.g. table 3 / no onion" />
               </div>
 
-              <div class="pos-pay-row">
-                <div>
-                  <div class="pos-small">Tax (optional)</div>
-                  <input id="posTax" class="pos-note" type="number" min="0" step="1" value="0" oninput="renderPosCart()" />
-                </div>
+              <div class="pos-pay-row" style="grid-template-columns: 1fr;">
                 <div>
                   <div class="pos-small">Payment mode</div>
                   <select id="posPayMode" class="pos-note" onchange="renderPosPayment()">
@@ -1755,6 +2172,24 @@
                     <option value="online">Online</option>
                     <option value="split">Split</option>
                   </select>
+                </div>
+              </div>
+
+              <div style="margin-top: 12px;">
+                <div class="pos-section-label" style="margin-top:0;">Quick add (custom)</div>
+                <div class="pos-pay-row" style="grid-template-columns: 1.3fr .7fr; margin-top: 0;">
+                  <div>
+                    <div class="pos-small">Item name</div>
+                    <input id="posCustomName" class="pos-note" placeholder="e.g. Pau Extra" />
+                  </div>
+                  <div>
+                    <div class="pos-small">Price</div>
+                    <input id="posCustomPrice" class="pos-note" type="number" min="0" step="1" placeholder="e.g. 10" />
+                  </div>
+                </div>
+                <div style="display:flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
+                  <button class="pos-btn gray" type="button" onclick="posAddCustomItem()">Add to cart</button>
+                  <button class="pos-btn gray" type="button" onclick="posCustomFillPau()">+ Pau Extra</button>
                 </div>
               </div>
 
@@ -1772,14 +2207,24 @@
                 <div class="pos-small" id="posPayHint" style="margin-top: 8px;"></div>
               </div>
 
-              <div style="margin-top: 12px;">
-                <div class="pos-small">Subtotal: <b id="posSubtotal">Rs 0</b> • Total: <b id="posTotal">Rs 0</b></div>
+              <div class="pos-totals-box">
+                <div class="pos-total-line"><span>Subtotal</span><b id="posSubtotal">Rs 0</b></div>
+                <div class="pos-total-line" style="align-items:flex-start;">
+                  <span>Adjustment</span>
+                  <div style="display:flex; gap:8px; align-items:center;">
+                    <input id="posAdjust" class="pos-note" style="margin-top:0; width: 130px; padding: 8px 10px; font-size: 13px;" type="number" step="1" value="0" oninput="renderPosCart(); renderPosPayment();" />
+                  </div>
+                </div>
+                <div class="pos-total-big"><span>Total</span><b id="posTotal">Rs 0</b></div>
               </div>
 
-              <div style="display:flex; gap: 10px; flex-wrap: wrap; margin-top: 12px;">
-                <button class="pos-btn gray" onclick="posPrintKOT()">Print KOT</button>
-                <button class="pos-btn gray" onclick="posPrintBill()">Print Bill</button>
-                <button class="pos-btn green" onclick="posGenerateBill()">Charge</button>
+              <div style="display:flex; gap: 10px; flex-wrap: wrap; margin-top: 14px;">
+                <button class="pos-btn gray" type="button" onclick="posPrintKOT()">Print KOT</button>
+                <button class="pos-btn gray" type="button" onclick="posPrintBill()">Print Bill</button>
+                <button class="pos-btn hold" type="button" onclick="posHoldOrder()">Hold</button>
+              </div>
+              <div style="margin-top: 12px;">
+                <button class="pos-btn green" type="button" style="width:100%; padding: 12px; font-size: 15px;" onclick="posGenerateBill()">Charge</button>
               </div>
             </div>
           </div>
@@ -1789,6 +2234,33 @@
   </div>
 
   <div id="printArea"></div>
+
+  <div id="celebrateOverlay" class="celebrateOverlay" aria-hidden="true">
+    <div class="celebrateCard">
+      <div class="confetti" id="confettiWrap"></div>
+      <div class="firework" aria-hidden="true">
+        <div class="burst"></div>
+        <div class="spark"></div>
+        <div class="spark"></div>
+        <div class="spark"></div>
+        <div class="spark"></div>
+        <div class="spark"></div>
+        <div class="spark"></div>
+      </div>
+      <div class="celebrateTitle">Order completed</div>
+      <div class="celebrateSub" id="celebrateSub">Saved successfully</div>
+    </div>
+  </div>
+
+  <div id="orderHistoryOverlay" class="modalOverlay" role="dialog" aria-modal="true" aria-label="Order history">
+    <div class="modal">
+      <div class="modalHeader">
+        <div class="modalTitle">Order history</div>
+        <button class="btn btn-secondary" type="button" onclick="posCloseHistory()">Close</button>
+      </div>
+      <div class="modalBody" id="orderHistoryBody"></div>
+    </div>
+  </div>
 
   <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>

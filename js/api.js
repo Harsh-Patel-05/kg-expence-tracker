@@ -35,6 +35,7 @@
           const res = await fetchJson("/api/menu-items/bulk", { method: "POST", body: JSON.stringify({ items }) });
           return Array.isArray(res?.items) ? res.items : [];
         },
+        removeAll: () => fetchJson("/api/menu-items/all", { method: "DELETE" }),
         update: (id, body) => fetchJson(`/api/menu-items/${id}`, { method: "PUT", body: JSON.stringify(body) }),
         remove: (id) => fetchJson(`/api/menu-items/${id}`, { method: "DELETE" })
       },
@@ -43,7 +44,8 @@
           const q = params && params.date ? `?date=${encodeURIComponent(params.date)}` : "";
           return fetchJson(`/api/orders${q}`, { method: "GET" });
         },
-        create: (body) => fetchJson("/api/orders", { method: "POST", body: JSON.stringify(body) })
+        create: (body) => fetchJson("/api/orders", { method: "POST", body: JSON.stringify(body) }),
+        remove: (id) => fetchJson(`/api/orders/${id}`, { method: "DELETE" })
       },
       sales: {
         list: () => fetchJson("/api/sales", { method: "GET" }),
@@ -139,7 +141,9 @@
     // Retry a few times in case scripts load slowly.
     window.__apiInitAttempts = (window.__apiInitAttempts || 0) + 1;
     if (window.__apiInitAttempts <= 40) return setTimeout(initApi, 50);
-    console.error("Firestore API not initialized: window.firebaseDB is missing.");
+    console.error("Firestore API not initialized: window.firebaseDB is missing. Falling back to backend API.");
+    window.__firebaseInitError = true;
+    window.api = buildBackendApi();
     return;
   }
 
@@ -155,18 +159,83 @@
     importAllData
   } = fb;
 
+  function getLocallyDeletedIds() {
+    try {
+      const raw = localStorage.getItem("kg_deleted_orders_v1");
+      const arr = raw ? JSON.parse(raw) : [];
+      return Array.isArray(arr) ? arr.map((x) => String(x)) : [];
+    } catch {
+      return [];
+    }
+  }
+
+  function addLocallyDeletedId(id) {
+    const oid = String(id || "").trim();
+    if (!oid) return;
+    try {
+      const cur = new Set(getLocallyDeletedIds());
+      cur.add(oid);
+      localStorage.setItem("kg_deleted_orders_v1", JSON.stringify(Array.from(cur).slice(-500)));
+    } catch {}
+  }
+
   // Keep the existing API shape used by `js/app.js` (window.api.*).
   const api = {
     menuItems: {
       list: () => getData("menuItems"),
       create: (body) => addData("menuItems", body),
+      bulkCreate: async (items) => {
+        for (const it of items) {
+          const name = String(it?.name || "").trim();
+          if (!name) continue;
+          const price = Number(it?.price);
+          if (!Number.isFinite(price) || price < 0) continue;
+          await addData("menuItems", {
+            name,
+            nameHi: String(it?.nameHi || "").trim(),
+            price,
+            category: String(it?.category || "General").trim() || "General",
+            imageUrl: String(it?.imageUrl || "").trim(),
+            available: it?.available !== false
+          });
+        }
+        return getData("menuItems");
+      },
+      removeAll: async () => {
+        const docs = await getData("menuItems");
+        await Promise.all(docs.map((d) => deleteData("menuItems", d.id)));
+        return { deletedCount: docs.length };
+      },
       update: (id, body) => updateData("menuItems", id, body),
       remove: (id) => deleteData("menuItems", id)
     },
     orders: {
-      list: () => getData("orders"),
+      list: async (params) => {
+        const all = await getData("orders");
+        const list = Array.isArray(all) ? all : [];
+        const localDel = new Set(getLocallyDeletedIds());
+        const filtered = list.filter((o) => o && o.deleted !== true && !localDel.has(String(o.id || "")));
+        const date = params && params.date ? String(params.date).slice(0, 10) : "";
+        return date ? filtered.filter((o) => String(o.date || "").slice(0, 10) === date) : filtered;
+      },
       create: (body) => addData("orders", body),
-      remove: (id) => deleteData("orders", id)
+      remove: async (id) => {
+        // Always hide it locally immediately (POS must move fast).
+        addLocallyDeletedId(id);
+        try {
+          return await deleteData("orders", id);
+        } catch (e) {
+          // If Firestore rules block deletes, do a soft-delete (update) instead.
+          // This keeps history clean without needing delete permissions.
+          try {
+            await updateData("orders", id, { deleted: true, deletedAt: new Date().toISOString() });
+            return { ok: true, id, soft: true };
+          } catch {
+            // Last resort: backend delete (works only for Mongo ObjectIds)
+            return await fetchJson(`/api/orders/${encodeURIComponent(id)}`, { method: "DELETE" });
+          }
+        }
+      }
     },
     sales: {
       list: () => getData("sales"),

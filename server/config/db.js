@@ -9,7 +9,10 @@ async function connectDB() {
     throw new Error("MONGODB_URI is not set in environment");
   }
   mongoose.set("strictQuery", true);
-  await mongoose.connect(uri);
+  await mongoose.connect(uri, {
+    serverSelectionTimeoutMS: 5000,
+    connectTimeoutMS: 5000
+  });
   return mongoose.connection;
 }
 

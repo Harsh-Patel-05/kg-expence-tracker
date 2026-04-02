@@ -5,6 +5,7 @@ function toDto(doc) {
   return {
     id: doc._id.toString(),
     name: doc.name,
+    nameHi: doc.nameHi || "",
     price: doc.price,
     category: doc.category,
     imageUrl: doc.imageUrl,
@@ -17,10 +18,11 @@ async function create(req, res) {
   const errors = validationResult(req);
   if (!errors.isEmpty()) return res.status(400).json({ message: "Validation failed", errors: errors.array() });
   try {
-    const { name, price, category, imageUrl, available } = req.body;
+    const { name, nameHi, price, category, imageUrl, available } = req.body;
     const doc = await MenuItem.create({
       userId: req.user.id,
       name: String(name).trim(),
+      nameHi: String(nameHi || "").trim(),
       price: Number(price),
       category: String(category || "General").trim() || "General",
       imageUrl: String(imageUrl || "").trim(),
@@ -41,6 +43,7 @@ async function bulkCreate(req, res) {
       .map((r) => ({
         userId: req.user.id,
         name: String(r?.name || "").trim(),
+        nameHi: String(r?.nameHi || r?.name_hi || "").trim(),
         price: Number(r?.price || 0),
         category: String(r?.category || "General").trim() || "General",
         imageUrl: String(r?.imageUrl || "").trim(),
@@ -85,6 +88,7 @@ async function update(req, res) {
       if (!name) return res.status(400).json({ message: "Name cannot be empty" });
       patch.name = name;
     }
+    if (req.body.nameHi !== undefined) patch.nameHi = String(req.body.nameHi || "").trim();
     if (req.body.price !== undefined) patch.price = Number(req.body.price);
     if (req.body.category !== undefined) patch.category = String(req.body.category || "General").trim() || "General";
     if (req.body.imageUrl !== undefined) patch.imageUrl = String(req.body.imageUrl || "").trim();
@@ -109,5 +113,14 @@ async function remove(req, res) {
   }
 }
 
-module.exports = { create, bulkCreate, list, update, remove };
+async function deleteAll(req, res) {
+  try {
+    const r = await MenuItem.deleteMany({ userId: req.user.id });
+    return res.json({ deletedCount: r.deletedCount });
+  } catch (e) {
+    return res.status(500).json({ message: "Failed to clear menu" });
+  }
+}
+
+module.exports = { create, bulkCreate, list, update, remove, deleteAll };
 

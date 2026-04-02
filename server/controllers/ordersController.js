@@ -1,6 +1,5 @@
 const { validationResult } = require("express-validator");
 const Order = require("../models/Order");
-const Sale = require("../models/Sale");
 
 function num(v) {
   const n = Number(v);
@@ -56,32 +55,6 @@ async function create(req, res) {
       return res.status(400).json({ message: "Payment mismatch: cash + online must equal total" });
     }
 
-    // Create Sale in the existing split format
-    const onlineAmount = online;
-    const cashAmount = cash;
-    const totalAmount = total;
-    let method = "cash";
-    if (cashAmount > 0 && onlineAmount > 0) method = "mixed";
-    else if (onlineAmount > 0) method = "online";
-
-    const saleNotesParts = [];
-    if (body.notes) saleNotesParts.push(String(body.notes).trim());
-    saleNotesParts.push(`POS Order (${normalizedItems.length} items)`);
-
-    const sale = await Sale.create({
-      userId: req.user.id,
-      date,
-      amount: totalAmount,
-      method,
-      cashAmount,
-      swiggyAmount: 0,
-      zomatoAmount: 0,
-      otherOnlineAmount: onlineAmount,
-      onlineAmount,
-      totalAmount,
-      notes: saleNotesParts.filter(Boolean).join(" | ")
-    });
-
     const order = await Order.create({
       userId: req.user.id,
       date,
@@ -90,11 +63,10 @@ async function create(req, res) {
       subtotal,
       tax,
       total,
-      payment: { cash: cashAmount, online: onlineAmount },
-      saleId: sale._id
+      payment: { cash, online }
     });
 
-    return res.status(201).json({ order: toDto(order), saleId: sale._id.toString() });
+    return res.status(201).json({ order: toDto(order), saleId: "" });
   } catch (e) {
     return res.status(500).json({ message: "Failed to create order" });
   }
@@ -111,5 +83,17 @@ async function list(req, res) {
   }
 }
 
-module.exports = { create, list };
+async function remove(req, res) {
+  try {
+    const id = String(req.params.id || "").trim();
+    if (!id) return res.status(400).json({ message: "id is required" });
+    const deleted = await Order.findOneAndDelete({ _id: id, userId: req.user.id });
+    if (!deleted) return res.status(404).json({ message: "Order not found" });
+    return res.json({ ok: true, id });
+  } catch (e) {
+    return res.status(500).json({ message: "Failed to delete order" });
+  }
+}
+
+module.exports = { create, list, remove };
 

@@ -6,28 +6,37 @@ export default {
     extend: {
       colors: {
         bg: {
-          0: "#0B1220",
-          1: "#0A1020",
-          2: "#0F172A"
+          0: "#F7FAFC"
         },
         card: {
-          0: "rgba(255,255,255,0.05)",
-          1: "rgba(255,255,255,0.08)"
+          0: "#FFFFFF",
+          1: "#FFFFFF"
         },
         stroke: {
-          0: "rgba(148,163,184,0.18)",
-          1: "rgba(34,211,238,0.22)"
+          0: "#E2E8F0",
+          1: "rgba(226,232,240,0.85)"
+        },
+        text: {
+          primary: "#1A202C",
+          secondary: "#718096"
+        },
+        primary: {
+          DEFAULT: "#2F855A",
+          light: "#38A169"
+        },
+        cta: {
+          yellow: "#ECC94B"
         },
         accent: {
-          cyan: "#22D3EE",
-          blue: "#60A5FA",
-          indigo: "#6366F1"
+          cyan: "#2F855A",
+          blue: "#38A169",
+          indigo: "#2F855A"
         }
       },
       boxShadow: {
-        panel: "0 10px 30px rgba(0,0,0,0.35)",
-        neonCyan: "0 0 0 1px rgba(34,211,238,0.18), 0 0 24px rgba(34,211,238,0.14)",
-        neonBlue: "0 0 0 1px rgba(96,165,250,0.16), 0 0 24px rgba(96,165,250,0.12)"
+        panel: "0 4px 12px rgba(0,0,0,0.05)",
+        neonCyan: "0 0 0 1px rgba(47,133,90,0.18), 0 6px 18px rgba(47,133,90,0.10)",
+        neonBlue: "0 0 0 1px rgba(56,161,105,0.16), 0 6px 18px rgba(56,161,105,0.10)"
       }
     }
   },

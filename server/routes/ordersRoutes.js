@@ -1,5 +1,5 @@
 const express = require("express");
-const { body } = require("express-validator");
+const { body, param } = require("express-validator");
 const { authMiddleware } = require("../middleware/auth");
 const { validateRequest } = require("../middleware/validateRequest");
 const controller = require("../controllers/ordersController");
@@ -24,6 +24,8 @@ router.post(
   validateRequest,
   controller.create
 );
+
+router.delete("/:id", [param("id").isMongoId(), validateRequest], controller.remove);
 
 module.exports = router;
 

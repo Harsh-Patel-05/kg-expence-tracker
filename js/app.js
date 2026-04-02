@@ -5,6 +5,132 @@ function num(v) {
   return Number.isFinite(n) ? n : 0;
 }
 
+/** Parse price from Excel cells: 120, "120", "Rs 120", "₹1,200", "200/-" */
+function parseMenuPrice(value) {
+  if (value == null || value === "") return NaN;
+  if (typeof value === "number" && Number.isFinite(value)) return value;
+  let s = String(value).trim();
+  s = s.replace(/^\u20b9\s*/i, "").replace(/^rs\.?\s*/i, "").replace(/,/g, "").replace(/\/-?\s*$/i, "").trim();
+  const n = parseFloat(s);
+  return Number.isFinite(n) ? n : NaN;
+}
+
+function normalizeExcelRow(r) {
+  const o = {};
+  for (const k of Object.keys(r || {})) o[String(k).trim()] = r[k];
+  return o;
+}
+
+function pickMenuName(r) {
+  const keys = [
+    "name",
+    "Name",
+    "NAME",
+    "item",
+    "Item",
+    "ITEM",
+    "dish",
+    "Dish",
+    "menu",
+    "Menu",
+    "Item Name",
+    "Menu Item",
+    "Product"
+  ];
+  for (const k of keys) {
+    if (r[k] != null && String(r[k]).trim()) return String(r[k]).trim();
+  }
+  const first = Object.keys(r).find((k) => {
+    const v = r[k];
+    return typeof v === "string" && String(v).trim() && Number.isNaN(parseMenuPrice(v));
+  });
+  return first ? String(r[first]).trim() : "";
+}
+
+function pickMenuPrice(r) {
+  const keys = [
+    "price",
+    "Price",
+    "PRICE",
+    "rate",
+    "Rate",
+    "RATE",
+    "mrp",
+    "MRP",
+    "amount",
+    "Amount",
+    "AMOUNT",
+    "rs",
+    "Rs",
+    "RS",
+    "Cost",
+    "cost"
+  ];
+  for (const k of keys) {
+    if (r[k] === undefined || r[k] === "") continue;
+    const p = parseMenuPrice(r[k]);
+    if (Number.isFinite(p) && p >= 0) return p;
+  }
+  for (const k of Object.keys(r)) {
+    if (!/price|rate|mrp|amount|rs|cost|amt|inr|rupee/i.test(String(k))) continue;
+    const p = parseMenuPrice(r[k]);
+    if (Number.isFinite(p) && p >= 0 && p <= 999999) return p;
+  }
+  return NaN;
+}
+
+function pickMenuCategory(r) {
+  const keys = ["category", "Category", "CATEGORY", "cat", "Cat", "Type", "type"];
+  for (const k of keys) {
+    if (r[k] != null && String(r[k]).trim()) return String(r[k]).trim();
+  }
+  return "General";
+}
+
+function prepLabel(prep, lang) {
+  const p = String(prep || "regular");
+  if (lang === "hi") {
+    if (p === "swaminarayan") return "स्वामिनारायण";
+    return "रेग";
+  }
+  if (p === "swaminarayan") return "Swaminarayan";
+  return "Regular";
+}
+
+function deriveBaseAndVariant(name) {
+  const raw = String(name || "").trim();
+  // match: "(500 gms)" or "500 gms" or "1 kg" at end
+  const m =
+    raw.match(/\((\s*\d+(?:\.\d+)?\s*(?:kg|g|gm|gms)\s*)\)\s*$/i) ||
+    raw.match(/(?:-|–|—)\s*(\d+(?:\.\d+)?\s*(?:kg|g|gm|gms))\s*$/i) ||
+    raw.match(/\s(\d+(?:\.\d+)?\s*(?:kg|g|gm|gms))\s*$/i);
+  if (!m) return { base: raw, variant: "" };
+  const variant = String(m[1] || "").trim().replace(/\s+/g, " ");
+  const base = raw
+    .replace(m[0], "")
+    .trim()
+    .replace(/\s+/g, " ");
+  return { base: base || raw, variant };
+}
+
+function variantToGrams(variant) {
+  const s = String(variant || "").trim().toLowerCase();
+  const m = s.match(/(\d+(?:\.\d+)?)\s*(kg|g|gm|gms)\b/);
+  if (!m) return null;
+  const n = parseFloat(m[1]);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  const unit = m[2];
+  if (unit === "kg") return Math.round(n * 1000);
+  return Math.round(n);
+}
+
+function normalizeKey(s) {
+  return String(s || "")
+    .trim()
+    .toLowerCase()
+    .replace(/\s+/g, " ");
+}
+
 function money(v) {
   return `Rs ${num(v).toLocaleString("en-IN")}`;
 }
@@ -126,6 +252,160 @@ let editSupplierState = { id: null, name: "", items: [] };
 
 // POS state (in-memory)
 let posCart = []; // [{menuItemId,id,name,price,qty,note}]
+let posTickets = []; // [{id,status,createdAt,cart,note,payMode,payCash,payOnline}]
+let posActiveTicketId = "";
+
+function loadPosTickets() {
+  try {
+    const raw = localStorage.getItem("kg_pos_tickets_v1");
+    const arr = raw ? JSON.parse(raw) : [];
+    posTickets = Array.isArray(arr) ? arr : [];
+  } catch {
+    posTickets = [];
+  }
+}
+
+function savePosTickets() {
+  try {
+    localStorage.setItem("kg_pos_tickets_v1", JSON.stringify(posTickets.slice(0, 50)));
+  } catch {}
+}
+
+function ticketSummary(t) {
+  const cart = Array.isArray(t.cart) ? t.cart : [];
+  const count = cart.reduce((s, it) => s + num(it.qty), 0);
+  const total = cart.reduce((s, it) => s + num(it.price) * num(it.qty), 0);
+  return { count, total };
+}
+
+function renderPosTickets() {
+  const bar = document.getElementById("posTicketsBar");
+  const row = document.getElementById("posTicketsRow");
+  const cnt = document.getElementById("posTicketsCount");
+  if (!bar || !row || !cnt) return;
+  if (!posTickets.length) {
+    bar.style.display = "none";
+    return;
+  }
+  bar.style.display = "block";
+  cnt.textContent = String(posTickets.length);
+  row.innerHTML = posTickets
+    .slice()
+    .sort((a, b) => num(b.createdAt) - num(a.createdAt))
+    .map((t) => {
+      const { count, total } = ticketSummary(t);
+      const active = t.id === posActiveTicketId;
+      const st = String(t.status || "pending");
+      const cls = `posTicket ${st === "preparing" ? "preparing" : ""} ${active ? "active" : ""}`;
+      const label = st === "preparing" ? "Preparing" : "Pending";
+      return `<div class="${cls}" role="button" tabindex="0" data-ticket-id="${escapeHtml(String(t.id))}">
+        <span class="posTicketDot" aria-hidden="true"></span>
+        <span>#${escapeHtml(String(t.id).slice(-4))}</span>
+        <span class="posTicketMeta">${escapeHtml(label)}</span>
+        <span class="posTicketMeta">${count} items</span>
+        <span class="posTicketMeta">${escapeHtml(money(total))}</span>
+      </div>`;
+    })
+    .join("");
+}
+
+// Make ticket chips reliably clickable (no inline onclick)
+if (!window.__kgPosTicketClickBound) {
+  window.__kgPosTicketClickBound = true;
+  document.addEventListener("click", (e) => {
+    const el = e.target && e.target.closest ? e.target.closest(".posTicket[data-ticket-id]") : null;
+    if (!el) return;
+    const id = el.getAttribute("data-ticket-id");
+    if (!id) return;
+    if (typeof window.posOpenTicket === "function") window.posOpenTicket(id);
+  });
+  document.addEventListener("keydown", (e) => {
+    if (e.key !== "Enter" && e.key !== " ") return;
+    const el = e.target && e.target.closest ? e.target.closest(".posTicket[data-ticket-id]") : null;
+    if (!el) return;
+    e.preventDefault();
+    const id = el.getAttribute("data-ticket-id");
+    if (!id) return;
+    if (typeof window.posOpenTicket === "function") window.posOpenTicket(id);
+  });
+}
+
+window.posNewTicket = function () {
+  posActiveTicketId = "";
+  posCart = [];
+  const note = document.getElementById("posOrderNote");
+  if (note) note.value = "";
+  const adj = document.getElementById("posAdjust");
+  if (adj) adj.value = "0";
+  renderPosCart();
+  renderPosPayment();
+  renderPosTickets();
+};
+
+window.posClearTickets = function () {
+  if (!confirm("Clear all pending/preparing tickets?")) return;
+  posTickets = [];
+  posActiveTicketId = "";
+  savePosTickets();
+  renderPosTickets();
+  toast("Tickets cleared", "success");
+};
+
+window.posOpenTicket = function (id) {
+  const t = posTickets.find((x) => x.id === id);
+  if (!t) return;
+  posActiveTicketId = id;
+  posCart = Array.isArray(t.cart) ? t.cart : [];
+  const note = document.getElementById("posOrderNote");
+  if (note) note.value = String(t.note || "");
+  const adj = document.getElementById("posAdjust");
+  if (adj) adj.value = String(num(t.adjust));
+  const modeSel = document.getElementById("posPayMode");
+  if (modeSel) modeSel.value = String(t.payMode || "cash");
+  const cashEl = document.getElementById("posPayCash");
+  const onEl = document.getElementById("posPayOnline");
+  if (cashEl) cashEl.value = String(t.payCash || 0);
+  if (onEl) onEl.value = String(t.payOnline || 0);
+  renderPosCart();
+  renderPosPayment();
+  renderPosTickets();
+};
+
+function saveActiveTicketSnapshot(status) {
+  if (!posCart.length) return null;
+  const now = Date.now();
+  const payMode = document.getElementById("posPayMode")?.value || "cash";
+  const payCash = num(document.getElementById("posPayCash")?.value);
+  const payOnline = num(document.getElementById("posPayOnline")?.value);
+  const note = (document.getElementById("posOrderNote")?.value || "").trim();
+  const adjust = num(document.getElementById("posAdjust")?.value);
+  const snap = {
+    id: posActiveTicketId || `t${now}`,
+    status: status || "pending",
+    createdAt: now,
+    cart: posCart.map((x) => ({ ...x })),
+    note,
+    adjust,
+    payMode,
+    payCash,
+    payOnline
+  };
+  // upsert
+  posTickets = posTickets.filter((t) => t.id !== snap.id);
+  posTickets.unshift(snap);
+  posActiveTicketId = snap.id;
+  savePosTickets();
+  renderPosTickets();
+  return snap;
+}
+
+function removeTicket(id) {
+  if (!id) return;
+  posTickets = posTickets.filter((t) => t.id !== id);
+  if (posActiveTicketId === id) posActiveTicketId = "";
+  savePosTickets();
+  renderPosTickets();
+}
 let menuEditId = null;
 let menuImageDataUrl = "";
 let posActiveCategory = "";
@@ -147,6 +427,41 @@ function toast(message, type = "info") {
     div.classList.add("toast-out");
     setTimeout(() => div.remove(), 300);
   }, 3200);
+}
+
+function showCelebrate(totalText) {
+  const ov = document.getElementById("celebrateOverlay");
+  const sub = document.getElementById("celebrateSub");
+  const wrap = document.getElementById("confettiWrap");
+  if (!ov || !wrap) return;
+  if (sub) sub.textContent = totalText ? `Total: ${totalText}` : "Saved successfully";
+
+  // confetti
+  wrap.innerHTML = "";
+  const colors = ["#2F855A", "#38A169", "#ECC94B", "#60A5FA", "#A78BFA", "#FB7185"];
+  const n = 42;
+  for (let i = 0; i < n; i++) {
+    const el = document.createElement("i");
+    const left = Math.random() * 100;
+    const delay = Math.random() * 0.35;
+    const dur = 1.05 + Math.random() * 0.7;
+    const w = 7 + Math.random() * 8;
+    const h = 10 + Math.random() * 14;
+    el.style.left = `${left}%`;
+    el.style.background = colors[i % colors.length];
+    el.style.width = `${w}px`;
+    el.style.height = `${h}px`;
+    el.style.animationDelay = `${delay}s`;
+    el.style.animationDuration = `${dur}s`;
+    el.style.opacity = String(0.75 + Math.random() * 0.25);
+    wrap.appendChild(el);
+  }
+
+  ov.classList.add("show");
+  clearTimeout(ov.__t);
+  ov.__t = setTimeout(() => {
+    ov.classList.remove("show");
+  }, 1200);
 }
 
 function escapeHtml(s) {
@@ -182,7 +497,7 @@ function setSidebarCollapsed(v) {
 function applySidebarButtonText() {
   const el = document.getElementById("posSidebarBtnText");
   if (!el) return;
-  el.textContent = document.body.classList.contains("sidebar-collapsed") ? "Show Sidebar" : "Hide Sidebar";
+  el.textContent = document.body.classList.contains("sidebar-collapsed") ? "Expand" : "Collapse";
 }
 
 window.toggleSidebar = function () {
@@ -712,14 +1027,16 @@ window.showSection = function (sectionName) {
     refreshMenu();
   }
   if (sectionName === "pos") {
+    loadPosTickets();
     refreshMenuForPos();
     renderPosCart();
     renderPosPayment();
     applySidebarButtonText();
-    posStartLiveSales();
+    posLoadTodayTotals();
+    posRefreshFavourites();
     renderPosCategoryChips();
+    renderPosTickets();
   } else {
-    posStopLiveSales();
   }
 };
 
@@ -799,7 +1116,7 @@ window.addSale = function () {
 window.resetMenuForm = function () {
   menuEditId = null;
   menuImageDataUrl = "";
-  const ids = ["menuName", "menuPrice", "menuCategory", "menuAvailable"];
+  const ids = ["menuName", "menuNameHi", "menuPrice", "menuCategory", "menuAvailable"];
   ids.forEach((id) => {
     const el = document.getElementById(id);
     if (!el) return;
@@ -875,6 +1192,7 @@ window.renderMenuList = function () {
                 <div style="font-weight:900;">${escapeHtml(m.name)}</div>
                 ${badge}
               </div>
+              ${m.nameHi ? `<div class="muted" style="font-size: 12px; margin-top:2px;">${escapeHtml(m.nameHi)}</div>` : ""}
               <div class="muted" style="font-size: 12px;">${escapeHtml(m.category || "General")} • ${money(m.price)}</div>
             </div>
           </div>
@@ -894,6 +1212,8 @@ window.editMenuItem = function (id) {
   if (!m) return;
   menuEditId = id;
   document.getElementById("menuName").value = m.name || "";
+  const nameHiEl = document.getElementById("menuNameHi");
+  if (nameHiEl) nameHiEl.value = m.nameHi || "";
   document.getElementById("menuPrice").value = num(m.price);
   document.getElementById("menuCategory").value = m.category || "";
   menuImageDataUrl = String(m.imageUrl || "");
@@ -911,12 +1231,60 @@ window.onMenuImagePicked = async function (event) {
     if (!file) return;
     if (!file.type.startsWith("image/")) return toast("Please select an image file", "error");
     if (file.size > 2.5 * 1024 * 1024) return toast("Image too large (max ~2.5MB)", "error");
-    const dataUrl = await new Promise((resolve, reject) => {
-      const r = new FileReader();
-      r.onload = () => resolve(String(r.result || ""));
-      r.onerror = () => reject(new Error("Failed to read file"));
-      r.readAsDataURL(file);
-    });
+
+    // Compress + resize before saving (faster uploads + smaller DB writes)
+    const dataUrl = await (async () => {
+      const readAsDataURL = (f) =>
+        new Promise((resolve, reject) => {
+          const r = new FileReader();
+          r.onload = () => resolve(String(r.result || ""));
+          r.onerror = () => reject(new Error("Failed to read file"));
+          r.readAsDataURL(f);
+        });
+
+      const url = await readAsDataURL(file);
+      let img = null;
+      try {
+        img = await new Promise((resolve, reject) => {
+          const i = new Image();
+          i.onload = () => resolve(i);
+          i.onerror = () => reject(new Error("Failed to decode image"));
+          i.src = url;
+        });
+      } catch (e) {
+        // Some formats (e.g. HEIC) may not decode in some browsers.
+        // Fall back to the original DataURL (still subject to size limits).
+        toast("Image format not supported for compression. Saving original (may be slower).", "info");
+        return url;
+      }
+
+      const maxW = 720;
+      const maxH = 480;
+      let w = img.width || maxW;
+      let h = img.height || maxH;
+      const scale = Math.min(1, maxW / w, maxH / h);
+      w = Math.max(1, Math.round(w * scale));
+      h = Math.max(1, Math.round(h * scale));
+
+      const canvas = document.createElement("canvas");
+      canvas.width = w;
+      canvas.height = h;
+      const ctx = canvas.getContext("2d");
+      if (!ctx) return url;
+      ctx.imageSmoothingEnabled = true;
+      ctx.imageSmoothingQuality = "high";
+      ctx.drawImage(img, 0, 0, w, h);
+
+      // Prefer JPEG for speed/size unless PNG with transparency is needed (rare for menu photos)
+      const out = canvas.toDataURL("image/jpeg", 0.72);
+      return out;
+    })();
+
+    // Guard: if still huge, warn and keep anyway
+    if (dataUrl.length > 600_000) {
+      toast("Image is still large. Consider smaller photo for faster save.", "info");
+    }
+
     menuImageDataUrl = dataUrl;
     const prev = document.getElementById("menuImagePreview");
     if (prev) prev.src = menuImageDataUrl;
@@ -946,17 +1314,29 @@ window.saveMenuItem = async function () {
     if (!api?.menuItems) throw new Error("Menu API not ready");
 
     const name = (document.getElementById("menuName")?.value || "").trim();
+    const nameHi = (document.getElementById("menuNameHi")?.value || "").trim();
     const price = num(document.getElementById("menuPrice")?.value);
     const category = (document.getElementById("menuCategory")?.value || "").trim() || "General";
     const available = (document.getElementById("menuAvailable")?.value || "true") === "true";
     const imageUrl = String(menuImageDataUrl || "");
+    const isFirebaseMode = !!window.__firebaseReady && !window.__firebaseInitError;
+    // Firestore document size limit is ~1MB. Base64 grows quickly, so keep a safe margin.
+    const maxLen = isFirebaseMode ? 850_000 : 1_200_000;
+    if (imageUrl && imageUrl.length > maxLen) {
+      return toast(
+        isFirebaseMode
+          ? "Image too large for Firebase. Use a smaller photo (try screenshot or lower-res)."
+          : "Image too large. Please pick a smaller image (faster save).",
+        "error"
+      );
+    }
 
     if (!name) return toast("Enter name", "error");
     if (!(price >= 0)) return toast("Enter valid price", "error");
 
     setLoading(true);
-    if (menuEditId) await api.menuItems.update(menuEditId, { name, price, category, imageUrl, available });
-    else await api.menuItems.create({ name, price, category, imageUrl, available });
+    if (menuEditId) await api.menuItems.update(menuEditId, { name, nameHi, price, category, imageUrl, available });
+    else await api.menuItems.create({ name, nameHi, price, category, imageUrl, available });
 
     window.resetMenuForm();
     await refreshMenu();
@@ -989,47 +1369,86 @@ window.deleteMenuItem = async function (id) {
 window.importMenuExcel = async function () {
   try {
     const file = document.getElementById("menuExcelFile")?.files?.[0];
-    if (!file) return toast("Select an Excel file", "error");
+    if (!file) return toast("Select an Excel or CSV file", "error");
     if (!window.XLSX) return toast("Excel library not loaded", "error");
 
     setLoading(true);
     const buf = await file.arrayBuffer();
-    const wb = window.XLSX.read(buf, { type: "array" });
+    const isCsv = /\.csv$/i.test(file.name || "");
+    const wb = isCsv
+      ? window.XLSX.read(new TextDecoder("utf-8").decode(buf), { type: "string" })
+      : window.XLSX.read(buf, { type: "array" });
     const sheetName = wb.SheetNames?.[0];
     if (!sheetName) throw new Error("No sheet found");
-    const rows = window.XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval: "" });
+    const rawRows = window.XLSX.utils.sheet_to_json(wb.Sheets[sheetName], { defval: "" });
 
-    const items = rows.map((r) => ({
-      name: String(r.name || r.Name || r.ITEM || r.Item || "").trim(),
-      price: num(r.price || r.Price || r.Rate || r.rate || 0),
-      category: String(r.category || r.Category || "General").trim() || "General",
-      imageUrl: String(r.imageUrl || r.ImageUrl || r.image || r.Image || "").trim(),
-      available: String(r.available || r.Available || "true").toLowerCase() !== "false"
-    }));
+    const items = [];
+    const skipped = [];
+    for (const raw of rawRows) {
+      const r = normalizeExcelRow(raw);
+      const name = pickMenuName(r);
+      const price = pickMenuPrice(r);
+      const category = pickMenuCategory(r);
+      const nameHi = String(r.nameHi || r.NameHi || r["Hindi name"] || r["Hindi Name"] || r.name_hi || "").trim();
+      const imageUrl = String(r.imageUrl || r.ImageUrl || r.image || r.Image || "").trim();
+      const available = String(r.available || r.Available || "true").toLowerCase() !== "false";
+      if (!name) {
+        skipped.push("empty name row");
+        continue;
+      }
+      if (!Number.isFinite(price) || price < 0) {
+        skipped.push(`${name}: bad price`);
+        continue;
+      }
+      items.push({ name, nameHi, price, category, imageUrl, available });
+    }
+
+    if (!items.length) {
+      toast(
+        "No valid rows. Use columns like name + price (or Rate, MRP, Rs, Amount). Prices: 120, Rs 120, ₹1,200",
+        "error"
+      );
+      return;
+    }
 
     if (api.menuItems.bulkCreate) {
       const next = await api.menuItems.bulkCreate(items);
-      if (Array.isArray(next) && next.length) {
-        state.menuItems = next;
-        renderMenuFilters();
-        renderMenuList();
-        renderPosMenu();
-      }
+      if (Array.isArray(next) && next.length) state.menuItems = next;
     } else {
-      // Firebase mode fallback: add one by one (upsert not available)
-      for (const it of items) {
-        if (!it.name) continue;
-        await api.menuItems.create(it);
-      }
+      for (const it of items) await api.menuItems.create(it);
     }
 
-    // Always refresh from source of truth
     await refreshMenu();
     await refreshMenuForPos();
-    toast("Menu imported", "success");
+    const extra =
+      skipped.length > 0 ? ` (${skipped.length} row(s) skipped — check names/prices)` : "";
+    toast(`Imported ${items.length} item(s)${extra}`, "success");
   } catch (e) {
     console.error(e);
     toast(e.message || "Import failed", "error");
+  } finally {
+    setLoading(false);
+  }
+};
+
+window.clearAllMenuItems = async function () {
+  if (!confirm("Delete ALL menu items? This cannot be undone. Type OK in the next prompt.")) return;
+  const ok = window.prompt('Type DELETE to confirm clearing the entire menu:');
+  if (String(ok || "").trim() !== "DELETE") {
+    toast("Cancelled", "error");
+    return;
+  }
+  try {
+    api = window.api;
+    if (!api?.menuItems?.removeAll) throw new Error("Clear menu is not supported in this mode");
+    setLoading(true);
+    await api.menuItems.removeAll();
+    await refreshMenu();
+    await refreshMenuForPos();
+    toast("All menu items removed", "success");
+  } catch (e) {
+    console.error(e);
+    toast(e.message || "Failed to clear menu", "error");
   } finally {
     setLoading(false);
   }
@@ -1061,32 +1480,139 @@ window.renderPosMenu = function () {
   const cat = posActiveCategory || "";
 
   let items = Array.isArray(state.menuItems) ? [...state.menuItems] : [];
-  if (cat) items = items.filter((m) => String(m.category || "") === cat);
+  if (cat && cat !== "__favs") items = items.filter((m) => String(m.category || "") === cat);
   if (q) items = items.filter((m) => String(m.name || "").toLowerCase().includes(q));
-  items.sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
 
-  wrap.innerHTML = items
-    .map((m) => {
-      const disabled = !m.available;
+  if (cat === "__favs") {
+    const counts = window.__posFavCounts;
+    if (counts && counts.size) {
+      items.sort((a, b) => {
+        const ka = favKeyFromMenuItem(a);
+        const kb = favKeyFromMenuItem(b);
+        const ca = counts.get(ka) || 0;
+        const cb = counts.get(kb) || 0;
+        if (cb !== ca) return cb - ca;
+        return String(a.name || "").localeCompare(String(b.name || ""));
+      });
+      // show top favourites (still filtered by search if q was provided)
+      items = items.slice(0, 32);
+    } else {
+      // no history yet
+      wrap.innerHTML = `<div class="muted" style="padding: 10px;">No favourites yet — complete a few orders first.</div>`;
+      return;
+    }
+  }
+
+  // Group variants only when we can detect a real size (500g/1kg etc).
+  // If no variant is detected, keep items separate (prevents "Default Default").
+  const groups = new Map(); // key -> { baseName, category, imageUrl, rows: [...] }
+  for (const m of items) {
+    const { base, variant } = deriveBaseAndVariant(m.name);
+    const catKey = String(m.category || "General");
+    const key = variant
+      ? `${catKey}@@${base.toLowerCase()}`
+      : `${catKey}@@${String(m.name || "").trim().toLowerCase()}@@${String(m.id)}`;
+    const g = groups.get(key) || {
+      baseName: variant ? base : String(m.name || "").trim(),
+      category: catKey,
+      imageUrl: String(m.imageUrl || ""),
+      rows: []
+    };
+    g.rows.push({
+      id: String(m.id),
+      name: String(m.name || ""),
+      nameHi: String(m.nameHi || ""),
+      price: num(m.price),
+      available: !!m.available,
+      variant
+    });
+    // prefer an image if group doesn't have one yet
+    if (!g.imageUrl && m.imageUrl) g.imageUrl = String(m.imageUrl);
+    groups.set(key, g);
+  }
+
+  const sorted = Array.from(groups.values()).sort((a, b) => a.baseName.localeCompare(b.baseName));
+  window.__posVariantSel = window.__posVariantSel || {}; // { [groupKey]: selectedVariantId }
+
+  wrap.innerHTML = sorted
+    .map((g) => {
+      const rows = g.rows.sort((a, b) => {
+        // sort by weight (grams) so 500g comes before 1kg
+        const ag = variantToGrams(a.variant);
+        const bg = variantToGrams(b.variant);
+        if (ag != null && bg != null && ag !== bg) return ag - bg;
+        return String(a.variant || "").localeCompare(String(b.variant || ""));
+      });
+      const groupKey = `${normalizeKey(g.category)}@@${normalizeKey(g.baseName)}`;
+      const savedSel = window.__posVariantSel[groupKey];
+      const selected =
+        (savedSel && rows.find((r) => String(r.id) === String(savedSel))) ||
+        rows.find((r) => r.available) ||
+        rows[0];
+      const disabledAll = rows.every((r) => !r.available);
+
+      const variantUi =
+        rows.length <= 1
+          ? ``
+          : `<div class="pos-variant-row">
+              ${rows
+                .map((r) => {
+                  const label = r.variant ? r.variant : "Default";
+                  const on = String(r.id) === String(selected?.id);
+                  const dis = !r.available;
+                  return `<button type="button" class="pos-variant-chip ${on ? "active" : ""}" ${dis ? "disabled" : ""} data-vg="${escapeHtml(groupKey)}" data-vid="${escapeHtml(String(r.id))}">${escapeHtml(label)}</button>`;
+                })
+                .join("")}
+            </div>`;
+
       return `
-        <div class="pos-item${disabled ? " disabled" : ""}">
-          <img src="${escapeHtml(m.imageUrl || "assets/the-kilogram-logo.png")}" onerror="this.src='assets/the-kilogram-logo.png'"/>
+        <div class="pos-item${disabledAll ? " disabled" : ""}" ${(!selected?.available) ? "aria-disabled='true'" : ""} data-add-id="${(!selected?.available) ? "" : escapeHtml(String(selected?.id || ""))}">
+          <div class="pos-item-media">
+            <img src="${escapeHtml(g.imageUrl || "assets/the-kilogram-logo.png")}" onerror="this.src='assets/the-kilogram-logo.png'"/>
+          </div>
           <div class="pos-item-body">
-            <div class="pos-item-name">${escapeHtml(m.name)}</div>
-            <div class="pos-item-sub">
-              <div>${escapeHtml(m.category || "General")}</div>
-              <div class="pos-item-price">${money(m.price)}</div>
-            </div>
-            <button class="pos-item-btn" ${disabled ? "disabled" : ""} onclick="posAddToCart('${m.id}')">
-              <span style="width:26px;height:26px;border-radius:12px;background:rgba(255,255,255,0.22);display:inline-flex;align-items:center;justify-content:center;font-weight:900;">+</span>
-              ADD
-            </button>
+            <div class="pos-item-name">${escapeHtml(g.baseName)}</div>
+            <div class="pos-item-price">${money(selected?.price || 0)}</div>
+            ${rows.length > 1 ? variantUi : ""}
           </div>
         </div>
       `;
     })
     .join("");
 };
+
+window.posSelectVariant = function (groupKey, variantId) {
+  window.__posVariantSel = window.__posVariantSel || {};
+  window.__posVariantSel[String(groupKey)] = String(variantId);
+  renderPosMenu();
+};
+
+// One-time event delegation: clicking a card adds selected variant.
+// Clicking a variant chip only selects variant.
+if (!window.__posMenuClickBound) {
+  window.__posMenuClickBound = true;
+  document.addEventListener("click", (e) => {
+    const grid = document.getElementById("posMenuGrid");
+    if (!grid) return;
+    if (!grid.contains(e.target)) return;
+
+    // Variant selection
+    const chip = e.target.closest && e.target.closest(".pos-variant-chip");
+    if (chip) {
+      const groupKey = chip.getAttribute("data-vg") || "";
+      const variantId = chip.getAttribute("data-vid") || "";
+      if (groupKey && variantId) window.posSelectVariant(groupKey, variantId);
+      return;
+    }
+
+    if (e.target.closest && e.target.closest(".pos-variant-row")) return;
+    const card = e.target.closest && e.target.closest(".pos-item");
+    if (!card) return;
+    const id = card.getAttribute("data-add-id") || "";
+    if (!id) return;
+    window.posAddToCart(id);
+  });
+}
 
 function renderPosCategoryChips() {
   const wrap = document.getElementById("posCategoryChips");
@@ -1096,6 +1622,7 @@ function renderPosCategoryChips() {
   const allActive = !posActiveCategory;
   wrap.innerHTML =
     `<div class="pos-chip ${allActive ? "active" : ""}" onclick="posSetCategory('')">All</div>` +
+    `<div class="pos-chip ${posActiveCategory === "__favs" ? "active" : ""}" onclick="posSetCategory('__favs')">Favourites</div>` +
     cats
       .map((c) => `<div class="pos-chip ${posActiveCategory === c ? "active" : ""}" onclick="posSetCategory('${escapeHtml(c)}')">${escapeHtml(c)}</div>`)
       .join("");
@@ -1107,12 +1634,72 @@ window.posSetCategory = function (cat) {
   renderPosMenu();
 };
 
+function favKeyFromOrderItem(it) {
+  const id = String(it?.menuItemId || "").trim();
+  if (id) return `id:${id}`;
+  const name = String(it?.name || "").trim().toLowerCase();
+  const price = num(it?.price);
+  return `np:${name}@@${price}`;
+}
+
+function favKeyFromMenuItem(m) {
+  const id = String(m?.id || "").trim();
+  if (id) return `id:${id}`;
+  const name = String(m?.name || "").trim().toLowerCase();
+  const price = num(m?.price);
+  return `np:${name}@@${price}`;
+}
+
+window.posRefreshFavourites = async function () {
+  try {
+    api = window.api;
+    if (!api?.orders?.list) return;
+    const orders = await api.orders.list();
+    const list = Array.isArray(orders) ? orders : [];
+    const counts = new Map();
+    for (const o of list) {
+      const items = Array.isArray(o.items) ? o.items : [];
+      for (const it of items) {
+        const k = favKeyFromOrderItem(it);
+        counts.set(k, (counts.get(k) || 0) + Math.max(1, Math.floor(num(it.qty) || 1)));
+      }
+    }
+    window.__posFavCounts = counts;
+  } catch (e) {
+    console.error(e);
+  }
+};
+
+/** One row per dish: merge by name + price (handles id type mismatches & duplicate menu docs). */
+function mergePosCartDuplicates() {
+  const map = new Map();
+  for (const it of posCart) {
+    const prep = String(it.prep || "regular").trim().toLowerCase();
+    const np = `${String(it.name || "").trim().toLowerCase()}@@${num(it.price)}@@${prep}`;
+    const cur = map.get(np);
+    if (cur) {
+      cur.qty = num(cur.qty) + num(it.qty);
+      const id = String(it.menuItemId || "").trim();
+      if (id && !String(cur.menuItemId || "").trim()) cur.menuItemId = id;
+    } else {
+      map.set(np, {
+        menuItemId: String(it.menuItemId ?? "").trim(),
+        name: it.name,
+        price: num(it.price),
+        qty: num(it.qty),
+        prep
+      });
+    }
+  }
+  posCart = Array.from(map.values());
+}
+
 window.posAddToCart = function (menuItemId) {
-  const m = state.menuItems.find((x) => x.id === menuItemId);
+  const idKey = String(menuItemId ?? "").trim();
+  const m = state.menuItems.find((x) => String(x.id) === idKey);
   if (!m || !m.available) return;
-  const existing = posCart.find((c) => c.menuItemId === menuItemId);
-  if (existing) existing.qty += 1;
-  else posCart.push({ menuItemId, name: m.name, price: num(m.price), qty: 1, note: "" });
+  posCart.push({ menuItemId: idKey, name: m.name, nameHi: m.nameHi || "", price: num(m.price), qty: 1, prep: "regular" });
+  mergePosCartDuplicates();
   renderPosCart();
 };
 
@@ -1120,52 +1707,62 @@ window.posClearCart = function () {
   posCart = [];
   const note = document.getElementById("posOrderNote");
   if (note) note.value = "";
+  const adj = document.getElementById("posAdjust");
+  if (adj) adj.value = "0";
+  posActiveTicketId = "";
   renderPosCart();
   renderPosPayment();
+  renderPosTickets();
 };
 
 function posTotals() {
   const subtotal = posCart.reduce((s, it) => s + num(it.price) * num(it.qty), 0);
-  const tax = Math.max(0, num(document.getElementById("posTax")?.value));
-  const total = subtotal + tax;
-  return { subtotal, tax, total };
+  const adjust = num(document.getElementById("posAdjust")?.value);
+  const total = Math.max(0, subtotal + adjust);
+  return { subtotal, tax: 0, adjust, total };
 }
 
 window.renderPosCart = function () {
   const list = document.getElementById("posCartList");
   if (!list) return;
 
+  mergePosCartDuplicates();
+
   const count = posCart.reduce((s, it) => s + num(it.qty), 0);
   const countEl = document.getElementById("posCartCount");
-  if (countEl) countEl.textContent = `${count} item(s)`;
+  if (countEl) countEl.textContent = `${count} item${count === 1 ? "" : "s"}`;
 
   if (!posCart.length) {
-    list.innerHTML = `<div class="pos-small" style="padding: 10px;">Cart is empty</div>`;
+    list.innerHTML = `<div class="pos-cart-empty">Cart is empty</div>`;
   } else {
     list.innerHTML = posCart
       .map((it, idx) => {
         const line = num(it.price) * num(it.qty);
+        const prep = String(it.prep || "regular").toLowerCase();
         return `
           <div class="pos-cart-row">
-            <div class="pos-cart-top">
-              <div>
-                <div style="font-weight:900;">${escapeHtml(it.name)}</div>
-                <div class="pos-small">${money(it.price)} × ${num(it.qty)} = <b>${money(line)}</b></div>
-              </div>
+            <div class="pos-cart-head">
+              <div class="pos-cart-title">${escapeHtml(it.name)}</div>
               <div class="pos-qty">
-                <button onclick="posDecQty(${idx})">−</button>
+                <button type="button" onclick="posDecQty(${idx})">−</button>
                 <div class="pill">${num(it.qty)}</div>
-                <button onclick="posIncQty(${idx})">+</button>
+                <button type="button" onclick="posIncQty(${idx})">+</button>
               </div>
             </div>
-            <input class="pos-note" placeholder="Item note (optional)" value="${escapeHtml(it.note || "")}" oninput="posSetItemNote(${idx}, this.value)" />
+            <div class="pos-cart-meta">
+              <div class="pos-prep-row">
+                <button type="button" class="pos-prep-btn ${prep === "regular" ? "active" : ""}" onclick="posSetPrep(${idx}, 'regular')">Regular</button>
+                <button type="button" class="pos-prep-btn ${prep === "swaminarayan" ? "active" : ""}" onclick="posSetPrep(${idx}, 'swaminarayan')">Swaminarayan</button>
+              </div>
+              <div class="pos-small pos-cart-sub">${money(it.price)} × ${num(it.qty)} = <b>${money(line)}</b></div>
+            </div>
           </div>
         `;
       })
       .join("");
   }
 
-  const { subtotal, total } = posTotals();
+  const { subtotal, adjust, total } = posTotals();
   const subEl = document.getElementById("posSubtotal");
   const totEl = document.getElementById("posTotal");
   if (subEl) subEl.textContent = money(subtotal);
@@ -1189,10 +1786,12 @@ window.posDecQty = function (idx) {
   renderPosCart();
 };
 
-window.posSetItemNote = function (idx, note) {
+window.posSetPrep = function (idx, prep) {
   const it = posCart[idx];
   if (!it) return;
-  it.note = String(note || "");
+  it.prep = String(prep || "regular").toLowerCase();
+  mergePosCartDuplicates();
+  renderPosCart();
 };
 
 window.renderPosPayment = function () {
@@ -1247,13 +1846,21 @@ function doPrint(html) {
 
 window.posPrintKOT = function () {
   if (!posCart.length) return toast("Cart is empty", "error");
+  const lang = "hi"; // always Hindi KOT
   const lines = posCart
-    .map((it) => `<div style="display:flex; justify-content:space-between; gap:12px; font-size: 13px;">
-      <div style="font-weight:700;">${escapeHtml(it.name)}${it.note ? `<div style="font-size:11px;color:#444;">${escapeHtml(it.note)}</div>` : ""}</div>
-      <div style="font-weight:900;">× ${num(it.qty)}</div>
-    </div>`)
+    .map((it) => {
+      const prep = prepLabel(it.prep, lang);
+      const title = (lang === "hi" ? (it.nameHi || "") : "") || it.name;
+      return `<div style="display:flex; justify-content:space-between; gap:12px; font-size: 13px;">
+        <div style="font-weight:800;">
+          ${escapeHtml(title)}
+          <div style="font-size:11px;color:#444; margin-top:2px;">${escapeHtml(prep)}</div>
+        </div>
+        <div style="font-weight:900;">× ${num(it.qty)}</div>
+      </div>`;
+    })
     .join("");
-  doPrint(buildPrintHtml("KOT", lines, "", ""));
+  doPrint(buildPrintHtml(lang === "hi" ? "किचन ऑर्डर (KOT)" : "KOT", lines, "", ""));
 };
 
 window.posPrintBill = function () {
@@ -1271,14 +1878,13 @@ window.posPrintBill = function () {
 
   const lines = posCart
     .map((it) => `<div style="display:flex; justify-content:space-between; gap:12px; font-size: 13px;">
-      <div>${escapeHtml(it.name)} <span style="color:#555;">× ${num(it.qty)}</span></div>
+      <div>${escapeHtml(it.name)} <span style="color:#555;">(${escapeHtml(prepLabel(it.prep, "en"))}) × ${num(it.qty)}</span></div>
       <div style="font-weight:900;">${money(num(it.price) * num(it.qty))}</div>
     </div>`)
     .join("");
 
   const totals = `
     <div style="display:flex; justify-content:space-between; font-size: 13px;"><div>Subtotal</div><div style="font-weight:900;">${money(subtotal)}</div></div>
-    <div style="display:flex; justify-content:space-between; font-size: 13px;"><div>Tax</div><div style="font-weight:900;">${money(tax)}</div></div>
     <div style="display:flex; justify-content:space-between; font-size: 14px; margin-top: 6px;"><div style="font-weight:900;">Total</div><div style="font-weight:900;">${money(total)}</div></div>
     <div style="margin-top: 8px; font-size: 12px;">
       Payment: Cash ${money(cash)} | Online ${money(online)}
@@ -1288,13 +1894,42 @@ window.posPrintBill = function () {
   doPrint(buildPrintHtml("Customer Bill", lines, totals, `<div style="text-align:center; font-size: 12px; margin-top: 10px;">Thank you!</div>`));
 };
 
+window.posAddCustomItem = function () {
+  const nameEl = document.getElementById("posCustomName");
+  const priceEl = document.getElementById("posCustomPrice");
+  const name = String(nameEl?.value || "").trim();
+  const price = num(priceEl?.value);
+  if (!name) return toast("Enter item name", "error");
+  if (!(price >= 0)) return toast("Enter valid price", "error");
+  posCart.push({
+    menuItemId: `custom:${Date.now()}`,
+    name,
+    nameHi: "",
+    price,
+    qty: 1,
+    prep: "regular"
+  });
+  mergePosCartDuplicates();
+  renderPosCart();
+  if (nameEl) nameEl.value = "";
+  if (priceEl) priceEl.value = "";
+  toast("Added to cart", "success");
+};
+
+window.posCustomFillPau = function () {
+  const nameEl = document.getElementById("posCustomName");
+  if (nameEl) nameEl.value = "Pau Extra";
+  const priceEl = document.getElementById("posCustomPrice");
+  if (priceEl && !String(priceEl.value || "").trim()) priceEl.value = "0";
+};
+
 window.posGenerateBill = async function () {
   if (!posCart.length) return toast("Cart is empty", "error");
   try {
     api = window.api;
     if (!api?.orders?.create) throw new Error("Orders API not ready");
 
-    const { subtotal, tax, total } = posTotals();
+    const { subtotal, tax, adjust, total } = posTotals();
     const mode = document.getElementById("posPayMode")?.value || "cash";
     let cash = 0;
     let online = 0;
@@ -1309,6 +1944,11 @@ window.posGenerateBill = async function () {
     if (!confirm(`Generate bill for ${money(total)}?`)) return;
 
     setLoading(true);
+    const noteTxt = (document.getElementById("posOrderNote")?.value || "").trim();
+    const notes =
+      Math.abs(num(adjust)) > 0.01
+        ? `${noteTxt}${noteTxt ? "\n" : ""}Adjustment: ${money(adjust)}`
+        : noteTxt;
     const payload = {
       date: todayISO(),
       items: posCart.map((it) => ({
@@ -1316,9 +1956,9 @@ window.posGenerateBill = async function () {
         name: it.name,
         price: num(it.price),
         qty: Math.max(1, Math.floor(num(it.qty))),
-        note: String(it.note || "").trim()
+        note: prepLabel(it.prep, "en")
       })),
-      notes: (document.getElementById("posOrderNote")?.value || "").trim(),
+      notes,
       subtotal,
       tax,
       total,
@@ -1326,14 +1966,11 @@ window.posGenerateBill = async function () {
     };
     await api.orders.create(payload);
 
-    // refresh sales so dashboard balances update instantly
-    const sales = await api.sales.list();
-    state.sales = Array.isArray(sales) ? sales : [];
-    renderDashboard();
-    renderSales();
-    renderPosTodaySales();
-
-    toast("Bill generated + sale recorded", "success");
+    await posLoadTodayTotals();
+    posRefreshFavourites();
+    toast("Order saved", "success");
+    showCelebrate(money(total));
+    if (posActiveTicketId) removeTicket(posActiveTicketId);
     posClearCart();
   } catch (e) {
     console.error(e);
@@ -1343,85 +1980,174 @@ window.posGenerateBill = async function () {
   }
 };
 
-function salesForToday() {
-  const t = todayISO();
-  const list = Array.isArray(state.sales) ? state.sales : [];
-  return list.filter((s) => String(s.date || "").slice(0, 10) === t);
-}
-
-window.renderPosTodaySales = function () {
-  const cashEl = document.getElementById("posTodaySalesCash");
-  const onEl = document.getElementById("posTodaySalesOnline");
-  const totEl = document.getElementById("posTodaySalesTotal");
-  const metaEl = document.getElementById("posTodaySalesMeta");
-  const listEl = document.getElementById("posTodaySalesList");
-  if (!cashEl || !onEl || !totEl || !metaEl || !listEl) return;
-
-  const today = salesForToday();
-  const cash = today.reduce((s, x) => s + num(x.cashAmount || (x.method === "cash" ? x.amount : 0)), 0);
-  const online = today.reduce((s, x) => s + num(x.onlineAmount || (x.method === "online" ? x.amount : 0)), 0);
-  const total = today.reduce((s, x) => s + num(x.totalAmount || x.amount), 0);
-
-  cashEl.textContent = money(cash);
-  onEl.textContent = money(online);
-  totEl.textContent = money(total);
-  metaEl.textContent = `${todayISO()} • ${today.length} sale(s)`;
-
-  const recent = [...today].sort((a, b) => new Date(b.createdAt || b.date) - new Date(a.createdAt || a.date)).slice(0, 8);
-  if (!recent.length) {
-    listEl.innerHTML = `<div class="muted" style="padding: 10px;">No sales yet today</div>`;
+window.posHoldOrder = function () {
+  if (!posCart.length) {
+    toast("Cart is empty", "error");
     return;
   }
-
-  listEl.innerHTML = recent
-    .map((s) => {
-      const amt = num(s.totalAmount || s.amount);
-      const method = String(s.method || "").toLowerCase() || (num(s.cashAmount) > 0 && num(s.onlineAmount) > 0 ? "mixed" : "cash");
-      const note = (s.notes || "").trim();
-      return `
-        <div class="row" style="padding: 10px;">
-          <div>
-            <div style="font-weight:900;">${money(amt)} <span class="muted" style="font-weight:600;">(${escapeHtml(method)})</span></div>
-            ${note ? `<div class="muted" style="font-size: 12px;">${escapeHtml(note)}</div>` : ""}
-          </div>
-          <div class="muted" style="font-size:12px;">${escapeHtml(String(s.createdAt || "").toString().slice(11, 19) || "")}</div>
-        </div>
-      `;
-    })
-    .join("");
+  saveActiveTicketSnapshot("pending");
+  posCart = [];
+  const note = document.getElementById("posOrderNote");
+  if (note) note.value = "";
+  const adj = document.getElementById("posAdjust");
+  if (adj) adj.value = "0";
+  posActiveTicketId = "";
+  renderPosCart();
+  renderPosPayment();
+  toast("Order moved to pending", "success");
 };
 
-window.posRefreshTodaySales = async function () {
+window.posLoadTodayTotals = async function () {
   try {
     api = window.api;
-    if (!api?.sales?.list) return;
-    setLoading(true);
-    const sales = await api.sales.list();
-    state.sales = Array.isArray(sales) ? sales : [];
-    renderPosTodaySales();
+    if (!api?.orders?.list) return;
+    const metaEl = document.getElementById("posTodaySalesMeta");
+    const cashEl = document.getElementById("posTodaySalesCash");
+    const onEl = document.getElementById("posTodaySalesOnline");
+    const totEl = document.getElementById("posTodaySalesTotal");
+    if (!cashEl || !onEl || !totEl || !metaEl) return;
+
+    const date = todayISO();
+    let orders = [];
+    try {
+      orders = await api.orders.list({ date });
+    } catch {
+      orders = await api.orders.list();
+    }
+    orders = Array.isArray(orders) ? orders : [];
+    const today = orders.filter((o) => String(o.date || "").slice(0, 10) === date);
+
+    const cash = today.reduce((s, o) => s + num(o.payment?.cash), 0);
+    const online = today.reduce((s, o) => s + num(o.payment?.online), 0);
+    const total = today.reduce((s, o) => s + num(o.total), 0);
+
+    cashEl.textContent = money(cash);
+    onEl.textContent = money(online);
+    totEl.textContent = money(total);
+    metaEl.textContent = `${date} • ${today.length} order(s)`;
   } catch (e) {
     console.error(e);
-    toast(e.message || "Failed to refresh sales", "error");
+  }
+};
+
+window.posShowHistory = async function () {
+  try {
+    const ov = document.getElementById("orderHistoryOverlay");
+    const body = document.getElementById("orderHistoryBody");
+    if (!ov || !body) return;
+    api = window.api;
+    if (!api?.orders?.list) return toast("Orders API not ready", "error");
+    setLoading(true);
+    const orders = await api.orders.list();
+    const list = Array.isArray(orders) ? orders : [];
+    const localDeleted = (() => {
+      try {
+        const raw = localStorage.getItem("kg_deleted_orders_v1");
+        const arr = raw ? JSON.parse(raw) : [];
+        return new Set(Array.isArray(arr) ? arr.map((x) => String(x)) : []);
+      } catch {
+        return new Set();
+      }
+    })();
+    body.innerHTML =
+      list
+        .filter((o) => {
+          const id = o?.id || o?._id || "";
+          return id ? !localDeleted.has(String(id)) : true;
+        })
+        .slice(0, 60)
+        .map((o) => {
+          const lines = Array.isArray(o.items)
+            ? o.items.slice(0, 6).map((it) => `${escapeHtml(it.name)} × ${num(it.qty)}`).join("<br/>")
+            : "";
+          const id = o.id || o._id || "";
+          const created =
+            o && typeof o.createdAt === "object" && typeof o.createdAt?.toDate === "function"
+              ? o.createdAt.toDate()
+              : o && typeof o.createdAt === "object" && Number.isFinite(o.createdAt?.seconds)
+              ? new Date(o.createdAt.seconds * 1000)
+              : new Date(o.createdAt || Date.now());
+          const timeStr = Number.isFinite(created.getTime()) ? created.toLocaleTimeString() : "--:--";
+          return `<div class="row" data-order-id="${escapeHtml(String(id))}" style="grid-template-columns: 1fr auto; align-items:flex-start;">
+            <div>
+              <div style="font-weight:700;">${escapeHtml(String(o.date || "").slice(0,10))} • ${escapeHtml(timeStr)}</div>
+              <div class="muted" style="margin-top:6px;">${lines || "—"}</div>
+            </div>
+            <div style="display:flex; flex-direction:column; align-items:flex-end; gap:8px;">
+              <div style="font-weight:800;">${money(num(o.total))}</div>
+              ${
+                id
+                  ? `<button class="btn btn-secondary" style="padding:6px 10px; font-size:12px;" type="button" data-del-order-id="${escapeHtml(
+                      String(id)
+                    )}">Delete</button>`
+                  : ""
+              }
+            </div>
+          </div>`;
+        })
+        .join("") || `<div class="muted">No orders yet</div>`;
+    ov.classList.add("open");
+  } catch (e) {
+    console.error(e);
+    toast(e.message || "Failed to load history", "error");
   } finally {
     setLoading(false);
   }
 };
 
-function posStartLiveSales() {
-  if (posSalesInterval) return;
-  // render immediately, no auto-refresh
-  renderPosTodaySales();
-  // posSalesInterval = setInterval(() => {
-  //   if (activeSection !== "pos") return;
-  //   window.posRefreshTodaySales?.();
-  // }, 12000);
+window.posDeleteOrder = async function (id) {
+  try {
+    const oid = String(id || "").trim();
+    if (!oid) return;
+    api = window.api;
+    if (!api?.orders?.remove) return toast("Delete API not ready", "error");
+    if (!confirm("Delete this order?")) return;
+    // Hide immediately (POS UX)
+    try {
+      const raw = localStorage.getItem("kg_deleted_orders_v1");
+      const arr = raw ? JSON.parse(raw) : [];
+      const set = new Set(Array.isArray(arr) ? arr.map((x) => String(x)) : []);
+      set.add(oid);
+      localStorage.setItem("kg_deleted_orders_v1", JSON.stringify(Array.from(set).slice(-500)));
+    } catch {}
+    const row = document.querySelector(`#orderHistoryBody .row[data-order-id="${CSS.escape(oid)}"]`);
+    if (row) row.remove();
+    setLoading(true);
+    await api.orders.remove(oid);
+    toast("Order deleted", "success");
+    await posLoadTodayTotals();
+    posRefreshFavourites();
+    await window.posShowHistory();
+  } catch (e) {
+    console.error(e);
+    toast(e?.message ? `Delete failed: ${e.message}` : "Delete failed", "error");
+    // Still refresh list because we hide locally in Firebase mode.
+    try {
+      await posLoadTodayTotals();
+      posRefreshFavourites();
+      await window.posShowHistory();
+    } catch {}
+  } finally {
+    setLoading(false);
+  }
+};
+
+// History modal delete click handler (reliable in all browsers)
+if (!window.__kgPosHistoryDeleteBound) {
+  window.__kgPosHistoryDeleteBound = true;
+  document.addEventListener("click", (e) => {
+    const btn = e.target && e.target.closest ? e.target.closest("#orderHistoryBody button[data-del-order-id]") : null;
+    if (!btn) return;
+    const id = btn.getAttribute("data-del-order-id");
+    if (!id) return;
+    window.posDeleteOrder?.(id);
+  });
 }
 
-function posStopLiveSales() {
-  if (!posSalesInterval) return;
-  clearInterval(posSalesInterval);
-  posSalesInterval = null;
-}
+window.posCloseHistory = function () {
+  const ov = document.getElementById("orderHistoryOverlay");
+  if (ov) ov.classList.remove("open");
+};
 
 
 window.toggleAddSupplier = function () {
@@ -2742,8 +3468,13 @@ function renderAll() {
 async function loadAll() {
   setLoading(true);
   try {
+    // Wait for `window.api` to be ready (Firebase or backend fallback).
+    const start = Date.now();
+    while (!window.api && Date.now() - start < 5000) {
+      await new Promise((r) => setTimeout(r, 50));
+    }
     api = window.api;
-    if (!api) throw new Error("Firestore API not initialized");
+    if (!api) throw new Error("API not initialized (check Firebase/backend)");
     const [sales, purchases, supplierPayments, expenses, inventory, attendance, salaries, advances, fixedSalaries, reminders, supRes, stRes, menuItems, orders] = await Promise.all([
       api.sales.list(),
       api.purchases.list(),
@@ -2780,7 +3511,7 @@ async function loadAll() {
     maybeNotifyReminders();
   } catch (e) {
     console.error(e);
-    toast("Error occurred", "error");
+    toast(e?.message ? `Error: ${e.message}` : "Error occurred", "error");
   } finally {
     setLoading(false);
   }
@@ -2824,4 +3555,13 @@ window.addEventListener("load", async () => {
   await loadAll();
   setTimeout(() => window.renderAnalytics(), 800);
 });
+
+window.clearAppCache = function () {
+  if (!confirm("Clear local cache (tickets + UI prefs) and reload?")) return;
+  try {
+    localStorage.removeItem("kg_pos_tickets_v1");
+    localStorage.removeItem("kg_sidebar_collapsed");
+  } catch {}
+  location.reload();
+};
 
