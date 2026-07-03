@@ -8,6 +8,7 @@
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;700&display=swap');
     
     * { 
       box-sizing: border-box; 
@@ -25,7 +26,6 @@
     }
     
     :root{
-      /* SaaS POS theme (Kilogram / QuickFlow style) */
       --bg-main: #F7FAFC;
       --bg-secondary: #EDF2F7;
       --bg-card: #FFFFFF;
@@ -66,13 +66,72 @@
       margin: 0 auto; 
       display: flex; 
       gap: 20px; 
-      min-height: 100vh; 
+      min-height: 100vh;
+      width: 100%;
     }
     
     .sidebar {
       width: 260px;
       flex-shrink: 0;
       display: block;
+    }
+
+    .appNavToggle{
+      display: none;
+      align-items: center;
+      justify-content: center;
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      color: var(--text-primary);
+      font-size: 22px;
+      line-height: 1;
+      cursor: pointer;
+      box-shadow: var(--shadow);
+      flex-shrink: 0;
+    }
+    .appNavToggle:hover{
+      background: var(--primary-glow);
+      border-color: rgba(47, 133, 90, 0.35);
+      color: var(--primary);
+    }
+
+    .sidebarBackdrop{
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(26, 32, 44, 0.45);
+      z-index: 9990;
+      backdrop-filter: blur(2px);
+    }
+    body.sidebar-open .sidebarBackdrop{ display: block; }
+
+    .appNavToggle--fixed{
+      display: none;
+      position: fixed;
+      top: 16px;
+      left: 16px;
+      z-index: 9985;
+    }
+
+    @media (max-width: 1100px){
+      .appNavToggle{ display: inline-flex; }
+      .appNavToggle--fixed{ display: inline-flex; }
+      .sidebar{
+        position: fixed;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        z-index: 9995;
+        width: min(280px, 88vw);
+        transform: translateX(-110%);
+        transition: transform 0.25s ease;
+        padding: 12px 0 12px 12px;
+      }
+      body.sidebar-open .sidebar{ transform: translateX(0); }
+      body.sidebar-open{ overflow: hidden; }
     }
     
     .sidebar .card {
@@ -1441,11 +1500,74 @@
         height: auto;
       }
     }
+
+    /* Staff attendance — date-wise month picker */
+    .att-month-bar{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      align-items:center;
+      margin-top:12px;
+    }
+    .att-day-strip{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin-top:12px;
+    }
+    .att-day{
+      min-width:44px;
+      padding:8px 10px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background:var(--bg-secondary);
+      color:var(--text-secondary);
+      font-size:13px;
+      font-weight:700;
+      cursor:pointer;
+      text-align:center;
+      line-height:1.2;
+      transition:var(--transition);
+    }
+    .att-day small{
+      display:block;
+      font-size:10px;
+      font-weight:600;
+      opacity:0.75;
+      margin-top:2px;
+    }
+    .att-day:hover{ border-color:rgba(47,133,90,.45); color:var(--primary); }
+    .att-day--selected{
+      background:var(--primary);
+      border-color:var(--primary);
+      color:#fff;
+      box-shadow:var(--primary-shadow);
+    }
+    .att-day--done{ border-color:rgba(47,133,90,.5); background:rgba(47,133,90,.12); color:var(--primary); }
+    .att-day--partial{ border-color:rgba(236,201,75,.65); background:rgba(236,201,75,.18); color:#744210; }
+    .att-day--empty{ opacity:0.85; }
+    .att-status-select{
+      width:100%;
+      max-width:140px;
+      padding:8px 10px;
+      border-radius:10px;
+      border:1px solid var(--border);
+      background:var(--bg-card);
+      font-size:13px;
+      font-weight:600;
+    }
   </style>
 </head>
 <body>
-  <div id="appLoading"><div class="spinner" aria-label="Loading"></div></div>
+  <div id="appLoading">
+    <div style="text-align:center;color:#e2e8f0;">
+      <div class="spinner" aria-label="Loading"></div>
+      <div id="appLoadingText" style="margin-top:14px;font-size:14px;font-weight:600;">Loading…</div>
+    </div>
+  </div>
   <div id="toastRoot" aria-live="polite"></div>
+  <div class="sidebarBackdrop" onclick="closeAppSidebar()" aria-hidden="true"></div>
+  <button type="button" class="appNavToggle appNavToggle--fixed" onclick="toggleAppSidebar()" aria-label="Open navigation menu" title="Menu">☰</button>
 
   <div class="page">
     <div class="sidebar">
@@ -1601,7 +1723,7 @@
           </div>
           <div class="kpi-card span-3 positive">
             <div class="kpi-top"><div class="kpi-ic">🏪</div></div>
-            <div class="kpi-meta"><div class="kpi-label">Retail Sales</div><div class="kpi-value" id="kpiRetailSales">Rs 0</div><div class="kpi-hint">Cash + Other Online</div></div>
+            <div class="kpi-meta"><div class="kpi-label">Retail Sales</div><div class="kpi-value" id="kpiRetailSales">Rs 0</div><div class="kpi-hint">Cash + UPI/other online (excl. Swiggy/Zomato)</div></div>
           </div>
           <div class="kpi-card span-3 positive">
             <div class="kpi-top"><div class="kpi-ic">📄</div></div>
@@ -1628,7 +1750,7 @@
           </div>
           <div class="content-col">
             <div class="card">
-              <div class="section-title"><h2>Expense Breakdown</h2><div class="muted">Staff / Suppliers / Rent / Others</div></div>
+              <div class="section-title"><h2>Expense Breakdown</h2><div class="muted">Staff / Supplier / Rent / Utilities / Shop &amp; kitchen</div></div>
               <div class="chart-wrap"><canvas id="expenseBreakdownChart"></canvas></div>
             </div>
             <div class="card">
@@ -1814,7 +1936,14 @@
           <div class="section-title"><h2>Expenses</h2></div>
           <div class="grid-5">
             <input id="billDate" type="date" />
-            <select id="billType"><option value="rent">Rent</option><option value="utilities">Utilities</option><option value="misc">Misc</option></select>
+            <select id="billType">
+              <option value="rent">Rent</option>
+              <option value="utilities">Utilities</option>
+              <option value="misc">Misc</option>
+              <option value="staff_food">Staff meals / food</option>
+              <option value="kitchen">Kitchen supplies / misc</option>
+              <option value="shop_other">Shop / unexpected</option>
+            </select>
             <input id="billAmount" type="number" placeholder="Amount" />
             <select id="billStatus"><option value="unpaid">Unpaid</option><option value="paid">Paid</option></select>
             <select id="billPaymentMethod">
@@ -1828,6 +1957,35 @@
           </div>
           <button onclick="addBill()" style="margin-top: 10px;">Save Expense</button>
           <div id="billsList" class="list"></div>
+        </div>
+
+        <div class="card" style="margin-top: 14px;">
+          <div class="section-title">
+            <h2>Staff meals, kitchen &amp; shop</h2>
+            <div class="muted">Staff food, kitchen costs, small shop expenses — same as other expenses: choose <strong>Cash</strong> or <strong>Online</strong>; when <strong>Paid</strong>, it reduces Cash balance or Bank balance on the dashboard.</div>
+          </div>
+          <div class="grid-5">
+            <input id="shopExpenseDate" type="date" />
+            <select id="shopExpenseType">
+              <option value="staff_food">Staff meals / food</option>
+              <option value="kitchen">Kitchen / supplies</option>
+              <option value="shop_other">Shop / unexpected</option>
+            </select>
+            <input id="shopExpenseAmount" type="number" min="0" step="1" placeholder="Amount" />
+            <select id="shopExpenseStatus">
+              <option value="unpaid">Unpaid</option>
+              <option value="paid">Paid</option>
+            </select>
+            <select id="shopExpensePayMethod">
+              <option value="cash">Cash (deduct from cash)</option>
+              <option value="online">Online / bank (deduct from bank)</option>
+            </select>
+          </div>
+          <div class="grid-2" style="margin-top: 10px;">
+            <input id="shopExpenseNote" placeholder="Note (optional, e.g. staff lunch, gas repair)" />
+            <div class="muted">These entries are included in <strong>Total Expenses</strong> and net profit when marked paid.</div>
+          </div>
+          <button type="button" class="secondary" onclick="addShopExpense()" style="margin-top: 10px;">Save shop / kitchen expense</button>
         </div>
       </div>
 
@@ -1869,16 +2027,39 @@
 
         <div id="staffTab-attendance" class="tabPanel">
           <div class="card">
-          <div class="section-title"><h2>Daily Attendance</h2><div class="muted">Select multiple employees</div></div>
-          <div class="grid-3">
-            <input id="attDate" type="date" />
-            <button type="button" class="secondary" onclick="markAllAttendance(true)">All Present</button>
-            <button type="button" class="secondary" onclick="markAllAttendance(false)">Clear</button>
+          <div class="section-title">
+            <h2>Date-wise Attendance</h2>
+            <div class="muted">Pick month → pick day (1, 2, 3…) → mark each staff → Save. Salary uses only <strong>saved</strong> present / half-day days (unmarked days are not deducted).</div>
+          </div>
+          <div class="att-month-bar">
+            <div>
+              <div class="muted" style="margin-bottom:4px;">Month</div>
+              <input id="attMonth" type="month" onchange="onAttMonthChange()" />
+            </div>
+            <div>
+              <div class="muted" style="margin-bottom:4px;">Date</div>
+              <input id="attDate" type="date" onchange="onAttDateChange()" />
+            </div>
+            <button type="button" class="secondary" onclick="shiftAttendanceDate(-1)" title="Previous day">← Prev</button>
+            <button type="button" class="secondary" onclick="shiftAttendanceDate(1)" title="Next day">Next →</button>
+            <button type="button" class="secondary" onclick="selectAttendanceDate(todayISO())">Today</button>
+          </div>
+          <div class="muted" style="margin-top:10px;">Tap a day to mark attendance for that date (e.g. on 4th June, fill 1st–4th one by one).</div>
+          <div id="attDayStrip" class="att-day-strip" aria-label="Days in month"></div>
+          <div id="attMonthSummary" class="muted" style="margin-top:10px;"></div>
+          <div class="section-title" style="margin-top:16px;">
+            <h2>Staff for selected date</h2>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button type="button" class="secondary" onclick="markAllAttendance('present')">All Present</button>
+              <button type="button" class="secondary" onclick="markAllAttendance('half-day')">All Half day</button>
+              <button type="button" class="secondary" onclick="markAllAttendance('absent')">All Absent</button>
+              <button type="button" class="secondary" onclick="markAllAttendance('')">Clear row</button>
+              <button type="button" class="secondary" onclick="copyAttendanceFromPrevDay()">Copy previous day</button>
+            </div>
           </div>
           <div id="attendanceChecklist" class="list" style="margin-top:10px;"></div>
-          <button style="margin-top:10px;" onclick="saveBulkAttendance()">Save Attendance</button>
-          <div class="muted" style="margin-top:8px;">Present is counted in salary calculation. Absent is saved as history too.</div>
-          <div class="section-title" style="margin-top:14px;"><h2>Attendance History</h2><div class="muted">Last 25</div></div>
+          <button style="margin-top:10px;" onclick="saveBulkAttendance()">Save attendance for this date</button>
+          <div class="section-title" style="margin-top:14px;"><h2>Attendance History</h2><div class="muted">Last 25 saved records</div></div>
           <div id="attendanceList" class="list"></div>
         </div>
         </div>
@@ -1892,7 +2073,7 @@
               <input id="salMonth" type="month" onchange="renderSalaryOverview()" />
             </div>
             <div>
-              <div class="muted" style="margin-bottom:6px;">Attendance % shown is based on marked days for the month.</div>
+              <div class="muted" style="margin-bottom:6px;">Salary = (monthly ÷ 30) × present days marked in Attendance tab. Only saved present / half-day count.</div>
               <button class="secondary" type="button" onclick="renderSalaryOverview()">Refresh Summary</button>
             </div>
           </div>
@@ -2043,8 +2224,8 @@
                   <input id="menuName" class="input" placeholder="e.g. Paneer Tikka" />
                 </div>
                 <div style="flex: 1; min-width: 180px;">
-                  <label class="label">Hindi name (optional)</label>
-                  <input id="menuNameHi" class="input" placeholder="e.g. पनीर टिक्का" />
+                  <label class="label">Hindi name (auto if blank)</label>
+                  <input id="menuNameHi" class="input" placeholder="Filled from English on save, or click Fill" />
                 </div>
                 <div style="width: 160px;">
                   <label class="label">Price</label>
@@ -2070,17 +2251,21 @@
                   </select>
                 </div>
                 <button class="btn" onclick="saveMenuItem()">Save Item</button>
+                <button class="btn btn-secondary" type="button" onclick="menuAutoFillHindiFromEnglish()">Fill Hindi</button>
                 <button class="btn btn-secondary" onclick="resetMenuForm()">Clear</button>
               </div>
               <div class="muted" style="margin-top:10px; font-size: 12px;">
                 Import <b>.xlsx</b>: columns <b>name</b> + <b>price</b> (also accepts <b>Rate</b>, <b>MRP</b>, <b>Amount</b>, <b>Rs</b>).
                 Prices can be <b>120</b>, <b>Rs 120</b>, <b>₹1,200</b>, or <b>200/-</b>. Optional: <b>category</b>, <b>available</b>. Images: add manually per item.
-                Starter file: <b>data/kilogram-takeaway-menu-template.csv</b> (open in Excel, save as .xlsx).
+                Full Kilogram menu: <b>data/kilogram-takeaway-menu-full.csv</b> (306 items, same as website).
+                Hindi: leave blank and <b>Save</b> fills from English, or use <b>Fill all missing Hindi</b> after import.
               </div>
               <div style="display:flex; gap: 10px; flex-wrap: wrap; align-items:center; margin-top: 10px;">
                 <input id="menuExcelFile" type="file" accept=".xlsx,.xls,.csv" class="input" style="max-width: 340px;" />
                 <button class="btn btn-secondary" onclick="importMenuExcel()">Import Excel / CSV</button>
+                <button class="btn" type="button" onclick="loadKilogramOfficialMenu()">Load Kilogram Menu (website)</button>
                 <button class="btn btn-secondary" onclick="refreshMenu()">Refresh</button>
+                <button class="btn btn-secondary" type="button" onclick="backfillAllMenuHindi()">Fill all missing Hindi</button>
                 <button class="warn" type="button" onclick="clearAllMenuItems()">Clear entire menu</button>
               </div>
             </div>
@@ -2218,11 +2403,16 @@
                 <div class="pos-total-big"><span>Total</span><b id="posTotal">Rs 0</b></div>
               </div>
 
-              <div style="display:flex; gap: 10px; flex-wrap: wrap; margin-top: 14px;">
-                <button class="pos-btn gray" type="button" onclick="posPrintKOT()">Print KOT</button>
+              <div style="display:flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; align-items:center;">
+                <button class="pos-btn gray" type="button" onclick="posPrintKOT()">Print KOT (Hindi)</button>
                 <button class="pos-btn gray" type="button" onclick="posPrintBill()">Print Bill</button>
                 <button class="pos-btn hold" type="button" onclick="posHoldOrder()">Hold</button>
               </div>
+              <div style="display:flex; gap: 10px; flex-wrap: wrap; align-items:center; margin-top: 10px;">
+                <button class="pos-btn gray" type="button" id="thermalPrinterConnectBtn" onclick="thermalPrinterConnect()">Connect thermal printer</button>
+                <span class="pos-small" id="thermalPrinterStatus" style="flex:1; min-width: 200px;">Checking printer…</span>
+              </div>
+              <div class="pos-small" style="margin-top: 8px;">KOT in Hindi on <b>58mm Bluetooth thermal</b> (Chrome + printer paired). Uses saved Hindi names. No printer? Falls back to normal print.</div>
               <div style="margin-top: 12px;">
                 <button class="pos-btn green" type="button" style="width:100%; padding: 12px; font-size: 15px;" onclick="posGenerateBill()">Charge</button>
               </div>
@@ -2268,6 +2458,8 @@
     <script src="js/config.js"></script>
     <script src="js/firebase.js"></script>
     <script src="js/api.js"></script>
+    <script src="constants/kilogramMenuSeed.js"></script>
+    <script src="js/thermalPrinter.js"></script>
     <script src="js/app.js"></script>
 </body>
 </html>

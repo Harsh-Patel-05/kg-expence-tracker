@@ -158,6 +158,7 @@ function animateNumber(el, target, formatter, durationMs = 900) {
 function todayISO() {
   return new Date().toISOString().slice(0, 10);
 }
+window.todayISO = todayISO;
 
 function monthISO() {
   return new Date().toISOString().slice(0, 7);
@@ -410,10 +411,13 @@ let menuEditId = null;
 let menuImageDataUrl = "";
 let posActiveCategory = "";
 
-function setLoading(on) {
+function setLoading(on, message) {
   loadingCount += on ? 1 : -1;
   const el = document.getElementById("appLoading");
   if (el) el.classList.toggle("active", loadingCount > 0);
+  const msgEl = document.getElementById("appLoadingText");
+  if (msgEl && message) msgEl.textContent = message;
+  else if (msgEl && !on && loadingCount <= 0) msgEl.textContent = "Loading…";
 }
 
 function toast(message, type = "info") {
@@ -473,6 +477,48 @@ function escapeHtml(s) {
     .replaceAll("'", "&#039;");
 }
 
+/** English → Hindi for KOT / menu (uses public translation API; needs internet). */
+const __enHiTranslateCache = new Map();
+const __EN_HI_CACHE_MAX = 400;
+
+function looksLikeLatinMenuName(text) {
+  return /[A-Za-z]/.test(String(text || ""));
+}
+
+function looksMostlyDevanagari(text) {
+  const s = String(text || "").trim();
+  if (!s) return false;
+  return /[\u0900-\u097F]/.test(s) && !/[A-Za-z]/.test(s);
+}
+
+async function translateEnToHi(text) {
+  const q0 = String(text || "").trim();
+  if (!q0) return "";
+  if (looksMostlyDevanagari(q0)) return q0;
+  if (!looksLikeLatinMenuName(q0)) return q0;
+
+  const q = q0.slice(0, 450);
+  const key = q.toLowerCase();
+  if (__enHiTranslateCache.has(key)) return __enHiTranslateCache.get(key);
+
+  try {
+    const url = `https://api.mymemory.translated.net/get?q=${encodeURIComponent(q)}&langpair=en|hi`;
+    const ctrl = new AbortController();
+    const t = setTimeout(() => ctrl.abort(), 12000);
+    const res = await fetch(url, { signal: ctrl.signal });
+    clearTimeout(t);
+    if (!res.ok) throw new Error("translate failed");
+    const data = await res.json();
+    const out = String(data?.responseData?.translatedText || "").trim();
+    if (!out || /^MYMEMORY WARNING/i.test(out)) throw new Error("no translation");
+    if (__enHiTranslateCache.size >= __EN_HI_CACHE_MAX) __enHiTranslateCache.clear();
+    __enHiTranslateCache.set(key, out);
+    return out;
+  } catch {
+    return "";
+  }
+}
+
 function uniq(arr) {
   return Array.from(new Set(arr.filter(Boolean)));
 }
@@ -502,6 +548,26 @@ function applySidebarButtonText() {
 
 window.toggleSidebar = function () {
   setSidebarCollapsed(!document.body.classList.contains("sidebar-collapsed"));
+};
+
+function isMobileSidebarLayout() {
+  try {
+    return window.matchMedia("(max-width: 1100px)").matches;
+  } catch {
+    return false;
+  }
+}
+
+window.closeAppSidebar = function () {
+  document.body.classList.remove("sidebar-open");
+};
+
+window.toggleAppSidebar = function () {
+  if (isMobileSidebarLayout()) {
+    document.body.classList.toggle("sidebar-open");
+    return;
+  }
+  toggleSidebar();
 };
 
 async function withErr(fn) {
@@ -547,8 +613,8 @@ function fixedSalaryFor(name) {
 }
 
 function attendanceStatsForMonth(name, month) {
-  const m = String(month || "");
-  const rows = state.attendance.filter((a) => a && a.name === name && String(a.date || "").startsWith(m));
+  const m = String(month || "").slice(0, 7);
+  const rows = state.attendance.filter((a) => a && a.name === name && String(a.date || "").slice(0, 7) === m);
   const present = rows.filter((r) => r.status === "present").length;
   const half = rows.filter((r) => r.status === "half-day").length;
   const absent = rows.filter((r) => r.status === "absent").length;
@@ -557,6 +623,152 @@ function attendanceStatsForMonth(name, month) {
   const pct = marked > 0 ? (presentEquivalent / marked) * 100 : 0;
   return { present, half, absent, marked, presentEquivalent, pct };
 }
+
+function attMonthValue() {
+  const m = document.getElementById("attMonth")?.value;
+  if (m) return String(m).slice(0, 7);
+  const d = document.getElementById("attDate")?.value || todayISO();
+  return String(d).slice(0, 7);
+}
+
+function syncAttMonthFromDate() {
+  const month = attMonthValue();
+  const attMonth = document.getElementById("attMonth");
+  if (attMonth && attMonth.value !== month) attMonth.value = month;
+}
+
+function attendanceDatesForMonth(month) {
+  const m = String(month || monthISO()).slice(0, 7);
+  const parts = m.split("-").map((x) => parseInt(x, 10));
+  const y = parts[0];
+  const mo = parts[1];
+  if (!y || !mo) return [];
+  const lastDay = new Date(y, mo, 0).getDate();
+  const cur = monthISO();
+  const today = todayISO();
+  let maxDay = lastDay;
+  if (m > cur) return [];
+  if (m === cur) maxDay = Math.min(lastDay, parseInt(today.slice(8, 10), 10));
+  const out = [];
+  for (let d = 1; d <= maxDay; d++) out.push(`${m}-${String(d).padStart(2, "0")}`);
+  return out;
+}
+
+function attendanceDaySummary(date) {
+  const names = staffNames();
+  const d = String(date || "").slice(0, 10);
+  if (!names.length) return { staff: 0, marked: 0, presentEq: 0 };
+  let marked = 0;
+  let presentEq = 0;
+  names.forEach((name) => {
+    const entry = getAttendanceEntryFor(d, name);
+    if (!entry) return;
+    marked++;
+    const st = String(entry.status || "");
+    if (st === "present") presentEq += 1;
+    else if (st === "half-day") presentEq += 0.5;
+  });
+  return { staff: names.length, marked, presentEq };
+}
+
+function attendanceDayStripClass(date, selectedDate) {
+  const sum = attendanceDaySummary(date);
+  if (date === selectedDate) return "att-day att-day--selected";
+  if (!sum.marked) return "att-day att-day--empty";
+  if (sum.marked < sum.staff) return "att-day att-day--partial";
+  return "att-day att-day--done";
+}
+
+function renderAttendanceDayStrip() {
+  const strip = document.getElementById("attDayStrip");
+  if (!strip) return;
+  const month = attMonthValue();
+  const days = attendanceDatesForMonth(month);
+  const selected = document.getElementById("attDate")?.value || days[days.length - 1] || todayISO();
+  if (!days.length) {
+    strip.innerHTML = `<div class="muted">No dates available for this month yet.</div>`;
+    return;
+  }
+  strip.innerHTML = days
+    .map((iso) => {
+      const dayNum = parseInt(iso.slice(8, 10), 10);
+      const sum = attendanceDaySummary(iso);
+      const sub = sum.marked ? `${sum.marked}/${sum.staff}` : "—";
+      const cls = attendanceDayStripClass(iso, selected);
+      return `<button type="button" class="${cls}" onclick="selectAttendanceDate('${iso}')">${dayNum}<small>${sub}</small></button>`;
+    })
+    .join("");
+}
+
+function renderAttendanceMonthSummary() {
+  const el = document.getElementById("attMonthSummary");
+  if (!el) return;
+  const month = attMonthValue();
+  const date = document.getElementById("attDate")?.value || todayISO();
+  const daySum = attendanceDaySummary(date);
+  const savedDays = new Set(
+    state.attendance.filter((a) => a?.date && String(a.date).slice(0, 7) === month).map((a) => String(a.date).slice(0, 10))
+  ).size;
+  const dateLabel = new Date(`${date}T00:00:00`).toLocaleDateString("en-IN", { weekday: "short", day: "numeric", month: "short" });
+  el.innerHTML =
+    `<strong>${dateLabel}</strong> — ${daySum.marked}/${daySum.staff} staff saved` +
+    (daySum.presentEq > 0 ? `, ${daySum.presentEq} present-day(s) on this date.` : ".") +
+    ` Month: <strong>${savedDays}</strong> date(s) with saved attendance.`;
+}
+
+function renderAttendanceMonthUi() {
+  syncAttMonthFromDate();
+  renderAttendanceDayStrip();
+  renderAttendanceMonthSummary();
+  renderAttendanceChecklist();
+}
+
+window.selectAttendanceDate = function (iso) {
+  const el = document.getElementById("attDate");
+  if (el) el.value = String(iso || "").slice(0, 10);
+  renderAttendanceMonthUi();
+};
+
+window.onAttMonthChange = function () {
+  const month = attMonthValue();
+  const days = attendanceDatesForMonth(month);
+  const attDate = document.getElementById("attDate");
+  if (!attDate) return renderAttendanceMonthUi();
+  const cur = String(attDate.value || "").slice(0, 10);
+  if (!cur.startsWith(month) && days.length) attDate.value = days[days.length - 1];
+  else if (!days.length) attDate.value = `${month}-01`;
+  renderAttendanceMonthUi();
+};
+
+window.onAttDateChange = function () {
+  syncAttMonthFromDate();
+  renderAttendanceMonthUi();
+};
+
+window.shiftAttendanceDate = function (delta) {
+  const days = attendanceDatesForMonth(attMonthValue());
+  const cur = document.getElementById("attDate")?.value || "";
+  const i = days.indexOf(cur);
+  const next = i < 0 ? (delta > 0 ? 0 : days.length - 1) : i + delta;
+  if (next >= 0 && next < days.length) selectAttendanceDate(days[next]);
+  else toast(delta > 0 ? "No later day in this month" : "No earlier day", "info");
+};
+
+window.copyAttendanceFromPrevDay = function () {
+  const date = document.getElementById("attDate")?.value || todayISO();
+  const days = attendanceDatesForMonth(attMonthValue());
+  const i = days.indexOf(date);
+  if (i <= 0) return toast("No previous day in this month", "info");
+  const prev = days[i - 1];
+  const list = document.getElementById("attendanceChecklist");
+  if (!list) return;
+  list.querySelectorAll("select[data-att-name]").forEach((sel) => {
+    const name = sel.getAttribute("data-att-name") || "";
+    const entry = getAttendanceEntryFor(prev, name);
+    sel.value = entry ? String(entry.status || "") : "";
+  });
+  toast(`Copied from ${prev} — click Save to store for ${date}`, "info");
+};
 
 function calcSalaryForMonth(name, month) {
   const monthly = fixedSalaryFor(name);
@@ -655,14 +867,34 @@ function saleAmounts(s) {
     
     // For total calculation: use saved total or calculate
     const total = s.totalAmount !== undefined ? num(s.totalAmount) : cash + online;
-    return { cash, online, total, swiggy, zomato, otherOnline, legacyOnline };
+    // Retail = cash + UPI/other online + bank transfers, excluding Swiggy/Zomato.
+    // Do NOT add legacy `onlineAmount` when breakdown fields exist — addSale saves both
+    // `otherOnlineAmount` and `onlineAmount` (duplicate), which was inflating retail (e.g. 18k vs 25k).
+    const hasOnlineBreakdown = swiggy > 0 || zomato > 0 || otherOnline > 0;
+    const retailLegacyOnly = !hasOnlineBreakdown && legacyOnline > 0 ? legacyOnline : 0;
+    const retail = cash + otherOnline + retailLegacyOnly;
+    return { cash, online, total, swiggy, zomato, otherOnline, legacyOnline, retail };
   }
   // Legacy format: { amount, method }
   const amt = num(s?.amount);
   const m = String(s?.method || "").toLowerCase();
   const cash = m === "cash" ? amt : 0;
   const online = m && m !== "cash" ? amt : 0;
-  return { cash, online, total: amt, swiggy: 0, zomato: 0, otherOnline: 0, legacyOnline: online };
+  const retail = cash + online;
+  return { cash, online, total: amt, swiggy: 0, zomato: 0, otherOnline: 0, legacyOnline: online, retail };
+}
+
+function expenseCategoryLabel(cat) {
+  const k = String(cat || "").toLowerCase();
+  const map = {
+    rent: "Rent",
+    utilities: "Utilities",
+    misc: "Misc",
+    staff_food: "Staff meals / food",
+    kitchen: "Kitchen / supplies",
+    shop_other: "Shop / unexpected"
+  };
+  return map[k] || String(cat || "Expense");
 }
 
 function salaryAdvanceFor(name, month) {
@@ -688,8 +920,8 @@ function calcTotals() {
   // Calculate Online Sales (Swiggy + Zomato only)
   const onlineSales = salesAmounts.reduce((sum, { amounts }) => sum + amounts.swiggy + amounts.zomato, 0);
 
-  // Calculate Retail Sales (Cash + Other Online, excluding Swiggy/Zomato)
-  const retailSales = salesAmounts.reduce((sum, { amounts }) => sum + amounts.cash + amounts.otherOnline + amounts.legacyOnline, 0);
+  // Retail = cash + other online (UPI/bank); excludes Swiggy/Zomato; avoids double-counting onlineAmount
+  const retailSales = salesAmounts.reduce((sum, { amounts }) => sum + num(amounts.retail), 0);
 
   const paidSupplierCash = state.purchases
     .filter((p) => p.paidStatus === "paid" && (p.paymentMethod || "cash") !== "online")
@@ -883,18 +1115,20 @@ function renderExpenseBreakdownChart() {
   const rent = billsByCategory.rent || 0;
   const utilities = billsByCategory.utilities || 0;
   const misc = billsByCategory.misc || 0;
+  const shopKitchen =
+    (billsByCategory.staff_food || 0) + (billsByCategory.kitchen || 0) + (billsByCategory.shop_other || 0);
   const others = Object.entries(billsByCategory)
-    .filter(([k]) => !["rent", "utilities", "misc"].includes(k))
+    .filter(([k]) => !["rent", "utilities", "misc", "staff_food", "kitchen", "shop_other"].includes(k))
     .reduce((sum, [, v]) => sum + num(v), 0);
 
   expenseBreakdownChartRef = new Chart(canvas, {
     type: "pie",
     data: {
-      labels: ["Staff", "Supplier", "Rent", "Utilities", "Misc", "Others"],
+      labels: ["Staff", "Supplier", "Rent", "Utilities", "Misc", "Shop & kitchen", "Others"],
       datasets: [
         {
-          data: [staff, supplier, rent, utilities, misc, others],
-          backgroundColor: ["#ef4444", "#a855f7", "#f97316", "#14b8a6", "#60a5fa", "#94a3b8"]
+          data: [staff, supplier, rent, utilities, misc, shopKitchen, others],
+          backgroundColor: ["#ef4444", "#a855f7", "#f97316", "#14b8a6", "#60a5fa", "#eab308", "#94a3b8"]
         }
       ]
     },
@@ -1016,19 +1250,23 @@ function maybeNotifyReminders() {
 
 window.showSection = function (sectionName) {
   activeSection = sectionName;
+  closeAppSidebar();
   document.querySelectorAll(".dashboard-section").forEach((section) => section.classList.remove("active"));
   document.querySelectorAll(".nav-item").forEach((item) => item.classList.remove("active"));
   const targetSection = document.getElementById(`${sectionName}-section`);
   const targetNav = document.querySelector(`.nav-item[onclick="showSection('${sectionName}')"]`);
   if (targetSection) targetSection.classList.add("active");
   if (targetNav) targetNav.classList.add("active");
+  if (sectionName === "analytics") window.renderAnalytics?.();
   if (sectionName === "staff") window.showStaffTab?.(staffTab);
   if (sectionName === "menu") {
     refreshMenu();
   }
   if (sectionName === "pos") {
     loadPosTickets();
-    refreshMenuForPos();
+    refreshMenuForPos().then(() => syncKilogramMenuInBackground());
+    window.ThermalPrinter?.updateStatusUi?.();
+    window.ThermalPrinter?.tryReconnectSaved?.();
     renderPosCart();
     renderPosPayment();
     applySidebarButtonText();
@@ -1064,6 +1302,14 @@ window.showStaffTab = function (tab) {
   document.querySelectorAll("#staff-section .tabBtn").forEach((b) => b.classList.remove("active"));
   const btn = document.querySelector(`#staff-section .tabBtn[data-staff-tab="${staffTab}"]`);
   if (btn) btn.classList.add("active");
+  if (staffTab === "attendance") {
+    const attMonth = document.getElementById("attMonth");
+    if (attMonth && !attMonth.value) attMonth.value = monthISO();
+    const attDate = document.getElementById("attDate");
+    if (attDate && !attDate.value) attDate.value = todayISO();
+    renderAttendanceMonthUi();
+  }
+  if (staffTab === "salary") window.renderSalaryOverview?.();
 };
 
 window.addSale = function () {
@@ -1314,7 +1560,6 @@ window.saveMenuItem = async function () {
     if (!api?.menuItems) throw new Error("Menu API not ready");
 
     const name = (document.getElementById("menuName")?.value || "").trim();
-    const nameHi = (document.getElementById("menuNameHi")?.value || "").trim();
     const price = num(document.getElementById("menuPrice")?.value);
     const category = (document.getElementById("menuCategory")?.value || "").trim() || "General";
     const available = (document.getElementById("menuAvailable")?.value || "true") === "true";
@@ -1334,6 +1579,13 @@ window.saveMenuItem = async function () {
     if (!name) return toast("Enter name", "error");
     if (!(price >= 0)) return toast("Enter valid price", "error");
 
+    let nameHi = (document.getElementById("menuNameHi")?.value || "").trim();
+    if (!nameHi && name && looksLikeLatinMenuName(name)) {
+      toast("Translating name to Hindi…", "info");
+      const auto = await translateEnToHi(name);
+      if (auto) nameHi = auto;
+    }
+
     setLoading(true);
     if (menuEditId) await api.menuItems.update(menuEditId, { name, nameHi, price, category, imageUrl, available });
     else await api.menuItems.create({ name, nameHi, price, category, imageUrl, available });
@@ -1345,6 +1597,63 @@ window.saveMenuItem = async function () {
   } catch (e) {
     console.error(e);
     toast(e.message || "Failed to save item", "error");
+  } finally {
+    setLoading(false);
+  }
+};
+
+window.menuAutoFillHindiFromEnglish = async function () {
+  try {
+    const name = (document.getElementById("menuName")?.value || "").trim();
+    if (!name) return toast("Enter English name first", "error");
+    if (!looksLikeLatinMenuName(name)) return toast("Name already looks non-English; edit Hindi field manually if needed", "info");
+    setLoading(true);
+    toast("Translating…", "info");
+    const hi = await translateEnToHi(name);
+    const el = document.getElementById("menuNameHi");
+    if (hi && el) {
+      el.value = hi;
+      toast("Hindi filled — review and save", "success");
+    } else {
+      toast("Could not translate (check internet or try again)", "error");
+    }
+  } catch (e) {
+    console.error(e);
+    toast(e.message || "Translation failed", "error");
+  } finally {
+    setLoading(false);
+  }
+};
+
+/** One-click: save Hindi for every menu row that is missing `nameHi` (uses internet; throttled). */
+window.backfillAllMenuHindi = async function () {
+  if (!confirm("Fill Hindi names for all items missing Hindi? Uses internet and may take a few minutes.")) return;
+  try {
+    api = window.api;
+    if (!api?.menuItems?.list || !api.menuItems.update) throw new Error("Menu API not ready");
+    setLoading(true);
+    const list = await api.menuItems.list();
+    const items = Array.isArray(list) ? list : [];
+    let n = 0;
+    for (const m of items) {
+      const id = m.id || m._id;
+      const nm = String(m.name || "").trim();
+      const hi = String(m.nameHi || "").trim();
+      if (!id || !nm || hi) continue;
+      if (!looksLikeLatinMenuName(nm)) continue;
+      const auto = await translateEnToHi(nm);
+      if (auto) {
+        await api.menuItems.update(id, { nameHi: auto });
+        n += 1;
+      }
+      await new Promise((r) => setTimeout(r, 450));
+    }
+    await refreshMenu();
+    await refreshMenuForPos();
+    toast(n ? `Updated Hindi for ${n} item(s)` : "Nothing to update (or translation failed)", n ? "success" : "info");
+  } catch (e) {
+    console.error(e);
+    toast(e.message || "Backfill failed", "error");
   } finally {
     setLoading(false);
   }
@@ -1431,6 +1740,123 @@ window.importMenuExcel = async function () {
   }
 };
 
+const KILOGRAM_MENU_SYNC_VERSION = "2026-05-25-v2";
+
+function kilogramMenuSeedRows() {
+  const seed = Array.isArray(window.KILOGRAM_MENU_SEED) ? window.KILOGRAM_MENU_SEED : [];
+  return seed
+    .map((it) => ({
+      name: String(it.name || "").trim(),
+      nameHi: String(it.nameHi || "").trim(),
+      price: num(it.price),
+      category: String(it.category || "General").trim(),
+      imageUrl: String(it.imageUrl || "").trim(),
+      available: it.available !== false,
+    }))
+    .filter((it) => it.name && Number.isFinite(it.price) && it.price >= 0);
+}
+
+function menuHasKilogramCategories(items) {
+  const cats = new Set((items || []).map((m) => String(m.category || "").trim()));
+  return cats.has("Chinese") && cats.has("Punjabi") && cats.has("Snacks");
+}
+
+function shouldAutoSyncKilogramMenu(items) {
+  const rows = kilogramMenuSeedRows();
+  if (!rows.length) return false;
+  if (!Array.isArray(items) || !items.length) return true;
+  if (!menuHasKilogramCategories(items)) return true;
+  try {
+    return localStorage.getItem("kg_kilogram_menu_sync_version") !== KILOGRAM_MENU_SYNC_VERSION;
+  } catch {
+    return true;
+  }
+}
+
+let __kgMenuSyncPromise = null;
+
+async function syncKilogramMenuToDb({ silent = false } = {}) {
+  if (__kgMenuSyncPromise) return __kgMenuSyncPromise;
+
+  const items = kilogramMenuSeedRows();
+  if (!items.length) {
+    if (!silent) toast("Kilogram menu file missing — refresh the page", "error");
+    return false;
+  }
+  api = window.api;
+  if (!api?.menuItems?.bulkCreate && !api?.menuItems?.create) {
+    if (!silent) toast("Menu API not ready", "error");
+    return false;
+  }
+
+  __kgMenuSyncPromise = (async () => {
+  if (!silent) setLoading(true, "Uploading menu…");
+  try {
+    if (api.menuItems.bulkCreate) {
+      const next = await api.menuItems.bulkCreate(items);
+      if (Array.isArray(next) && next.length) state.menuItems = next;
+    } else {
+      for (const it of items) await api.menuItems.create(it);
+    }
+    try {
+      localStorage.setItem("kg_kilogram_menu_sync_version", KILOGRAM_MENU_SYNC_VERSION);
+    } catch {}
+    const res = await api.menuItems.list();
+    state.menuItems = Array.isArray(res) ? res : (Array.isArray(res?.items) ? res.items : []);
+    renderMenuFilters();
+    renderPosCategoryChips();
+    renderPosMenu();
+    if (!silent) toast(`Loaded ${items.length} Kilogram menu items`, "success");
+    return true;
+  } catch (e) {
+    console.error(e);
+    if (!silent) toast(e.message || "Failed to load Kilogram menu", "error");
+    return false;
+  } finally {
+    if (!silent) setLoading(false);
+  }
+  })();
+
+  try {
+    return await __kgMenuSyncPromise;
+  } finally {
+    __kgMenuSyncPromise = null;
+  }
+}
+
+let __kgMenuBgSyncDone = false;
+
+function syncKilogramMenuInBackground() {
+  if (__kgMenuBgSyncDone || __kgMenuSyncPromise) return;
+  if (!shouldAutoSyncKilogramMenu(state.menuItems)) return;
+  __kgMenuBgSyncDone = true;
+  void syncKilogramMenuToDb({ silent: true })
+    .then((ok) => {
+      if (ok) toast("Kilogram menu ready — Snacks, Chinese, Mains, Punjabi", "ok");
+    })
+    .catch((e) => console.error(e))
+    .finally(() => {
+      __kgMenuBgSyncDone = false;
+    });
+}
+
+/** Load full takeaway menu from constants/kilogramMenuSeed.js (The Kilogram website). */
+window.loadKilogramOfficialMenu = async function () {
+  const rows = kilogramMenuSeedRows();
+  if (!rows.length) return toast("Kilogram menu data not loaded — refresh the page", "error");
+  const msg =
+    `Load ${rows.length} items from The Kilogram website menu?\n\n` +
+    "Sections: Snacks, Chinese, Mains (bhaji/pulao), Punjabi, Beverages.\n" +
+    "Existing items with the same name will be updated.";
+  if (!confirm(msg)) return;
+  try {
+    localStorage.removeItem("kg_kilogram_menu_sync_version");
+  } catch {}
+  await syncKilogramMenuToDb({ silent: false });
+  await refreshMenu();
+  await refreshMenuForPos();
+};
+
 window.clearAllMenuItems = async function () {
   if (!confirm("Delete ALL menu items? This cannot be undone. Type OK in the next prompt.")) return;
   const ok = window.prompt('Type DELETE to confirm clearing the entire menu:');
@@ -1480,7 +1906,9 @@ window.renderPosMenu = function () {
   const cat = posActiveCategory || "";
 
   let items = Array.isArray(state.menuItems) ? [...state.menuItems] : [];
-  if (cat && cat !== "__favs") items = items.filter((m) => String(m.category || "") === cat);
+  if (cat && cat !== "__favs") {
+    items = items.filter((m) => String(m.category || "") === cat);
+  }
   if (q) items = items.filter((m) => String(m.name || "").toLowerCase().includes(q));
 
   if (cat === "__favs") {
@@ -1617,15 +2045,28 @@ if (!window.__posMenuClickBound) {
 function renderPosCategoryChips() {
   const wrap = document.getElementById("posCategoryChips");
   if (!wrap) return;
-  const cats = uniq(state.menuItems.map((m) => m.category || "General"))
-    .sort((a, b) => String(a).localeCompare(String(b)));
-  const allActive = !posActiveCategory;
-  wrap.innerHTML =
-    `<div class="pos-chip ${allActive ? "active" : ""}" onclick="posSetCategory('')">All</div>` +
-    `<div class="pos-chip ${posActiveCategory === "__favs" ? "active" : ""}" onclick="posSetCategory('__favs')">Favourites</div>` +
-    cats
-      .map((c) => `<div class="pos-chip ${posActiveCategory === c ? "active" : ""}" onclick="posSetCategory('${escapeHtml(c)}')">${escapeHtml(c)}</div>`)
-      .join("");
+
+  const preset = Array.isArray(window.POS_MENU_CATEGORIES) ? window.POS_MENU_CATEGORIES : [];
+  const inMenu = uniq(state.menuItems.map((m) => m.category || "General"));
+  const ordered = [];
+  for (const p of preset) {
+    if (p.id === "all" || p.id === "__favs") ordered.push(p);
+    else if (inMenu.includes(p.id)) ordered.push(p);
+  }
+  for (const c of inMenu.sort((a, b) => String(a).localeCompare(String(b)))) {
+    if (!ordered.some((p) => p.id === c)) ordered.push({ id: c, label: c, icon: "" });
+  }
+
+  wrap.innerHTML = ordered
+    .map((p) => {
+      const active =
+        (p.id === "all" && !posActiveCategory) ||
+        (p.id !== "all" && posActiveCategory === p.id);
+      const catArg = p.id === "all" ? "" : p.id === "__favs" ? "__favs" : p.id;
+      const label = p.icon ? `${p.icon} ${p.label}` : p.label;
+      return `<div class="pos-chip ${active ? "active" : ""}" onclick="posSetCategory('${escapeHtml(catArg)}')">${escapeHtml(label)}</div>`;
+    })
+    .join("");
 }
 
 window.posSetCategory = function (cat) {
@@ -1822,7 +2263,7 @@ window.renderPosPayment = function () {
 
 function buildPrintHtml(title, linesHtml, totalsHtml, footerHtml) {
   return `
-    <div style="max-width: 360px; margin: 0 auto;">
+    <div style="max-width: 360px; margin: 0 auto; font-family: 'Noto Sans Devanagari', 'Nirmala UI', 'Mangal', sans-serif;">
       <div style="text-align:center; font-weight: 900; font-size: 18px;">The Kilogram</div>
       <div style="text-align:center; font-size: 12px; margin-top: 4px;">${escapeHtml(title)}</div>
       <div style="text-align:center; font-size: 11px; margin-top: 6px;">${escapeHtml(todayISO())} ${new Date().toLocaleTimeString()}</div>
@@ -1844,23 +2285,55 @@ function doPrint(html) {
   }, 500);
 }
 
-window.posPrintKOT = function () {
+window.posPrintKOT = async function () {
   if (!posCart.length) return toast("Cart is empty", "error");
   const lang = "hi"; // always Hindi KOT
-  const lines = posCart
-    .map((it) => {
-      const prep = prepLabel(it.prep, lang);
-      const title = (lang === "hi" ? (it.nameHi || "") : "") || it.name;
-      return `<div style="display:flex; justify-content:space-between; gap:12px; font-size: 13px;">
+  setLoading(true);
+  try {
+    const kotHelpers = { prepLabel, translateEnToHi, escapeHtml };
+
+    if (window.ThermalPrinter?.isConnected()) {
+      await window.ThermalPrinter.printKOTFromCart(posCart, kotHelpers);
+      toast("KOT sent to thermal printer (Hindi)", "success");
+      return;
+    }
+
+    if (window.ThermalPrinter?.isSupported()) {
+      const re = await window.ThermalPrinter.tryReconnectSaved();
+      if (re && window.ThermalPrinter.isConnected()) {
+        await window.ThermalPrinter.printKOTFromCart(posCart, kotHelpers);
+        toast("KOT sent to thermal printer (Hindi)", "success");
+        return;
+      }
+    }
+
+    const lineParts = await Promise.all(
+      posCart.map(async (it) => {
+        const prep = prepLabel(it.prep, lang);
+        let title = String(it.nameHi || "").trim();
+        if (!title && String(it.name || "").trim()) {
+          title = (await translateEnToHi(String(it.name).trim())) || String(it.name || "");
+        }
+        if (!title) title = String(it.name || "");
+        return `<div style="display:flex; justify-content:space-between; gap:12px; font-size: 13px;">
         <div style="font-weight:800;">
           ${escapeHtml(title)}
           <div style="font-size:11px;color:#444; margin-top:2px;">${escapeHtml(prep)}</div>
         </div>
         <div style="font-weight:900;">× ${num(it.qty)}</div>
       </div>`;
-    })
-    .join("");
-  doPrint(buildPrintHtml(lang === "hi" ? "किचन ऑर्डर (KOT)" : "KOT", lines, "", ""));
+      })
+    );
+    doPrint(buildPrintHtml(lang === "hi" ? "किचन ऑर्डर (KOT)" : "KOT", lineParts.join(""), "", ""));
+    if (window.ThermalPrinter?.isSupported()) {
+      toast("No printer connected — used browser print. Tap Connect thermal printer for Bluetooth.", "info");
+    }
+  } catch (e) {
+    console.error(e);
+    toast(e.message || "KOT print failed", "error");
+  } finally {
+    setLoading(false);
+  }
 };
 
 window.posPrintBill = function () {
@@ -2492,6 +2965,32 @@ window.addBill = function () {
   });
 };
 
+window.addShopExpense = function () {
+  const date = document.getElementById("shopExpenseDate")?.value || todayISO();
+  const category = document.getElementById("shopExpenseType")?.value || "shop_other";
+  const amount = num(document.getElementById("shopExpenseAmount")?.value);
+  const status = document.getElementById("shopExpenseStatus")?.value || "unpaid";
+  const paymentMethod = document.getElementById("shopExpensePayMethod")?.value || "cash";
+  const note = (document.getElementById("shopExpenseNote")?.value || "").trim();
+  if (!(amount > 0)) return toast("Enter valid amount", "error");
+  withErr(async () => {
+    await api.expenses.create({
+      date,
+      category,
+      amount,
+      status,
+      paymentMethod: paymentMethod === "online" ? "online" : "cash",
+      note
+    });
+    ["shopExpenseAmount", "shopExpenseNote"].forEach((id) => {
+      const el = document.getElementById(id);
+      if (el) el.value = "";
+    });
+    await loadAll();
+    toast("Saved successfully", "ok");
+  });
+};
+
 window.toggleExpenseStatus = function (id) {
   const e = state.expenses.find((x) => x.id === id);
   if (!e) return;
@@ -2582,16 +3081,27 @@ window.addAttendance = function () {
 };
 
 function getAttendanceStatusFor(date, name) {
-  const d = String(date || "").slice(0, 10);
-  const n = String(name || "");
-  const entry = state.attendance.find((a) => String(a.date || "").slice(0, 10) === d && String(a.name || "") === n);
-  return entry ? String(entry.status || "absent") : "absent";
+  const entry = getAttendanceEntryFor(date, name);
+  return entry ? String(entry.status || "absent") : "";
 }
 
 function getAttendanceEntryFor(date, name) {
   const d = String(date || "").slice(0, 10);
   const n = String(name || "");
   return state.attendance.find((a) => String(a.date || "").slice(0, 10) === d && String(a.name || "") === n) || null;
+}
+
+function attStatusSelectHtml(name, status) {
+  const s = String(status || "");
+  const opts = [
+    { v: "", l: "Not marked" },
+    { v: "present", l: "Present" },
+    { v: "half-day", l: "Half day" },
+    { v: "absent", l: "Absent" }
+  ];
+  const inner = opts.map((o) => `<option value="${o.v}" ${s === o.v ? "selected" : ""}>${o.l}</option>`).join("");
+  const safe = String(name).replace(/"/g, "&quot;");
+  return `<select class="att-status-select" data-att-name="${safe}" aria-label="Attendance for ${safe}">${inner}</select>`;
 }
 
 function renderAttendanceChecklist() {
@@ -2606,14 +3116,14 @@ function renderAttendanceChecklist() {
   el.innerHTML = names
     .map((name) => {
       const status = getAttendanceStatusFor(date, name);
-      const checked = status === "present" ? "checked" : "";
+      const pill = status || "not marked";
+      const safe = name.replace(/'/g, "\\'");
       return `
-        <label class="row" style="grid-template-columns:auto 1fr auto auto;gap:10px;align-items:center;cursor:pointer;">
-          <input type="checkbox" data-att-name="${name}" ${checked} style="width:18px;height:18px;accent-color: rgba(168,85,247,.95);" />
-          <div><strong>${name}</strong></div>
-          <span class="pill">${status}</span>
-          <button type="button" class="secondary btn-sm" onclick="openAttendanceHistory('${name.replace(/'/g, "\\'")}'); event.preventDefault(); event.stopPropagation();">History</button>
-        </label>
+        <div class="row" style="grid-template-columns:1fr auto auto;gap:10px;align-items:center;">
+          <div><strong>${name}</strong> <span class="pill">${pill}</span></div>
+          ${attStatusSelectHtml(name, status)}
+          <button type="button" class="secondary btn-sm" onclick="openAttendanceHistory('${safe}')">History</button>
+        </div>
       `;
     })
     .join("");
@@ -2631,16 +3141,12 @@ window.openAttendanceHistory = function (name) {
   alert(`${name}\n\n${msg}`);
 };
 
-window.markAllAttendance = function (present) {
+window.markAllAttendance = function (status) {
   const el = document.getElementById("attendanceChecklist");
   if (!el) return;
-  el.querySelectorAll('input[type="checkbox"][data-att-name]').forEach((cb) => {
-    cb.checked = !!present;
-  });
-  // Update pill labels instantly
-  el.querySelectorAll("label.row").forEach((row) => {
-    const pill = row.querySelector(".pill");
-    if (pill) pill.textContent = present ? "present" : "absent";
+  const v = status === "present" || status === "half-day" || status === "absent" ? status : "";
+  el.querySelectorAll("select[data-att-name]").forEach((sel) => {
+    sel.value = v;
   });
 };
 
@@ -2648,22 +3154,27 @@ window.saveBulkAttendance = function () {
   const date = document.getElementById("attDate")?.value || todayISO();
   const list = document.getElementById("attendanceChecklist");
   if (!list) return;
-  const checks = [...list.querySelectorAll('input[type="checkbox"][data-att-name]')];
-  if (!checks.length) return toast("No staff found", "error");
+  const selects = [...list.querySelectorAll("select[data-att-name]")];
+  if (!selects.length) return toast("No staff found", "error");
+
+  const toSave = selects
+    .map((sel) => ({
+      name: sel.getAttribute("data-att-name") || "",
+      status: String(sel.value || "").trim()
+    }))
+    .filter((x) => x.name && x.status);
+
+  if (!toSave.length) return toast("Select Present, Half day, or Absent for at least one staff", "error");
 
   withErr(async () => {
-    for (const cb of checks) {
-      const name = cb.getAttribute("data-att-name") || "";
-      const status = cb.checked ? "present" : "absent";
+    for (const { name, status } of toSave) {
       const existing = getAttendanceEntryFor(date, name);
-      if (existing?.id) {
-        await api.attendance.update(existing.id, { date, name, status });
-      } else {
-        await api.attendance.create({ date, name, status });
-      }
+      if (existing?.id) await api.attendance.update(existing.id, { date, name, status });
+      else await api.attendance.create({ date, name, status });
     }
     await loadAll();
-    toast("Attendance saved", "ok");
+    renderAttendanceMonthUi();
+    toast(`Attendance saved for ${date} (${toSave.length} staff)`, "ok");
   });
 };
 
@@ -2695,22 +3206,18 @@ window.calculateAttendanceBasedSalary = function () {
   const month = document.getElementById("salMonth")?.value || "";
   const name = document.getElementById("salName")?.value || "";
   if (!month || !name) return toast("Select month and staff", "error");
-  const fixedSalary = state.fixedSalaries.find((fs) => fs.name === name);
-  if (!fixedSalary) return toast("No fixed salary set for this staff", "error");
+  if (!fixedSalaryFor(name)) return toast("No fixed salary set for this staff", "error");
 
-  const monthAttendance = state.attendance.filter((a) => a.date && String(a.date).startsWith(month) && a.name === name);
-  const presentDays = monthAttendance.filter((a) => a.status === "present").length;
-  const halfDays = monthAttendance.filter((a) => a.status === "half-day").length;
-  const attendanceDays = presentDays + halfDays * 0.5;
-
-  // Fixed 30-day logic (as requested)
-  const dailySalary = num(fixedSalary.amount) / 30;
-  const actualSalary = dailySalary * attendanceDays;
+  const s = calcSalaryForMonth(name, month);
   const advance = salaryAdvanceFor(name, month);
-  const finalSalary = Math.max(0, actualSalary - advance);
+  const finalSalary = Math.max(0, s.earned - advance);
 
-  if (document.getElementById("salAmount")) document.getElementById("salAmount").value = actualSalary.toFixed(2);
-  toast(`Calculated: Rs ${actualSalary.toFixed(2)} (present ${presentDays}, half ${halfDays}). Advance: Rs ${advance}. Final: Rs ${finalSalary.toFixed(2)}`, "info");
+  if (document.getElementById("salAmount")) document.getElementById("salAmount").value = s.earned.toFixed(2);
+  toast(
+    `Calculated: Rs ${s.earned.toFixed(2)} (${s.stats.presentEquivalent} day(s) from attendance). ` +
+      `Present ${s.stats.present}, half ${s.stats.half}. Advance: Rs ${advance}. Payable: Rs ${finalSalary.toFixed(2)}`,
+    "info"
+  );
 };
 
 window.addAdvance = function () {
@@ -3018,7 +3525,7 @@ function renderBills() {
       .slice(0, 25)
       .map(
         (e) =>
-          `<div class="row"><div>${e.date} — ${e.category}: ${money(e.amount)} <span class="pill">${e.status}</span>${e.note ? ` <span class="muted">(${e.note})</span>` : ""}</div><div><button type="button" class="secondary" onclick="toggleExpenseStatus('${e.id}')">Toggle</button> <button class="warn" onclick="removeItem('expenses','${e.id}')">Delete</button></div></div>`
+          `<div class="row"><div>${e.date} — ${escapeHtml(expenseCategoryLabel(e.category))}: ${money(e.amount)} <span class="pill">${e.status}</span>${e.paymentMethod === "online" ? ` <span class="pill">Online</span>` : ` <span class="pill">Cash</span>`}${e.note ? ` <span class="muted">(${escapeHtml(e.note)})</span>` : ""}</div><div><button type="button" class="secondary" onclick="toggleExpenseStatus('${e.id}')">Toggle</button> <button class="warn" onclick="removeItem('expenses','${e.id}')">Delete</button></div></div>`
       )
       .join("") || `<div class="muted">No expenses.</div>`;
 }
@@ -3106,7 +3613,7 @@ window.renderSalaryOverview = function () {
   if (!table) return;
 
   const names = staffNames();
-  table.innerHTML = `<div class="table-row"><strong>Employee</strong><strong>Monthly</strong><strong>Attendance %</strong><strong>Payable</strong></div>`;
+  table.innerHTML = `<div class="table-row"><strong>Employee</strong><strong>Monthly</strong><strong>Attendance (month)</strong><strong>Payable</strong></div>`;
   if (!names.length) {
     table.innerHTML += `<div class="muted">No staff in master.</div>`;
     return;
@@ -3114,9 +3621,13 @@ window.renderSalaryOverview = function () {
 
   names.forEach((name) => {
     const s = calcSalaryForMonth(name, month);
-    const pctLabel = s.stats.marked > 0 ? `${s.stats.pct.toFixed(0)}% (${s.stats.present}/${s.stats.marked})` : "—";
-    const right = `${money(s.payable)} <span class="pill">adv ${money(s.adv)}</span>`;
-    table.innerHTML += `<div class="table-row"><div><strong>${name}</strong></div><div>${money(s.monthly)}</div><div>${pctLabel}</div><div>${right}</div></div>`;
+    const attLabel =
+      s.stats.presentEquivalent > 0 || s.stats.marked > 0
+        ? `${s.stats.presentEquivalent} day(s) • ${s.stats.marked} marked`
+        : "No attendance marked";
+    const earnedLabel = `${money(s.earned)} earned`;
+    const right = `${money(s.payable)} <span class="pill">${earnedLabel}</span> <span class="pill">adv ${money(s.adv)}</span>`;
+    table.innerHTML += `<div class="table-row"><div><strong>${name}</strong></div><div>${money(s.monthly)}</div><div>${attLabel}</div><div>${right}</div></div>`;
   });
 };
 
@@ -3237,6 +3748,19 @@ window.renderAnalytics = async function () {
     else if (range === "monthly" || range === "3m" || range === "6m" || range === "yearly") bucketMode = "month";
     else if (range === "custom") bucketMode = daysSpan <= 60 ? "day" : daysSpan <= 180 ? "week" : "month";
 
+    const inRange = (dateISO) => {
+      const x = String(dateISO || "").slice(0, 10);
+      if (!x) return false;
+      return x >= fromISO && x <= toISO;
+    };
+
+    const bucketKeyForISO = (iso) => {
+      const d = parseDay(String(iso || "").slice(0, 10));
+      if (bucketMode === "week") return weekStartISO(d);
+      if (bucketMode === "month") return isoMonth(d);
+      return isoDay(d);
+    };
+
     const buckets = [];
     if (bucketMode === "day") {
       for (let i = 0; i < daysSpan; i++) {
@@ -3285,6 +3809,10 @@ window.renderAnalytics = async function () {
 
     // Expenses = paid expenses + supplier payments + paid salary (master logic)
     const expPaidIn = state.expenses.filter((e) => e?.date && e.status === "paid" && inRange(e.date));
+    const shopExpenseCats = new Set(["staff_food", "kitchen", "shop_other"]);
+    const shopKitchenPaid = expPaidIn
+      .filter((e) => shopExpenseCats.has(String(e.category || "").toLowerCase()))
+      .reduce((s, e) => s + num(e.amount), 0);
     expPaidIn.forEach((e) => add(e.date, e.amount, exp));
 
     const supplierPaymentsIn = state.supplierPayments.filter((p) => p?.date && inRange(p.date));
@@ -3324,7 +3852,10 @@ window.renderAnalytics = async function () {
       Salary: salaryPaid,
       SupplierPayments: supplierPaid,
       GroceryBills: grocery,
-      Other: expPaidIn.reduce((s, e) => s + num(e.amount), 0)
+      ShopKitchen: shopKitchenPaid,
+      Other: expPaidIn
+        .filter((e) => !shopExpenseCats.has(String(e.category || "").toLowerCase()))
+        .reduce((s, e) => s + num(e.amount), 0)
     };
     const highest = Object.entries(expBreakdown).sort((a, b) => b[1] - a[1])[0];
     const bestIdx = profit.reduce((best, v, i) => (v > profit[best] ? i : best), 0);
@@ -3341,10 +3872,12 @@ window.renderAnalytics = async function () {
     const salesSplit = { cash: 0, swiggy: 0, zomato: 0, otherOnline: 0, onlineTotal: 0 };
     salesIn.forEach((s) => {
       const a = saleAmounts(s);
+      const legacyOnlyOther =
+        a.swiggy === 0 && a.zomato === 0 && a.otherOnline === 0 && a.legacyOnline > 0 ? a.legacyOnline : 0;
       salesSplit.cash += a.cash;
       salesSplit.swiggy += a.swiggy;
       salesSplit.zomato += a.zomato;
-      salesSplit.otherOnline += a.otherOnline + a.legacyOnline;
+      salesSplit.otherOnline += a.otherOnline + legacyOnlyOther;
       salesSplit.onlineTotal += a.online;
     });
 
@@ -3362,8 +3895,14 @@ window.renderAnalytics = async function () {
       anCharts[k] = null;
     });
 
+    const mkChart = (id, config) => {
+      const el = document.getElementById(id);
+      if (!el) return null;
+      return new Chart(el, config);
+    };
+
     // Rev/Exp/Profit line
-    anCharts.revExpProfit = new Chart(document.getElementById("anLineRevExpProfit"), {
+    anCharts.revExpProfit = mkChart("anLineRevExpProfit", {
       type: "line",
       data: {
         labels: buckets.map((b) => b.label),
@@ -3377,17 +3916,22 @@ window.renderAnalytics = async function () {
     });
 
     // Expense breakdown pie
-    anCharts.expenseBreakdown = new Chart(document.getElementById("anPieExpenseBreakdown"), {
+    anCharts.expenseBreakdown = mkChart("anPieExpenseBreakdown", {
       type: "doughnut",
       data: {
-        labels: ["Salary", "Supplier Payments", "Grocery Bills", "Other"],
-        datasets: [{ data: [salaryPaid, supplierPaid, grocery, expBreakdown.Other], backgroundColor: ["#60a5fa", "#22c55e", "#f97316", "#94a3b8"] }]
+        labels: ["Salary", "Supplier Payments", "Grocery Bills", "Shop & kitchen", "Other"],
+        datasets: [
+          {
+            data: [salaryPaid, supplierPaid, grocery, expBreakdown.ShopKitchen, expBreakdown.Other],
+            backgroundColor: ["#60a5fa", "#22c55e", "#f97316", "#eab308", "#94a3b8"]
+          }
+        ]
       },
       options: chartOptions(true)
     });
 
     // Sales breakdown bar
-    anCharts.salesBreakdown = new Chart(document.getElementById("anBarSalesBreakdown"), {
+    anCharts.salesBreakdown = mkChart("anBarSalesBreakdown", {
       type: "bar",
       data: {
         labels: ["Cash", "Swiggy", "Zomato", "Other Online"],
@@ -3397,7 +3941,7 @@ window.renderAnalytics = async function () {
     });
 
     // Monthly salary payments bar
-    anCharts.salaryMonthly = new Chart(document.getElementById("anBarSalaryMonthly"), {
+    anCharts.salaryMonthly = mkChart("anBarSalaryMonthly", {
       type: "bar",
       data: {
         labels: salaryMonthKeys.map((k) => k),
@@ -3407,7 +3951,7 @@ window.renderAnalytics = async function () {
     });
 
     // Supplier payments trend
-    anCharts.supplierPayments = new Chart(document.getElementById("anLineSupplierPayments"), {
+    anCharts.supplierPayments = mkChart("anLineSupplierPayments", {
       type: "line",
       data: {
         labels: buckets.map((b) => b.label),
@@ -3417,7 +3961,7 @@ window.renderAnalytics = async function () {
     });
 
     // Profit trend
-    anCharts.profitTrend = new Chart(document.getElementById("anLineProfitTrend"), {
+    anCharts.profitTrend = mkChart("anLineProfitTrend", {
       type: "line",
       data: {
         labels: buckets.map((b) => b.label),
@@ -3429,7 +3973,7 @@ window.renderAnalytics = async function () {
     renderStaffPayableTable();
   } catch (e) {
     console.error(e);
-    toast("Error occurred", "error");
+    toast(e?.message ? `Error: ${e.message}` : "Error occurred", "error");
   } finally {
     setLoading(false);
   }
@@ -3458,7 +4002,7 @@ function renderAll() {
   renderAdvancesFilters();
   window.renderAdvances?.();
   renderAttendance();
-  renderAttendanceChecklist();
+  renderAttendanceMonthUi();
   renderSalaries();
   window.renderSalaryOverview?.();
   renderSales();
@@ -3508,6 +4052,7 @@ async function loadAll() {
     state.orders = Array.isArray(orders) ? orders : [];
 
     renderAll();
+    syncKilogramMenuInBackground();
     maybeNotifyReminders();
   } catch (e) {
     console.error(e);
@@ -3518,11 +4063,11 @@ async function loadAll() {
 }
 
 function setDefaults() {
-  ["saleDate", "purchaseDate", "billDate", "attDate", "advDate", "remDueDate"].forEach((id) => {
+  ["saleDate", "purchaseDate", "billDate", "shopExpenseDate", "attDate", "advDate", "remDueDate"].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.value = todayISO();
   });
-  ["salMonth", "advMonth"].forEach((id) => {
+  ["salMonth", "advMonth", "attMonth"].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.value = monthISO();
   });
@@ -3552,8 +4097,11 @@ window.addEventListener("load", async () => {
   if (rateEl) rateEl.addEventListener("input", recalcPurchaseAmount);
   const salMonthEl = document.getElementById("salMonth");
   if (salMonthEl) salMonthEl.addEventListener("change", () => window.renderSalaryOverview?.());
+  const attMonthEl = document.getElementById("attMonth");
+  if (attMonthEl) attMonthEl.addEventListener("change", () => window.onAttMonthChange?.());
+  const attDateEl = document.getElementById("attDate");
+  if (attDateEl) attDateEl.addEventListener("change", () => window.onAttDateChange?.());
   await loadAll();
-  setTimeout(() => window.renderAnalytics(), 800);
 });
 
 window.clearAppCache = function () {

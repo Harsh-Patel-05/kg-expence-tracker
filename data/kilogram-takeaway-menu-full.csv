@@ -1,0 +1,307 @@
+name,nameHi,price,category,available
+"Regular Dabeli","रेगुलर दाबेली",30,"Snacks",true
+"Butter Dabeli","बटर दाबेली",40,"Snacks",true
+"Cheese Dabeli","चीज़ दाबेली",60,"Snacks",true
+"Vadapav (Oil)","वड़ापाव (ऑयल)",30,"Snacks",true
+"Vadapav (Butter)","वड़ापाव (बटर)",40,"Snacks",true
+"Cheese Vadapav","चीज़ वड़ापाव",60,"Snacks",true
+"Mayonnaise Vadapav","मेयोनीज़ वड़ापाव",50,"Snacks",true
+"Schezwan Vadapav","सेजवान वड़ापाव",50,"Snacks",true
+"Bombay Vadapav","बॉम्बे वड़ापाव",20,"Snacks",true
+"Regular Puff","रेगुलर पफ",30,"Snacks",true
+"Veg Puff","वेज पफ",40,"Snacks",true
+"Chinese Puff","चाइनीज पफ",30,"Snacks",true
+"Tandoori Puff","तंदूरी पफ",50,"Snacks",true
+"Tadka Puff","तड़का पफ",60,"Snacks",true
+"Cheese Puff","चीज़ पफ",60,"Snacks",true
+"Mayonnaise Puff","मेयोनीज़ पफ",40,"Snacks",true
+"Aloo Tikki Burger","आलू टिक्की बर्गर",50,"Snacks",true
+"Veg Burger","वेज बर्गर",60,"Snacks",true
+"Tandoori Burger","तंदूरी बर्गर",70,"Snacks",true
+"Schezwan Burger","सेजवान बर्गर",70,"Snacks",true
+"Peri-Peri Burger","पेरी पेरी बर्गर",70,"Snacks",true
+"Kilogram Special Burger","किलोग्राम स्पेशल बर्गर",90,"Snacks",true
+"Bread Butter Sandwich (Grilled +₹20)","ब्रेड बटर सैंडविच (ग्रिल्ड +₹20)",50,"Snacks",true
+"Bread Butter Sandwich (Option 2)","ब्रेड बटर सैंडविच (Option 2)",70,"Snacks",true
+"Bread Butter Sandwich (Option 3)","ब्रेड बटर सैंडविच (Option 3)",20,"Snacks",true
+"Butter Jam Sandwich (Grilled +₹20)","बटर जैम सैंडविच (ग्रिल्ड +₹20)",70,"Snacks",true
+"Butter Jam Sandwich (Option 2)","बटर जैम सैंडविच (Option 2)",90,"Snacks",true
+"Butter Jam Sandwich (Option 3)","बटर जैम सैंडविच (Option 3)",20,"Snacks",true
+"Veg Sandwich (Grilled +₹20)","वेज सैंडविच (ग्रिल्ड +₹20)",60,"Snacks",true
+"Veg Sandwich (Option 2)","वेज सैंडविच (Option 2)",80,"Snacks",true
+"Veg Sandwich (Option 3)","वेज सैंडविच (Option 3)",20,"Snacks",true
+"Aloo Mutter Sandwich (Grilled +₹20)","आलू मटर सैंडविच (ग्रिल्ड +₹20)",60,"Snacks",true
+"Aloo Mutter Sandwich (Option 2)","आलू मटर सैंडविच (Option 2)",80,"Snacks",true
+"Aloo Mutter Sandwich (Option 3)","आलू मटर सैंडविच (Option 3)",20,"Snacks",true
+"Cheese Sandwich (Grilled +₹20)","चीज़ सैंडविच (ग्रिल्ड +₹20)",80,"Snacks",true
+"Cheese Sandwich (Option 2)","चीज़ सैंडविच (Option 2)",100,"Snacks",true
+"Cheese Sandwich (Option 3)","चीज़ सैंडविच (Option 3)",20,"Snacks",true
+"Cheese Chutney Sandwich (Grilled +₹20)","चीज़ चटनी सैंडविच (ग्रिल्ड +₹20)",90,"Snacks",true
+"Cheese Chutney Sandwich (Option 2)","चीज़ चटनी सैंडविच (Option 2)",110,"Snacks",true
+"Cheese Chutney Sandwich (Option 3)","चीज़ चटनी सैंडविच (Option 3)",20,"Snacks",true
+"Chocolate Sandwich","चॉकलेट सैंडविच",80,"Snacks",true
+"Pineapple Sandwich","पाइनएप्पल सैंडविच",100,"Snacks",true
+"Rabdi Sandwich","रबड़ी सैंडविच",80,"Snacks",true
+"Cheese Chilli Onion Grill","चीज़ चिली प्याज ग्रिल",120,"Snacks",true
+"Corn Fiesta Grill","कॉर्न फिएस्टा ग्रिल",120,"Snacks",true
+"Mexican Grill Sandwich","मैक्सिकन ग्रिल सैंडविच",120,"Snacks",true
+"Veg Coleslaw Grill","वेज कोलस्लॉ ग्रिल",130,"Snacks",true
+"Paneer Tandoori Grill","पनीर तंदूरी ग्रिल",130,"Snacks",true
+"Peri-Peri Paneer Grill","पेरी पेरी पनीर ग्रिल",130,"Snacks",true
+"Chipotle Paneer Grill","चिपोटले पनीर ग्रिल",140,"Snacks",true
+"Makhni Paneer Grill","मखनी पनीर ग्रिल",140,"Snacks",true
+"Pizzeria Grill Sandwich","पिज़्ज़ेरिया ग्रिल सैंडविच",140,"Snacks",true
+"American Club Sandwich","अमेरिकन क्लब सैंडविच",180,"Snacks",true
+"Tandoori Paneer Club","तंदूरी पनीर क्लब",180,"Snacks",true
+"Junglee Paneer Club","जंगली पनीर क्लब",200,"Snacks",true
+"Classic Club Sandwich","क्लासिक क्लब सैंडविच",160,"Snacks",true
+"Paneer Takatak Sandwich","पनीर टकाटक सैंडविच",180,"Snacks",true
+"Mexican Club Sandwich","मैक्सिकन क्लब सैंडविच",190,"Snacks",true
+"Three-In-One Sandwich","थ्री-इन-वन सैंडविच",190,"Snacks",true
+"Masala Maggi","मसाला मैगी",55,"Snacks",true
+"Butter Maggi","बटर मैगी",60,"Snacks",true
+"Veg Maggi","वेज मैगी",70,"Snacks",true
+"Tadka Maggi","तड़का मैगी",80,"Snacks",true
+"Veg Tadka Maggi","वेज तड़का मैगी",90,"Snacks",true
+"Mexican Panini","मैक्सिकन पनीनी",140,"Snacks",true
+"Pizzeria Panini","पिज़्ज़ेरिया पनीनी",160,"Snacks",true
+"Russian Panini","रशियन पनीनी",170,"Snacks",true
+"Regular Bhel","रेगुलर भेल",60,"Snacks",true
+"Sukhi Bhel","सूखी भेल",50,"Snacks",true
+"Jain Bhel","जैन भेल",60,"Snacks",true
+"Masala Fries","मसाला फ्राइज़",60,"Snacks",true
+"Peri-Peri Fries","पेरी पेरी फ्राइज़",90,"Snacks",true
+"Cold Coffee","कोल्ड कॉफी",110,"Snacks",true
+"Chocolate Cold Coffee","चॉकलेट कोल्ड कॉफी",130,"Snacks",true
+"Hot & Sour Soup","हॉट एंड सॉर सूप",80,"Chinese",true
+"Man Chow Soup","मैन चाउ सूप",80,"Chinese",true
+"Tomato Soup","टोमैटो सूप",80,"Chinese",true
+"Sweet Corn Soup","स्वीट कॉर्न सूप",100,"Chinese",true
+"Dry Manchurian","ड्राई मंचूरियन",120,"Chinese",true
+"Gravy Manchurian","ग्रेवी मंचूरियन",120,"Chinese",true
+"Manchurian Dry — Chinese on Kilo (500 g)","मंचूरियन ड्राई — किलो पर चाइनीज (500 g)",120,"Chinese",true
+"Manchurian Dry — Chinese on Kilo (1 kg)","मंचूरियन ड्राई — किलो पर चाइनीज (1 kg)",230,"Chinese",true
+"Veg Fried Rice","वेज फ्राइड राइस",120,"Chinese",true
+"Schezwan Rice","सेजवान राइस",120,"Chinese",true
+"Manchurian Rice","मंचूरियन राइस",120,"Chinese",true
+"Garlic Rice","गार्लिक राइस",120,"Chinese",true
+"Noodle Rice","नूडल राइस",120,"Chinese",true
+"Paneer Rice","पनीर राइस",150,"Chinese",true
+"Mexican Rice","मैक्सिकन राइस",150,"Chinese",true
+"Triple Fried Rice","ट्रिपल फ्राइड राइस",200,"Chinese",true
+"Kilogram Special Rice","किलोग्राम स्पेशल राइस",200,"Chinese",true
+"Manchurian Fried Rice — Chinese on Kilo (500 g)","मंचूरियन फ्राइड राइस — किलो पर चाइनीज (500 g)",120,"Chinese",true
+"Manchurian Fried Rice — Chinese on Kilo (1 kg)","मंचूरियन फ्राइड राइस — किलो पर चाइनीज (1 kg)",230,"Chinese",true
+"Veg Fried Rice — Chinese on Kilo (500 g)","वेज फ्राइड राइस — किलो पर चाइनीज (500 g)",130,"Chinese",true
+"Veg Fried Rice — Chinese on Kilo (1 kg)","वेज फ्राइड राइस — किलो पर चाइनीज (1 kg)",250,"Chinese",true
+"Hakka Noodles","हक्का नूडल्स",120,"Chinese",true
+"Schezwan Noodles","सेजवान नूडल्स",120,"Chinese",true
+"Chowmein","Chowmein",120,"Chinese",true
+"Manchurian Noodles","मंचूरियन नूडल्स",120,"Chinese",true
+"Garlic Noodles","गार्लिक नूडल्स",120,"Chinese",true
+"Paneer Noodles","पनीर नूडल्स",150,"Chinese",true
+"Hakka Noodles — Chinese on Kilo (500 g)","हक्का नूडल्स — किलो पर चाइनीज (500 g)",150,"Chinese",true
+"Hakka Noodles — Chinese on Kilo (1 kg)","हक्का नूडल्स — किलो पर चाइनीज (1 kg)",270,"Chinese",true
+"Paneer Manchurian Dry","पनीर मंचूरियन ड्राई",150,"Chinese",true
+"Paneer Manchurian Gravy","पनीर मंचूरियन ग्रेवी",150,"Chinese",true
+"Paneer Chilli Dry","पनीर चिली ड्राई",170,"Chinese",true
+"Paneer Chilli Gravy","पनीर चिली ग्रेवी",170,"Chinese",true
+"Paneer Crispy","पनीर क्रिस्पी",170,"Chinese",true
+"Chilli Potato","चिली आलू",150,"Chinese",true
+"Honey Chilli Potato","हनी चिली आलू",160,"Chinese",true
+"Crispy Corn","क्रिस्पी कॉर्न",150,"Chinese",true
+"Chinese Bhel","चाइनीज भेल",160,"Chinese",true
+"Chinese Bhel — Chinese on Kilo (500 g)","चाइनीज भेल — किलो पर चाइनीज (500 g)",160,"Chinese",true
+"Chinese Bhel — Chinese on Kilo (1 kg)","चाइनीज भेल — किलो पर चाइनीज (1 kg)",300,"Chinese",true
+"Regular Bhaji (500 g)","रेगुलर भाजी (500 g)",120,"Mains",true
+"Regular Bhaji (1 kg)","रेगुलर भाजी (1 kg)",230,"Mains",true
+"Swaminarayan Bhaji (500 g)","स्वामिनारायण भाजी (500 g)",120,"Mains",true
+"Swaminarayan Bhaji (1 kg)","स्वामिनारायण भाजी (1 kg)",230,"Mains",true
+"Bowl Bhaji (500 g)","बाउल भाजी (500 g)",130,"Mains",true
+"Bowl Bhaji (1 kg)","बाउल भाजी (1 kg)",250,"Mains",true
+"Paneer Bhaji (500 g)","पनीर भाजी (500 g)",150,"Mains",true
+"Paneer Bhaji (1 kg)","पनीर भाजी (1 kg)",270,"Mains",true
+"Special Bhaji (500 g)","स्पेशल भाजी (500 g)",160,"Mains",true
+"Special Bhaji (1 kg)","स्पेशल भाजी (1 kg)",300,"Mains",true
+"Regular Pulao (500 g)","रेगुलर पुलाव (500 g)",120,"Mains",true
+"Regular Pulao (1 kg)","रेगुलर पुलाव (1 kg)",230,"Mains",true
+"Swaminarayan Pulao (500 g)","स्वामिनारायण पुलाव (500 g)",120,"Mains",true
+"Swaminarayan Pulao (1 kg)","स्वामिनारायण पुलाव (1 kg)",230,"Mains",true
+"Jain Pulao (500 g)","जैन पुलाव (500 g)",120,"Mains",true
+"Jain Pulao (1 kg)","जैन पुलाव (1 kg)",230,"Mains",true
+"Dry Fruit Pulao (500 g)","ड्राई फ्रूट पुलाव (500 g)",140,"Mains",true
+"Dry Fruit Pulao (1 kg)","ड्राई फ्रूट पुलाव (1 kg)",260,"Mains",true
+"Kashmiri Pulao (500 g)","कश्मीरी पुलाव (500 g)",140,"Mains",true
+"Kashmiri Pulao (1 kg)","कश्मीरी पुलाव (1 kg)",260,"Mains",true
+"Special Pulao (500 g)","स्पेशल पुलाव (500 g)",160,"Mains",true
+"Special Pulao (1 kg)","स्पेशल पुलाव (1 kg)",300,"Mains",true
+"Regular Pau (6)","रेगुलर पाव (6)",25,"Mains",true
+"Regular Pau (12 pcs)","रेगुलर पाव (12 pcs)",45,"Mains",true
+"Oil Pau (6)","ऑयल पाव (6)",40,"Mains",true
+"Oil Pau (12 pcs)","ऑयल पाव (12 pcs)",70,"Mains",true
+"Butter Pau (6)","बटर पाव (6)",50,"Mains",true
+"Butter Pau (12 pcs)","बटर पाव (12 pcs)",90,"Mains",true
+"250 g Bhaji + 2 Oil Pau","250 g भाजी + 2 ऑयल पाव",90,"Mains",true
+"250 g Bhaji + 2 Butter Pau","250 g भाजी + 2 बटर पाव",110,"Mains",true
+"500 g Bhaji + 500 g Pulao + 6 Reg Pau","500 g भाजी + 500 g पुलाव + 6 Reg पाव",240,"Mains",true
+"500 g Bhaji + 500 g Pulao + 6 Oil Pau","500 g भाजी + 500 g पुलाव + 6 ऑयल पाव",250,"Mains",true
+"1 kg Bhaji + 1 kg Pulao + 12 Reg Pau","1 kg भाजी + 1 kg पुलाव + 12 Reg पाव",460,"Mains",true
+"1 kg Bhaji + 1 kg Pulao + 12 Oil Pau","1 kg भाजी + 1 kg पुलाव + 12 ऑयल पाव",480,"Mains",true
+"Add Butter — 500 g Bhaji / Pulao","एक्स्ट्रा बटर — 500 g भाजी / पुलाव",20,"Mains",true
+"Add Butter — 1 kg Bhaji / Pulao","एक्स्ट्रा बटर — 1 kg भाजी / पुलाव",40,"Mains",true
+"Add Butter — 500 g Combo","एक्स्ट्रा बटर — 500 g कॉम्बो",40,"Mains",true
+"Add Butter — 1 kg Combo","एक्स्ट्रा बटर — 1 kg कॉम्बो",60,"Mains",true
+"Lasan Chutney","लसण चटनी",100,"Mains",true
+"Veg Masala (300 g)","वेज मसाला (300 g)",180,"Punjabi",true
+"Veg Masala (500 g)","वेज मसाला (500 g)",280,"Punjabi",true
+"Veg Masala (1 kg)","वेज मसाला (1 kg)",550,"Punjabi",true
+"Veg Kadai (300 g)","वेज कड़ाही (300 g)",180,"Punjabi",true
+"Veg Kadai (500 g)","वेज कड़ाही (500 g)",280,"Punjabi",true
+"Veg Kadai (1 kg)","वेज कड़ाही (1 kg)",550,"Punjabi",true
+"Veg Kolhapuri (300 g)","वेज कोल्हापुरी (300 g)",180,"Punjabi",true
+"Veg Kolhapuri (500 g)","वेज कोल्हापुरी (500 g)",280,"Punjabi",true
+"Veg Kolhapuri (1 kg)","वेज कोल्हापुरी (1 kg)",550,"Punjabi",true
+"Veg Hyderabadi (300 g)","वेज हैदराबादी (300 g)",180,"Punjabi",true
+"Veg Hyderabadi (500 g)","वेज हैदराबादी (500 g)",280,"Punjabi",true
+"Veg Hyderabadi (1 kg)","वेज हैदराबादी (1 kg)",550,"Punjabi",true
+"Veg Jaipuri (300 g)","वेज जयपुरी (300 g)",180,"Punjabi",true
+"Veg Jaipuri (500 g)","वेज जयपुरी (500 g)",280,"Punjabi",true
+"Veg Jaipuri (1 kg)","वेज जयपुरी (1 kg)",550,"Punjabi",true
+"Veg Chatpata (300 g)","वेज चटपटा (300 g)",180,"Punjabi",true
+"Veg Chatpata (500 g)","वेज चटपटा (500 g)",280,"Punjabi",true
+"Veg Chatpata (1 kg)","वेज चटपटा (1 kg)",550,"Punjabi",true
+"Chana Masala (300 g)","चना मसाला (300 g)",180,"Punjabi",true
+"Chana Masala (500 g)","चना मसाला (500 g)",280,"Punjabi",true
+"Chana Masala (1 kg)","चना मसाला (1 kg)",550,"Punjabi",true
+"Veg Korma (300 g)","वेज कोरमा (300 g)",180,"Punjabi",true
+"Veg Korma (500 g)","वेज कोरमा (500 g)",280,"Punjabi",true
+"Veg Korma (1 kg)","वेज कोरमा (1 kg)",550,"Punjabi",true
+"Mix Veg (300 g)","मिक्स वेज (300 g)",180,"Punjabi",true
+"Mix Veg (500 g)","मिक्स वेज (500 g)",280,"Punjabi",true
+"Mix Veg (1 kg)","मिक्स वेज (1 kg)",550,"Punjabi",true
+"Veg Angara (300 g)","वेज अंगारा (300 g)",180,"Punjabi",true
+"Veg Angara (500 g)","वेज अंगारा (500 g)",280,"Punjabi",true
+"Veg Angara (1 kg)","वेज अंगारा (1 kg)",550,"Punjabi",true
+"Aloo Palak (300 g)","आलू पालक (300 g)",180,"Punjabi",true
+"Aloo Palak (500 g)","आलू पालक (500 g)",280,"Punjabi",true
+"Aloo Palak (1 kg)","आलू पालक (1 kg)",550,"Punjabi",true
+"Aloo Mutter (300 g)","आलू मटर (300 g)",180,"Punjabi",true
+"Aloo Mutter (500 g)","आलू मटर (500 g)",280,"Punjabi",true
+"Aloo Mutter (1 kg)","आलू मटर (1 kg)",550,"Punjabi",true
+"Dum Aloo (300 g)","दम आलू (300 g)",180,"Punjabi",true
+"Dum Aloo (500 g)","दम आलू (500 g)",280,"Punjabi",true
+"Dum Aloo (1 kg)","दम आलू (1 kg)",550,"Punjabi",true
+"Veg Kofta (300 g)","वेज कोफ्ता (300 g)",180,"Punjabi",true
+"Veg Kofta (500 g)","वेज कोफ्ता (500 g)",280,"Punjabi",true
+"Veg Kofta (1 kg)","वेज कोफ्ता (1 kg)",550,"Punjabi",true
+"Veg Handi (300 g)","वेज हांडी (300 g)",180,"Punjabi",true
+"Veg Handi (500 g)","वेज हांडी (500 g)",280,"Punjabi",true
+"Veg Handi (1 kg)","वेज हांडी (1 kg)",550,"Punjabi",true
+"Paneer Tikka Masala (300 g)","पनीर टिक्का मसाला (300 g)",200,"Punjabi",true
+"Paneer Tikka Masala (500 g)","पनीर टिक्का मसाला (500 g)",300,"Punjabi",true
+"Paneer Tikka Masala (1 kg)","पनीर टिक्का मसाला (1 kg)",580,"Punjabi",true
+"Paneer Butter Masala (300 g)","पनीर बटर मसाला (300 g)",200,"Punjabi",true
+"Paneer Butter Masala (500 g)","पनीर बटर मसाला (500 g)",300,"Punjabi",true
+"Paneer Butter Masala (1 kg)","पनीर बटर मसाला (1 kg)",580,"Punjabi",true
+"Paneer Kadai (300 g)","पनीर कड़ाही (300 g)",200,"Punjabi",true
+"Paneer Kadai (500 g)","पनीर कड़ाही (500 g)",300,"Punjabi",true
+"Paneer Kadai (1 kg)","पनीर कड़ाही (1 kg)",580,"Punjabi",true
+"Paneer Tawa Masala (300 g)","पनीर तवा मसाला (300 g)",200,"Punjabi",true
+"Paneer Tawa Masala (500 g)","पनीर तवा मसाला (500 g)",300,"Punjabi",true
+"Paneer Tawa Masala (1 kg)","पनीर तवा मसाला (1 kg)",580,"Punjabi",true
+"Paneer Rajwadi (300 g)","पनीर राजवाड़ी (300 g)",200,"Punjabi",true
+"Paneer Rajwadi (500 g)","पनीर राजवाड़ी (500 g)",300,"Punjabi",true
+"Paneer Rajwadi (1 kg)","पनीर राजवाड़ी (1 kg)",580,"Punjabi",true
+"Paneer Kolhapuri (300 g)","पनीर कोल्हापुरी (300 g)",200,"Punjabi",true
+"Paneer Kolhapuri (500 g)","पनीर कोल्हापुरी (500 g)",300,"Punjabi",true
+"Paneer Kolhapuri (1 kg)","पनीर कोल्हापुरी (1 kg)",580,"Punjabi",true
+"Paneer Angara (300 g)","पनीर अंगारा (300 g)",200,"Punjabi",true
+"Paneer Angara (500 g)","पनीर अंगारा (500 g)",300,"Punjabi",true
+"Paneer Angara (1 kg)","पनीर अंगारा (1 kg)",580,"Punjabi",true
+"Paneer Bhuna Masala (300 g)","पनीर भुना मसाला (300 g)",200,"Punjabi",true
+"Paneer Bhuna Masala (500 g)","पनीर भुना मसाला (500 g)",300,"Punjabi",true
+"Paneer Bhuna Masala (1 kg)","पनीर भुना मसाला (1 kg)",580,"Punjabi",true
+"Mutter Paneer (300 g)","मटर पनीर (300 g)",200,"Punjabi",true
+"Mutter Paneer (500 g)","मटर पनीर (500 g)",300,"Punjabi",true
+"Mutter Paneer (1 kg)","मटर पनीर (1 kg)",580,"Punjabi",true
+"Palak Paneer (300 g)","पालक पनीर (300 g)",200,"Punjabi",true
+"Palak Paneer (500 g)","पालक पनीर (500 g)",300,"Punjabi",true
+"Palak Paneer (1 kg)","पालक पनीर (1 kg)",580,"Punjabi",true
+"Shahi Paneer (300 g)","शाही पनीर (300 g)",200,"Punjabi",true
+"Shahi Paneer (500 g)","शाही पनीर (500 g)",300,"Punjabi",true
+"Shahi Paneer (1 kg)","शाही पनीर (1 kg)",580,"Punjabi",true
+"Paneer Chatpata (300 g)","पनीर चटपटा (300 g)",200,"Punjabi",true
+"Paneer Chatpata (500 g)","पनीर चटपटा (500 g)",300,"Punjabi",true
+"Paneer Chatpata (1 kg)","पनीर चटपटा (1 kg)",580,"Punjabi",true
+"Paneer Lababdar (300 g)","पनीर लबाबदार (300 g)",200,"Punjabi",true
+"Paneer Lababdar (500 g)","पनीर लबाबदार (500 g)",300,"Punjabi",true
+"Paneer Lababdar (1 kg)","पनीर लबाबदार (1 kg)",580,"Punjabi",true
+"Paneer Korma (300 g)","पनीर कोरमा (300 g)",200,"Punjabi",true
+"Paneer Korma (500 g)","पनीर कोरमा (500 g)",300,"Punjabi",true
+"Paneer Korma (1 kg)","पनीर कोरमा (1 kg)",580,"Punjabi",true
+"Malai Kofta (300 g)","मलाई कोफ्ता (300 g)",200,"Punjabi",true
+"Malai Kofta (500 g)","मलाई कोफ्ता (500 g)",300,"Punjabi",true
+"Malai Kofta (1 kg)","मलाई कोफ्ता (1 kg)",580,"Punjabi",true
+"Paneer Toofani (300 g)","पनीर तूफानी (300 g)",200,"Punjabi",true
+"Paneer Toofani (500 g)","पनीर तूफानी (500 g)",300,"Punjabi",true
+"Paneer Toofani (1 kg)","पनीर तूफानी (1 kg)",580,"Punjabi",true
+"Paneer Kadhai (300 g)","पनीर कढ़ाई (300 g)",200,"Punjabi",true
+"Paneer Kadhai (500 g)","पनीर कढ़ाई (500 g)",300,"Punjabi",true
+"Paneer Kadhai (1 kg)","पनीर कढ़ाई (1 kg)",580,"Punjabi",true
+"Paneer Handi (300 g)","पनीर हांडी (300 g)",200,"Punjabi",true
+"Paneer Handi (500 g)","पनीर हांडी (500 g)",300,"Punjabi",true
+"Paneer Handi (1 kg)","पनीर हांडी (1 kg)",580,"Punjabi",true
+"Kaju Curry (300 g)","काजू करी (300 g)",210,"Punjabi",true
+"Kaju Curry (500 g)","काजू करी (500 g)",330,"Punjabi",true
+"Kaju Curry (1 kg)","काजू करी (1 kg)",620,"Punjabi",true
+"Kaju Masala (300 g)","काजू मसाला (300 g)",210,"Punjabi",true
+"Kaju Masala (500 g)","काजू मसाला (500 g)",330,"Punjabi",true
+"Kaju Masala (1 kg)","काजू मसाला (1 kg)",620,"Punjabi",true
+"Kaju Butter Masala (300 g)","काजू बटर मसाला (300 g)",210,"Punjabi",true
+"Kaju Butter Masala (500 g)","काजू बटर मसाला (500 g)",330,"Punjabi",true
+"Kaju Butter Masala (1 kg)","काजू बटर मसाला (1 kg)",620,"Punjabi",true
+"Kaju Paneer Masala (300 g)","काजू पनीर मसाला (300 g)",210,"Punjabi",true
+"Kaju Paneer Masala (500 g)","काजू पनीर मसाला (500 g)",330,"Punjabi",true
+"Kaju Paneer Masala (1 kg)","काजू पनीर मसाला (1 kg)",620,"Punjabi",true
+"Kaju Kofta (300 g)","काजू कोफ्ता (300 g)",210,"Punjabi",true
+"Kaju Kofta (500 g)","काजू कोफ्ता (500 g)",330,"Punjabi",true
+"Kaju Kofta (1 kg)","काजू कोफ्ता (1 kg)",620,"Punjabi",true
+"Khoya Kaju (300 g)","खोया काजू (300 g)",210,"Punjabi",true
+"Khoya Kaju (500 g)","खोया काजू (500 g)",330,"Punjabi",true
+"Khoya Kaju (1 kg)","खोया काजू (1 kg)",620,"Punjabi",true
+"Dal Fry (300 g)","दाल फ्राई (300 g)",150,"Punjabi",true
+"Dal Fry (500 g)","दाल फ्राई (500 g)",230,"Punjabi",true
+"Dal Fry (1 kg)","दाल फ्राई (1 kg)",450,"Punjabi",true
+"Dal Tadka (300 g)","दाल तड़का (300 g)",170,"Punjabi",true
+"Dal Tadka (500 g)","दाल तड़का (500 g)",250,"Punjabi",true
+"Dal Tadka (1 kg)","दाल तड़का (1 kg)",480,"Punjabi",true
+"Dal Tadka Butter (300 g)","दाल तड़का बटर (300 g)",170,"Punjabi",true
+"Dal Tadka Butter (500 g)","दाल तड़का बटर (500 g)",280,"Punjabi",true
+"Dal Tadka Butter (1 kg)","दाल तड़का बटर (1 kg)",530,"Punjabi",true
+"Dal Khichdi (300 g)","दाल खिचड़ी (300 g)",150,"Punjabi",true
+"Dal Khichdi (500 g)","दाल खिचड़ी (500 g)",230,"Punjabi",true
+"Dal Khichdi (1 kg)","दाल खिचड़ी (1 kg)",450,"Punjabi",true
+"Plain Rice (300 g)","प्लेन राइस (300 g)",80,"Punjabi",true
+"Plain Rice (500 g)","प्लेन राइस (500 g)",150,"Punjabi",true
+"Plain Rice (1 kg)","प्लेन राइस (1 kg)",280,"Punjabi",true
+"Jeera Rice (300 g)","जीरा राइस (300 g)",100,"Punjabi",true
+"Jeera Rice (500 g)","जीरा राइस (500 g)",180,"Punjabi",true
+"Jeera Rice (1 kg)","जीरा राइस (1 kg)",350,"Punjabi",true
+"Veg Biryani (300 g)","वेज बिरयानी (300 g)",140,"Punjabi",true
+"Veg Biryani (500 g)","वेज बिरयानी (500 g)",260,"Punjabi",true
+"Veg Biryani (1 kg)","वेज बिरयानी (1 kg)",500,"Punjabi",true
+"Hyderabadi Biryani (300 g)","हैदराबादी बिरयानी (300 g)",160,"Punjabi",true
+"Hyderabadi Biryani (500 g)","हैदराबादी बिरयानी (500 g)",270,"Punjabi",true
+"Hyderabadi Biryani (1 kg)","हैदराबादी बिरयानी (1 kg)",530,"Punjabi",true
+"Plain Tawa Roti","प्लेन तवा रोटी",10,"Punjabi",true
+"Butter Tawa Roti","बटर तवा रोटी",15,"Punjabi",true
+"Plain Tandoori Roti","प्लेन तंदूरी रोटी",30,"Punjabi",true
+"Butter Tandoori Roti","बटर तंदूरी रोटी",35,"Punjabi",true
+"Butter Naan","बटर नान",45,"Punjabi",true
+"Paratha","Paratha",30,"Punjabi",true
+"Butter Paratha","बटर पराठा",35,"Punjabi",true
+"Thums Up","थम्स अप",20,"Beverages",true
+"Fanta","फैंटा",20,"Beverages",true
+"Sprite","स्प्राइट",20,"Beverages",true
+"Water Bottle","पानी की बोतल",10,"Beverages",true
+"Water Bottle","पानी की बोतल",20,"Beverages",true

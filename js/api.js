@@ -153,6 +153,7 @@
     deleteData,
     updateData,
     upsertByField,
+    bulkUpsertMenuItems,
     getDocsByField,
     getDocById,
     exportAllData,
@@ -185,19 +186,23 @@
       list: () => getData("menuItems"),
       create: (body) => addData("menuItems", body),
       bulkCreate: async (items) => {
+        if (typeof bulkUpsertMenuItems === "function") {
+          return bulkUpsertMenuItems(items);
+        }
         for (const it of items) {
           const name = String(it?.name || "").trim();
           if (!name) continue;
           const price = Number(it?.price);
           if (!Number.isFinite(price) || price < 0) continue;
-          await addData("menuItems", {
+          const row = {
             name,
             nameHi: String(it?.nameHi || "").trim(),
             price,
             category: String(it?.category || "General").trim() || "General",
             imageUrl: String(it?.imageUrl || "").trim(),
             available: it?.available !== false
-          });
+          };
+          await upsertByField("menuItems", "name", name, row);
         }
         return getData("menuItems");
       },

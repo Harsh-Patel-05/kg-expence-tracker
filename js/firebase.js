@@ -117,6 +117,62 @@ const upsertByField = async (collectionName, field, value, data) => {
     }
 };
 
+/** Fast bulk upsert for menu (one read + batched writes). */
+const bulkUpsertMenuItems = async (items) => {
+    assertReady();
+    const rows = Array.isArray(items) ? items : [];
+    if (!rows.length) return [];
+
+    const existing = await getData("menuItems");
+    const byName = new Map();
+    for (const doc of existing) {
+        const n = String(doc.name || "").trim();
+        if (n && !byName.has(n)) byName.set(n, doc.id);
+    }
+
+    const BATCH_LIMIT = 400;
+    let batch = db.batch();
+    let ops = 0;
+    const commits = [];
+
+    const flush = () => {
+        if (ops > 0) commits.push(batch.commit());
+        batch = db.batch();
+        ops = 0;
+    };
+
+    for (const it of rows) {
+        const name = String(it?.name || "").trim();
+        if (!name) continue;
+        const price = Number(it?.price);
+        if (!Number.isFinite(price) || price < 0) continue;
+        const row = {
+            name,
+            nameHi: String(it?.nameHi || "").trim(),
+            price,
+            category: String(it?.category || "General").trim() || "General",
+            imageUrl: String(it?.imageUrl || "").trim(),
+            available: it?.available !== false
+        };
+        const id = byName.get(name);
+        if (id) {
+            batch.update(db.collection("menuItems").doc(id), row);
+        } else {
+            const ref = db.collection("menuItems").doc();
+            byName.set(name, ref.id);
+            batch.set(ref, {
+                ...row,
+                createdAt: firebase.firestore.FieldValue.serverTimestamp()
+            });
+        }
+        ops += 1;
+        if (ops >= BATCH_LIMIT) flush();
+    }
+    if (ops > 0) flush();
+    await Promise.all(commits);
+    return getData("menuItems");
+};
+
 const exportAllData = async () => {
     assertReady();
     const data = {};
@@ -179,6 +235,7 @@ window.firebaseDB = {
     updateData,
     deleteData,
     upsertByField,
+    bulkUpsertMenuItems,
     exportAllData,
     importAllData
 };

@@ -8,6 +8,7 @@ import {
   SafeAreaView,
   KeyboardAvoidingView,
   Platform,
+  TextInput,
 } from 'react-native';
 import { Theme } from '../theme';
 import Sidebar from '../components/Sidebar';
@@ -16,6 +17,7 @@ import CategoryTabs from '../components/CategoryTabs';
 import MenuCard from '../components/MenuCard';
 import OrderItem from '../components/OrderItem';
 import Button from '../components/Button';
+import KOTPrintModal from '../components/KOTPrintModal';
 import { SAMPLE_MENU_ITEMS } from '../constants/menuItems';
 
 const POSScreen = () => {
@@ -25,6 +27,8 @@ const POSScreen = () => {
   const [cart, setCart] = useState({});
   const [orderType, setOrderType] = useState('dinein'); // dinein or takeaway
   const [promoCode, setPromoCode] = useState('');
+  const [showPrintModal, setShowPrintModal] = useState(false);
+  const [orderId, setOrderId] = useState('ORD-001');
 
   // Filter menu items based on category and search
   const filteredMenuItems = useMemo(() => {
@@ -74,6 +78,26 @@ const POSScreen = () => {
     const newCart = { ...cart };
     delete newCart[itemId];
     setCart(newCart);
+  };
+
+  const handlePrintOrder = () => {
+    if (Object.keys(cart).length === 0) {
+      alert('कृपया पहले आइटम जोड़ें (Please add items first)');
+      return;
+    }
+    setShowPrintModal(true);
+  };
+
+  const handlePrintSuccess = (printedOrder) => {
+    // Generate new order ID after successful print
+    const newOrderId = 'ORD-' + String(parseInt(orderId.split('-')[1]) + 1).padStart(3, '0');
+    setOrderId(newOrderId);
+    setCart({});
+    setPromoCode('');
+  };
+
+  const handlePrintError = (error) => {
+    console.error('Print error:', error);
   };
 
   const renderMenuGrid = () => (
@@ -211,6 +235,12 @@ const POSScreen = () => {
       
       <View style={styles.orderActions}>
         <Button
+          title="🖨️ Print KOT"
+          variant="secondary"
+          style={styles.printButton}
+          onPress={handlePrintOrder}
+        />
+        <Button
           title="Hold"
           variant="secondary"
           style={styles.holdButton}
@@ -243,6 +273,25 @@ const POSScreen = () => {
           {renderOrderPanel()}
         </View>
       </KeyboardAvoidingView>
+
+      <KOTPrintModal
+        visible={showPrintModal}
+        onClose={() => setShowPrintModal(false)}
+        orderData={{
+          orderId: orderId,
+          orderType: orderType,
+          items: Object.entries(cart).map(([itemId, quantity]) => {
+            const item = SAMPLE_MENU_ITEMS.find(i => i.id === itemId);
+            return item ? { ...item, quantity } : null;
+          }).filter(Boolean),
+          subtotal: orderTotals.subtotal,
+          tax: orderTotals.tax,
+          discount: orderTotals.discount,
+          total: orderTotals.total,
+        }}
+        onPrintSuccess={handlePrintSuccess}
+        onPrintError={handlePrintError}
+      />
     </SafeAreaView>
   );
 };
@@ -377,6 +426,9 @@ const styles = StyleSheet.create({
   orderActions: {
     padding: Theme.Spacing.lg,
     gap: Theme.Spacing.sm,
+  },
+  printButton: {
+    flex: 1,
   },
   holdButton: {
     flex: 1,
