@@ -201,6 +201,80 @@ function withinRange(dateISO, range) {
   return x >= start;
 }
 
+function dateInPeriod(dateISO, fromISO, toISO) {
+  const x = String(dateISO || "").slice(0, 10);
+  if (!x) return false;
+  return x >= fromISO && x <= toISO;
+}
+
+function resolvePeriodRange(period) {
+  const toISO = todayISO();
+  if (period === "today") {
+    return { fromISO: toISO, toISO, period: "today", hint: "Today" };
+  }
+  if (period === "week") {
+    return { fromISO: startOfRangeISO("week"), toISO, period: "week", hint: "This week" };
+  }
+  if (period === "month") {
+    return { fromISO: startOfRangeISO("month"), toISO, period: "month", hint: "This month" };
+  }
+  return { fromISO: startOfRangeISO("month"), toISO, period: "month", hint: "This month" };
+}
+
+function formatPeriodRangeLabel(fromISO, toISO) {
+  const f = new Date(`${fromISO}T00:00:00`);
+  const t = new Date(`${toISO}T00:00:00`);
+  if (fromISO === toISO) {
+    return f.toLocaleDateString("en-IN", { weekday: "long", day: "2-digit", month: "short", year: "numeric" });
+  }
+  const a = f.toLocaleDateString("en-IN", { day: "2-digit", month: "short" });
+  const b = t.toLocaleDateString("en-IN", { day: "2-digit", month: "short", year: "numeric" });
+  return `${a} – ${b}`;
+}
+
+function buildDayBuckets(fromISO, toISO) {
+  const parseDay = (iso) => new Date(`${String(iso).slice(0, 10)}T00:00:00`);
+  const isoDay = (d) => d.toISOString().slice(0, 10);
+  const fromDate = parseDay(fromISO);
+  const toDate = parseDay(toISO);
+  const daysSpan = Math.max(1, Math.round((toDate - fromDate) / (24 * 3600 * 1000)) + 1);
+  const buckets = [];
+  for (let i = 0; i < daysSpan; i++) {
+    const d = new Date(fromDate);
+    d.setDate(d.getDate() + i);
+    buckets.push({
+      key: isoDay(d),
+      label: d.toLocaleDateString("en-IN", { day: "2-digit", month: "short" })
+    });
+  }
+  return buckets;
+}
+
+function getDashboardPeriodRange() {
+  const period = document.querySelector("#dashboardPeriodFilter .period-chip.active")?.dataset.period || "today";
+  return resolvePeriodRange(period);
+}
+
+function syncPeriodChips(containerId, period) {
+  const wrap = document.getElementById(containerId);
+  if (!wrap) return;
+  wrap.querySelectorAll(".period-chip").forEach((btn) => {
+    btn.classList.toggle("active", btn.dataset.period === period);
+  });
+}
+
+window.setDashboardPeriod = function (period) {
+  syncPeriodChips("dashboardPeriodFilter", period);
+  renderDashboard();
+};
+
+window.setAnalyticsPeriod = function (period) {
+  const sel = document.getElementById("analyticsRange");
+  if (sel) sel.value = period;
+  syncPeriodChips("analyticsPeriodFilter", period);
+  renderAnalytics();
+};
+
 function daysUntil(iso) {
   const now = new Date();
   const a = new Date(now.toISOString().slice(0, 10) + "T00:00:00");
@@ -222,7 +296,9 @@ const state = {
   advances: [],
   inventory: [],
   fixedSalaries: [],
-  reminders: []
+  reminders: [],
+  balanceTransfers: [],
+  dailyClosings: []
 };
 
 let api = null;
@@ -415,6 +491,7 @@ function setLoading(on, message) {
   loadingCount += on ? 1 : -1;
   const el = document.getElementById("appLoading");
   if (el) el.classList.toggle("active", loadingCount > 0);
+  document.body.classList.toggle("app-is-loading", loadingCount > 0);
   const msgEl = document.getElementById("appLoadingText");
   if (msgEl && message) msgEl.textContent = message;
   else if (msgEl && !on && loadingCount <= 0) msgEl.textContent = "Loading…";
@@ -442,7 +519,7 @@ function showCelebrate(totalText) {
 
   // confetti
   wrap.innerHTML = "";
-  const colors = ["#2F855A", "#38A169", "#ECC94B", "#60A5FA", "#A78BFA", "#FB7185"];
+  const colors = ["#4AA9E9", "#2E97DD", "#F97316", "#F59E0B", "#EF4444", "#22C55E"];
   const n = 42;
   for (let i = 0; i < n; i++) {
     const el = document.createElement("i");
@@ -552,7 +629,7 @@ window.toggleSidebar = function () {
 
 function isMobileSidebarLayout() {
   try {
-    return window.matchMedia("(max-width: 1100px)").matches;
+    return window.matchMedia("(max-width: 900px)").matches;
   } catch {
     return false;
   }
@@ -578,10 +655,28 @@ async function withErr(fn) {
     toast("Saved successfully", "ok");
   } catch (e) {
     console.error(e);
-    toast("Error occurred", "error");
+    toast(e?.message ? `Error: ${e.message}` : "Error occurred", "error");
   } finally {
     setLoading(false);
     document.querySelectorAll("button").forEach((b) => (b.disabled = false));
+  }
+}
+
+function safeRun(label, fn) {
+  try {
+    fn();
+  } catch (e) {
+    console.error(`Render failed (${label}):`, e);
+  }
+}
+
+async function fetchList(label, fn, fallback = []) {
+  try {
+    const res = await fn();
+    return Array.isArray(res) ? res : Array.isArray(res?.items) ? res.items : fallback;
+  } catch (e) {
+    console.error(`Load failed (${label}):`, e);
+    return fallback;
   }
 }
 
@@ -910,33 +1005,33 @@ function payableForSalaryNonNegative(sal) {
   return Math.max(0, payableForSalary(sal));
 }
 
+function balanceDataSnapshot() {
+  return {
+    sales: state.sales,
+    purchases: state.purchases,
+    expenses: state.expenses,
+    salaries: state.salaries,
+    advances: state.advances,
+    supplierPayments: state.supplierPayments,
+    balanceTransfers: state.balanceTransfers
+  };
+}
+
 function calcTotals() {
-  // Cache sale amounts to avoid recalculating multiple times
-  const salesAmounts = state.sales.map(s => ({ sale: s, amounts: saleAmounts(s) }));
-  
+  const bm = window.balanceMath;
+  const salesAmounts = state.sales.map((s) => ({ sale: s, amounts: saleAmounts(s) }));
+
   const totalRevenue = salesAmounts.reduce((sum, { amounts }) => sum + amounts.total, 0);
   const totalSales = state.sales.length;
-
-  // Calculate Online Sales (Swiggy + Zomato only)
   const onlineSales = salesAmounts.reduce((sum, { amounts }) => sum + amounts.swiggy + amounts.zomato, 0);
-
-  // Retail = cash + other online (UPI/bank); excludes Swiggy/Zomato; avoids double-counting onlineAmount
   const retailSales = salesAmounts.reduce((sum, { amounts }) => sum + num(amounts.retail), 0);
 
-  const paidSupplierCash = state.purchases
-    .filter((p) => p.paidStatus === "paid" && (p.paymentMethod || "cash") !== "online")
+  const paidSupplier = state.purchases
+    .filter((p) => p.paidStatus === "paid")
     .reduce((sum, p) => sum + num(p.price), 0);
-  const paidSupplierBank = state.purchases
-    .filter((p) => p.paidStatus === "paid" && (p.paymentMethod || "cash") === "online")
-    .reduce((sum, p) => sum + num(p.price), 0);
-  const paidSupplier = paidSupplierCash + paidSupplierBank;
-  const paidBillsCash = state.expenses
-    .filter((e) => e.status === "paid" && (e.paymentMethod || "cash") !== "online")
+  const paidBills = state.expenses
+    .filter((e) => e.status === "paid")
     .reduce((sum, e) => sum + num(e.amount), 0);
-  const paidBillsOnline = state.expenses
-    .filter((e) => e.status === "paid" && (e.paymentMethod || "cash") === "online")
-    .reduce((sum, e) => sum + num(e.amount), 0);
-  const paidBills = paidBillsCash + paidBillsOnline;
   const paidStaff = state.salaries
     .filter((s) => s.status === "paid")
     .reduce((sum, s) => sum + Math.max(0, payableForSalary(s)), 0);
@@ -944,38 +1039,12 @@ function calcTotals() {
   const totalExpenses = paidSupplier + paidBills + paidStaff;
   const unpaidBills = state.purchases.filter((p) => p.paidStatus === "unpaid").reduce((sum, p) => sum + num(p.price), 0);
 
-  const cashIn = salesAmounts.reduce((sum, { amounts }) => sum + amounts.cash, 0);
-  // Bank balance includes ALL online sales (Swiggy + Zomato + Other Online)
-  const bankIn = salesAmounts.reduce((sum, { amounts }) => sum + amounts.online, 0);
-
-  const supplierPayCash = state.supplierPayments
-    .filter((p) => (p.method || "cash") !== "online")
-    .reduce((sum, p) => sum + num(p.amount), 0);
-  const supplierPayOnline = state.supplierPayments
-    .filter((p) => (p.method || "cash") === "online")
-    .reduce((sum, p) => sum + num(p.amount), 0);
-
-  const advCash = state.advances
-    .filter((a) => (a.method || "cash") !== "online")
-    .reduce((sum, a) => sum + num(a.amount), 0);
-  const advOnline = state.advances
-    .filter((a) => (a.method || "cash") === "online")
-    .reduce((sum, a) => sum + num(a.amount), 0);
-
-  const paidSalaryCash = state.salaries
-    .filter((s) => s.status === "paid" && (s.paymentMethod || "cash") !== "online")
-    .reduce((sum, s) => sum + Math.max(0, payableForSalary(s)), 0);
-  const paidSalaryOnline = state.salaries
-    .filter((s) => s.status === "paid" && (s.paymentMethod || "cash") === "online")
-    .reduce((sum, s) => sum + Math.max(0, payableForSalary(s)), 0);
-
-  // Supplier bills can be paid via cash/online. Other expense types are treated as cash-out by default.
-  const cashOut = paidBillsCash + paidSalaryCash + paidSupplierCash + supplierPayCash + advCash;
-  const bankOut = paidBillsOnline + paidSalaryOnline + paidSupplierBank + supplierPayOnline + advOnline;
-  const cashBalance = cashIn - cashOut;
-  const bankBalance = bankIn - bankOut;
+  const balances = bm
+    ? bm.computeBalances(balanceDataSnapshot())
+    : { cashBalance: 0, bankBalance: 0 };
+  const cashBalance = balances.cashBalance;
+  const bankBalance = balances.bankBalance;
   const totalBalance = cashBalance + bankBalance;
-
   const netProfit = totalRevenue - totalExpenses;
 
   return {
@@ -984,8 +1053,8 @@ function calcTotals() {
     totalBalance,
     totalRevenue,
     totalSales,
-    onlineSales,    // New: Swiggy + Zomato
-    retailSales,    // New: Cash + Other Online (excluding Swiggy/Zomato)
+    onlineSales,
+    retailSales,
     unpaidBills,
     netProfit,
     totalExpenses,
@@ -993,32 +1062,63 @@ function calcTotals() {
   };
 }
 
+function calcPeriodTotals(fromISO, toISO) {
+  const inRange = (d) => dateInPeriod(d, fromISO, toISO);
+
+  const salesAmounts = state.sales
+    .filter((s) => s?.date && inRange(s.date))
+    .map((s) => saleAmounts(s));
+
+  const totalRevenue = salesAmounts.reduce((sum, amounts) => sum + amounts.total, 0);
+  const onlineSales = salesAmounts.reduce((sum, amounts) => sum + amounts.swiggy + amounts.zomato, 0);
+  const retailSales = salesAmounts.reduce((sum, amounts) => sum + num(amounts.retail), 0);
+
+  const paidBills = state.expenses
+    .filter((e) => e.status === "paid" && inRange(e.date))
+    .reduce((sum, e) => sum + num(e.amount), 0);
+  const supplierPaid = state.supplierPayments
+    .filter((p) => p?.date && inRange(p.date))
+    .reduce((sum, p) => sum + num(p.amount), 0);
+  const paidStaff = state.salaries
+    .filter((s) => s.status === "paid" && s.paidAt && inRange(s.paidAt))
+    .reduce((sum, s) => sum + payableForSalaryNonNegative(s), 0);
+
+  const totalExpenses = paidBills + supplierPaid + paidStaff;
+  const netProfit = totalRevenue - totalExpenses;
+
+  return { totalRevenue, onlineSales, retailSales, totalExpenses, netProfit };
+}
+
 function renderDashboard() {
-  const t = calcTotals();
+  const balances = calcTotals();
+  const period = getDashboardPeriodRange();
+  const t = calcPeriodTotals(period.fromISO, period.toISO);
+  const periodLabel = formatPeriodRangeLabel(period.fromISO, period.toISO);
 
   const elToday = document.getElementById("todayLabel");
   if (elToday) {
     elToday.textContent = new Date().toLocaleString("en-IN", { weekday: "short", day: "2-digit", month: "short", year: "numeric" });
   }
 
+  const labelEl = document.getElementById("dashboardPeriodLabel");
+  if (labelEl) labelEl.textContent = periodLabel;
+
   const cashEl = document.getElementById("kpiCashBalance");
   const bankEl = document.getElementById("kpiBankBalance");
   const totalBalEl = document.getElementById("kpiTotalBalance");
   const revEl = document.getElementById("kpiTotalRevenue");
-  const unpaidEl = document.getElementById("kpiUnpaidBills");
   const profitEl = document.getElementById("kpiNetProfit");
   const profitCard = document.getElementById("netProfitCard");
-  // New KPI elements
   const onlineSalesEl = document.getElementById("kpiOnlineSales");
   const retailSalesEl = document.getElementById("kpiRetailSales");
+  const expensesEl = document.getElementById("kpiTotalExpenses");
 
-  if (cashEl) animateNumber(cashEl, t.cashBalance, (v) => money(v), 950);
-  if (bankEl) animateNumber(bankEl, t.bankBalance, (v) => money(v), 950);
-  if (totalBalEl) animateNumber(totalBalEl, t.totalBalance, (v) => money(v), 950);
+  if (cashEl) animateNumber(cashEl, balances.cashBalance, (v) => money(v), 950);
+  if (bankEl) animateNumber(bankEl, balances.bankBalance, (v) => money(v), 950);
+  if (totalBalEl) animateNumber(totalBalEl, balances.totalBalance, (v) => money(v), 950);
   if (revEl) animateNumber(revEl, t.totalRevenue, (v) => money(v), 950);
-  if (unpaidEl) animateNumber(unpaidEl, t.unpaidBills, (v) => money(v), 950);
-  
-  // Dynamic Net Profit color
+  if (expensesEl) animateNumber(expensesEl, t.totalExpenses, (v) => money(v), 950);
+
   if (profitEl && profitCard) {
     if (t.netProfit >= 0) {
       profitCard.className = "kpi-card span-12 positive";
@@ -1027,47 +1127,39 @@ function renderDashboard() {
     }
     animateNumber(profitEl, t.netProfit, (v) => money(v), 1050);
   }
-  
-  // Update new KPIs
+
   if (onlineSalesEl) animateNumber(onlineSalesEl, t.onlineSales, (v) => money(v), 950);
   if (retailSalesEl) animateNumber(retailSalesEl, t.retailSales, (v) => money(v), 950);
 
-  renderSalesOverviewChart();
-  renderExpenseBreakdownChart();
-  renderRecentTransactions();
-  renderUpcomingPayments();
+  safeRun("sales overview chart", renderSalesOverviewChart);
+  safeRun("expense breakdown chart", renderExpenseBreakdownChart);
+  safeRun("recent transactions", renderRecentTransactions);
+  safeRun("upcoming payments", renderUpcomingPayments);
 }
 
 function renderSalesOverviewChart() {
   const canvas = document.getElementById("salesOverviewChart");
-  if (!canvas) return;
+  if (!canvas || typeof Chart === "undefined") return;
   if (salesOverviewChartRef) salesOverviewChartRef.destroy();
 
-  const days = [];
-  for (let i = 6; i >= 0; i--) {
-    const d = new Date();
-    d.setDate(d.getDate() - i);
-    const key = d.toISOString().slice(0, 10);
-    days.push({ key, label: d.toLocaleDateString("en-IN", { day: "2-digit", month: "short" }) });
-  }
+  const { fromISO, toISO } = getDashboardPeriodRange();
+  const days = buildDayBuckets(fromISO, toISO);
   const idx = new Map(days.map((d, i) => [d.key, i]));
   const cash = new Array(days.length).fill(0);
   const swiggy = new Array(days.length).fill(0);
   const zomato = new Array(days.length).fill(0);
   const otherOnline = new Array(days.length).fill(0);
-  
-  // Cache sale amounts for performance
-  const salesAmounts = state.sales.map(s => ({ sale: s, amounts: saleAmounts(s) }));
-  
+
+  const salesAmounts = state.sales.map((s) => ({ sale: s, amounts: saleAmounts(s) }));
+
   salesAmounts.forEach(({ sale, amounts }) => {
     if (!sale.date) return;
     const i = idx.get(String(sale.date).slice(0, 10));
     if (i === undefined) return;
-    
+
     cash[i] += amounts.cash;
     swiggy[i] += amounts.swiggy;
     zomato[i] += amounts.zomato;
-    // Only add otherOnline + legacyOnline if it's an old record
     if (amounts.legacyOnline > 0 && amounts.swiggy === 0 && amounts.zomato === 0 && amounts.otherOnline === 0) {
       otherOnline[i] += amounts.legacyOnline;
     } else {
@@ -1080,34 +1172,47 @@ function renderSalesOverviewChart() {
     data: {
       labels: days.map((d) => d.label),
       datasets: [
-        { label: "Cash", data: cash, backgroundColor: "rgba(34, 197, 94, 0.85)", borderRadius: 10 },
-        { label: "🍔 Swiggy", data: swiggy, backgroundColor: "rgba(251, 146, 60, 0.85)", borderRadius: 10 },
+        { label: "Cash", data: cash, backgroundColor: "rgba(74, 169, 233, 0.88)", borderRadius: 10 },
+        { label: "🍔 Swiggy", data: swiggy, backgroundColor: "rgba(249, 115, 22, 0.88)", borderRadius: 10 },
         { label: "🍴 Zomato", data: zomato, backgroundColor: "rgba(239, 68, 68, 0.85)", borderRadius: 10 },
-        { label: "Other Online", data: otherOnline, backgroundColor: "rgba(59, 130, 246, 0.85)", borderRadius: 10 }
+        { label: "Other Online", data: otherOnline, backgroundColor: "rgba(46, 151, 221, 0.75)", borderRadius: 10 }
       ]
     },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { labels: { color: "rgba(226,232,240,0.85)" } } },
-      scales: {
-        x: { ticks: { color: "rgba(226,232,240,0.72)" }, grid: { color: "rgba(226,232,240,0.12)" } },
-        y: { ticks: { color: "rgba(226,232,240,0.72)" }, grid: { color: "rgba(226,232,240,0.12)" } }
-      }
-    }
+    options: (() => {
+      const c = chartThemeColors();
+      return {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 700, easing: "easeOutQuart" },
+        plugins: { legend: { labels: { color: c.text, font: { family: "Inter", size: 12 } } } },
+        scales: {
+          x: { ticks: { color: c.muted }, grid: { color: c.grid } },
+          y: { ticks: { color: c.muted }, grid: { color: c.grid } }
+        }
+      };
+    })()
   });
 }
 
 function renderExpenseBreakdownChart() {
   const canvas = document.getElementById("expenseBreakdownChart");
-  if (!canvas) return;
+  if (!canvas || typeof Chart === "undefined") return;
   if (expenseBreakdownChartRef) expenseBreakdownChartRef.destroy();
 
-  const staff = state.salaries.filter((s) => s.status === "paid").reduce((sum, s) => sum + payableForSalaryNonNegative(s), 0);
-  const supplier = state.purchases.filter((p) => p.paidStatus === "paid").reduce((sum, p) => sum + num(p.price), 0);
+  const { fromISO, toISO } = getDashboardPeriodRange();
+  const inRange = (d) => dateInPeriod(d, fromISO, toISO);
+
+  const staff = state.salaries
+    .filter((s) => s.status === "paid" && s.paidAt && inRange(s.paidAt))
+    .reduce((sum, s) => sum + payableForSalaryNonNegative(s), 0);
+  const supplier =
+    state.supplierPayments.filter((p) => p?.date && inRange(p.date)).reduce((sum, p) => sum + num(p.amount), 0) +
+    state.purchases
+      .filter((p) => p.paidStatus === "paid" && inRange(p.date))
+      .reduce((sum, p) => sum + num(p.price), 0);
   const billsByCategory = {};
   state.expenses
-    .filter((e) => e.status === "paid")
+    .filter((e) => e.status === "paid" && inRange(e.date))
     .forEach((e) => {
       const k = String(e.category || e.type || "others").toLowerCase();
       billsByCategory[k] = (billsByCategory[k] || 0) + num(e.amount);
@@ -1128,15 +1233,19 @@ function renderExpenseBreakdownChart() {
       datasets: [
         {
           data: [staff, supplier, rent, utilities, misc, shopKitchen, others],
-          backgroundColor: ["#ef4444", "#a855f7", "#f97316", "#14b8a6", "#60a5fa", "#eab308", "#94a3b8"]
+          backgroundColor: ["#4AA9E9", "#F97316", "#F59E0B", "#2E97DD", "#EF4444", "#8B5CF6", "#64748B"]
         }
       ]
     },
-    options: {
-      responsive: true,
-      maintainAspectRatio: false,
-      plugins: { legend: { labels: { color: "rgba(226,232,240,0.85)" } } }
-    }
+    options: (() => {
+      const c = chartThemeColors();
+      return {
+        responsive: true,
+        maintainAspectRatio: false,
+        animation: { duration: 650, easing: "easeOutQuart" },
+        plugins: { legend: { labels: { color: c.text, font: { family: "Inter", size: 12 } } } }
+      };
+    })()
   });
 }
 
@@ -1144,14 +1253,28 @@ function renderRecentTransactions() {
   const el = document.getElementById("recentTransactionsList");
   if (!el) return;
 
+  const { fromISO, toISO } = getDashboardPeriodRange();
+  const inRange = (d) => dateInPeriod(d, fromISO, toISO);
+
   const tx = [];
   state.sales.forEach((s) => {
+    if (!inRange(s.date)) return;
     const a = saleAmounts(s);
     tx.push({ kind: "Sale", date: s.date || "", amount: a.total, status: "in" });
   });
-  state.purchases.forEach((p) => tx.push({ kind: "Supplier Bill", date: p.date || "", amount: num(p.price), status: p.paidStatus }));
-  state.expenses.forEach((e) => tx.push({ kind: "Expense", date: e.date || "", amount: num(e.amount), status: e.status }));
-  state.salaries.forEach((s) => tx.push({ kind: "Salary", date: s.month ? `${s.month}-01` : "", amount: payableForSalaryNonNegative(s), status: s.status }));
+  state.purchases.forEach((p) => {
+    if (!inRange(p.date)) return;
+    tx.push({ kind: "Supplier Bill", date: p.date || "", amount: num(p.price), status: p.paidStatus });
+  });
+  state.expenses.forEach((e) => {
+    if (!inRange(e.date)) return;
+    tx.push({ kind: "Expense", date: e.date || "", amount: num(e.amount), status: e.status });
+  });
+  state.salaries.forEach((s) => {
+    const d = s.paidAt || (s.month ? `${s.month}-01` : "");
+    if (!inRange(d)) return;
+    tx.push({ kind: "Salary", date: d, amount: payableForSalaryNonNegative(s), status: s.status });
+  });
 
   const recent = tx
     .filter((x) => x.date)
@@ -1244,6 +1367,278 @@ function maybeNotifyReminders() {
   });
 }
 
+function transferInRange(dateISO, range, fromId, toId) {
+  const d = String(dateISO || "").slice(0, 10);
+  if (!d) return false;
+  if (range === "today") return d === todayISO();
+  if (range === "week" || range === "month") return withinRange(d, range);
+  if (range === "custom") {
+    const from = document.getElementById(fromId)?.value || "";
+    const to = document.getElementById(toId)?.value || "";
+    if (from && d < from) return false;
+    if (to && d > to) return false;
+    return true;
+  }
+  return true;
+}
+
+function syncBtHistoryRangeInputs(rangeId, fromId, toId) {
+  const range = document.getElementById(rangeId)?.value || "month";
+  const fromEl = document.getElementById(fromId);
+  const toEl = document.getElementById(toId);
+  if (!fromEl || !toEl) return;
+  const show = range === "custom";
+  fromEl.style.display = show ? "block" : "none";
+  toEl.style.display = show ? "block" : "none";
+  if (show) {
+    if (!fromEl.value) fromEl.value = isoAddDays(todayISO(), -30);
+    if (!toEl.value) toEl.value = todayISO();
+  }
+}
+
+function accountLabel(acct) {
+  const a = String(acct || "").toLowerCase();
+  return a === "bank" ? "Bank" : "Cash";
+}
+
+window.onBtAccountChange = function () {
+  const from = document.getElementById("btFromAccount")?.value || "cash";
+  const toSel = document.getElementById("btToAccount");
+  if (!toSel) return;
+  toSel.value = from === "cash" ? "bank" : "cash";
+  renderBalanceTransferForm();
+};
+
+function renderBalanceTransferForm() {
+  const t = calcTotals();
+  const cashEl = document.getElementById("btAvailCash");
+  const bankEl = document.getElementById("btAvailBank");
+  if (cashEl) cashEl.textContent = money(t.cashBalance);
+  if (bankEl) bankEl.textContent = money(t.bankBalance);
+}
+
+function renderBalanceTransferHistory() {
+  const table = document.getElementById("btHistoryTable");
+  if (!table) return;
+  syncBtHistoryRangeInputs("btHistoryRange", "btHistoryFrom", "btHistoryTo");
+  const range = document.getElementById("btHistoryRange")?.value || "month";
+  const rows = [...state.balanceTransfers]
+    .filter((r) => transferInRange(r.date, range, "btHistoryFrom", "btHistoryTo"))
+    .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+
+  table.innerHTML = `<div class="table-row"><strong>Date</strong><strong>From</strong><strong>To</strong><strong>Amount</strong><strong>Notes</strong><strong></strong></div>`;
+  if (!rows.length) {
+    table.innerHTML += `<div class="muted">No transfers in this period.</div>`;
+    return;
+  }
+  rows.forEach((r) => {
+    table.innerHTML += `<div class="table-row">
+      <div>${String(r.date || "").slice(0, 10)}</div>
+      <div>${accountLabel(r.fromAccount)}</div>
+      <div>${accountLabel(r.toAccount)}</div>
+      <div>${money(r.amount)}</div>
+      <div>${r.notes || "—"}</div>
+      <div><button type="button" class="warn btn-sm" onclick="removeBalanceTransfer('${r.id}')">Delete</button></div>
+    </div>`;
+  });
+}
+
+window.renderAnalyticsTransferHistory = function () {
+  const table = document.getElementById("anBtHistoryTable");
+  if (!table) return;
+  syncBtHistoryRangeInputs("anBtRange", "anBtFrom", "anBtTo");
+  const range = document.getElementById("anBtRange")?.value || "month";
+  const rows = [...state.balanceTransfers]
+    .filter((r) => transferInRange(r.date, range, "anBtFrom", "anBtTo"))
+    .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+
+  table.innerHTML = `<div class="table-row"><strong>Date</strong><strong>From</strong><strong>To</strong><strong>Amount</strong><strong>Notes</strong></div>`;
+  if (!rows.length) {
+    table.innerHTML += `<div class="muted">No balance transfers in this period.</div>`;
+    return;
+  }
+  rows.forEach((r) => {
+    table.innerHTML += `<div class="table-row">
+      <div>${String(r.date || "").slice(0, 10)}</div>
+      <div>${accountLabel(r.fromAccount)}</div>
+      <div>${accountLabel(r.toAccount)}</div>
+      <div>${money(r.amount)}</div>
+      <div>${r.notes || "—"}</div>
+    </div>`;
+  });
+};
+
+window.addBalanceTransfer = function () {
+  const fromAccount = document.getElementById("btFromAccount")?.value || "cash";
+  const toAccount = document.getElementById("btToAccount")?.value || "bank";
+  const amount = num(document.getElementById("btAmount")?.value);
+  const date = document.getElementById("btDate")?.value || todayISO();
+  const notes = (document.getElementById("btNotes")?.value || "").trim();
+
+  if (fromAccount === toAccount) return toast("Cannot transfer to the same account", "error");
+  if (!(amount > 0)) return toast("Amount must be greater than zero", "error");
+  if (!api?.balanceTransfers?.create) return toast("Balance transfer API not ready", "error");
+
+  const t = calcTotals();
+  const available = fromAccount === "cash" ? t.cashBalance : t.bankBalance;
+  if (amount > available + 0.009) {
+    return toast(`Insufficient ${fromAccount} balance. Available: ${money(available)}`, "error");
+  }
+
+  withErr(async () => {
+    await api.balanceTransfers.create({ date, fromAccount, toAccount, amount, notes });
+    document.getElementById("btAmount").value = "";
+    document.getElementById("btNotes").value = "";
+    await loadAll();
+    renderBalanceTransferForm();
+    renderBalanceTransferHistory();
+  });
+};
+
+window.removeBalanceTransfer = function (id) {
+  if (!id) return;
+  if (!confirm("Delete this transfer? Balances will be reversed automatically.")) return;
+  if (!api?.balanceTransfers?.remove) return toast("Delete not supported", "error");
+  withErr(async () => {
+    await api.balanceTransfers.remove(id);
+    await loadAll();
+    renderBalanceTransferForm();
+    renderBalanceTransferHistory();
+    window.renderAnalyticsTransferHistory?.();
+    toast("Transfer deleted", "ok");
+  });
+};
+
+function suggestedOpeningCash(dateISO) {
+  const d = String(dateISO || "").slice(0, 10);
+  const prev = isoAddDays(d, -1);
+  const prevClose = state.dailyClosings.find((c) => String(c.date || "").slice(0, 10) === prev);
+  if (prevClose) return num(prevClose.actualCashCounted);
+  return 0;
+}
+
+function dailyClosingForDate(dateISO) {
+  const d = String(dateISO || "").slice(0, 10);
+  return state.dailyClosings.find((c) => String(c.date || "").slice(0, 10) === d) || null;
+}
+
+function computeDailyClosingFigures(dateISO, openingCash) {
+  const bm = window.balanceMath;
+  const snap = balanceDataSnapshot();
+  const sales = bm ? bm.cashSalesOnDate(snap, dateISO) : 0;
+  const expenses = bm ? bm.cashExpensesOnDate(snap, dateISO) : 0;
+  const xfer = bm ? bm.transfersOnDate(snap, dateISO) : { cashToBank: 0, bankToCash: 0 };
+  const opening = num(openingCash);
+  const expected = opening + sales - expenses - xfer.cashToBank + xfer.bankToCash;
+  return {
+    openingCash: opening,
+    cashSales: sales,
+    cashExpenses: expenses,
+    cashDepositedToBank: xfer.cashToBank,
+    cashFromBank: xfer.bankToCash,
+    expectedCash: expected
+  };
+}
+
+window.refreshDailyClosingPreview = function () {
+  const date = document.getElementById("dcDate")?.value || todayISO();
+  const openingEl = document.getElementById("dcOpeningCash");
+  if (openingEl && !openingEl.dataset.touched) {
+    const suggested = suggestedOpeningCash(date);
+    if (suggested > 0 || !openingEl.value) openingEl.value = suggested ? String(suggested) : "";
+  }
+  const opening = num(openingEl?.value);
+  const fig = computeDailyClosingFigures(date, opening);
+  const set = (id, v) => {
+    const el = document.getElementById(id);
+    if (el) el.textContent = money(v);
+  };
+  set("dcPreviewOpening", fig.openingCash);
+  set("dcPreviewSales", fig.cashSales);
+  set("dcPreviewExpenses", fig.cashExpenses);
+  set("dcPreviewDeposited", fig.cashDepositedToBank);
+  set("dcPreviewFromBank", fig.cashFromBank);
+  set("dcPreviewExpected", fig.expectedCash);
+
+  const actual = num(document.getElementById("dcActualCash")?.value);
+  const diff = actual - fig.expectedCash;
+  const diffEl = document.getElementById("dcDifference");
+  if (diffEl) {
+    diffEl.value = money(diff);
+    diffEl.style.color = diff < 0 ? "var(--expense)" : diff > 0 ? "var(--primary)" : "var(--text-primary)";
+  }
+};
+
+window.closeDay = function () {
+  const date = document.getElementById("dcDate")?.value || todayISO();
+  if (dailyClosingForDate(date)) return toast("This day is already closed. Delete the record to re-close.", "error");
+
+  const opening = num(document.getElementById("dcOpeningCash")?.value);
+  const actual = num(document.getElementById("dcActualCash")?.value);
+  const reason = (document.getElementById("dcReason")?.value || "").trim();
+  const fig = computeDailyClosingFigures(date, opening);
+  const difference = actual - fig.expectedCash;
+
+  if (!(actual >= 0) || !document.getElementById("dcActualCash")?.value) return toast("Enter actual cash counted", "error");
+  if (Math.abs(difference) > 0.009 && !reason) return toast("Enter a reason for the cash difference", "error");
+  if (!api?.dailyClosings?.create) return toast("Daily closing API not ready", "error");
+
+  withErr(async () => {
+    await api.dailyClosings.create({
+      date: String(date).slice(0, 10),
+      openingCash: fig.openingCash,
+      cashSales: fig.cashSales,
+      cashExpenses: fig.cashExpenses,
+      cashDepositedToBank: fig.cashDepositedToBank,
+      cashFromBank: fig.cashFromBank,
+      expectedCash: fig.expectedCash,
+      actualCashCounted: actual,
+      difference,
+      reason,
+      closedAt: new Date().toISOString()
+    });
+    document.getElementById("dcActualCash").value = "";
+    document.getElementById("dcReason").value = "";
+    const openingEl = document.getElementById("dcOpeningCash");
+    if (openingEl) delete openingEl.dataset.touched;
+    await loadAll();
+    refreshDailyClosingPreview();
+  });
+};
+
+function renderDailyClosingHistory() {
+  const el = document.getElementById("dcHistoryList");
+  if (!el) return;
+  el.innerHTML = [...state.dailyClosings]
+    .sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0))
+    .map((c) => {
+      const d = String(c.date || "").slice(0, 10);
+      const diff = num(c.difference);
+      return `<div class="row" style="grid-template-columns:1fr auto;">
+        <div>
+          <strong>${d}</strong>
+          <span class="pill">Expected ${money(c.expectedCash)}</span>
+          <span class="pill">Actual ${money(c.actualCashCounted)}</span>
+          <span class="pill">Diff ${money(diff)}</span>
+          ${c.reason ? `<span class="muted"> — ${c.reason}</span>` : ""}
+        </div>
+        <button type="button" class="warn btn-sm" onclick="removeDailyClosing('${c.id}')">Delete</button>
+      </div>`;
+    })
+    .join("") || `<div class="muted">No daily closings yet.</div>`;
+}
+
+window.removeDailyClosing = function (id) {
+  if (!id || !confirm("Delete this daily closing record?")) return;
+  if (!api?.dailyClosings?.remove) return toast("Delete not supported", "error");
+  withErr(async () => {
+    await api.dailyClosings.remove(id);
+    await loadAll();
+    refreshDailyClosingPreview();
+    toast("Closing record deleted", "ok");
+  });
+};
+
 // -----------------------------
 // CRUD actions
 // -----------------------------
@@ -1257,7 +1652,18 @@ window.showSection = function (sectionName) {
   const targetNav = document.querySelector(`.nav-item[onclick="showSection('${sectionName}')"]`);
   if (targetSection) targetSection.classList.add("active");
   if (targetNav) targetNav.classList.add("active");
-  if (sectionName === "analytics") window.renderAnalytics?.();
+  if (sectionName === "analytics") {
+    window.renderAnalytics?.();
+    window.renderAnalyticsTransferHistory?.();
+  }
+  if (sectionName === "balance-transfer") {
+    renderBalanceTransferForm();
+    renderBalanceTransferHistory();
+  }
+  if (sectionName === "daily-closing") {
+    refreshDailyClosingPreview();
+    renderDailyClosingHistory();
+  }
   if (sectionName === "staff") window.showStaffTab?.(staffTab);
   if (sectionName === "menu") {
     refreshMenu();
@@ -1427,7 +1833,7 @@ window.renderMenuList = function () {
 
   wrap.innerHTML = items
     .map((m) => {
-      const badge = m.available ? `<span class="pill" style="background: rgba(34,197,94,0.12); border:1px solid rgba(34,197,94,0.25); color:#a7f3d0;">Available</span>`
+      const badge = m.available ? `<span class="pill" style="background: rgba(74,169,233,0.12); border:1px solid rgba(74,169,233,0.25); color:var(--primary);">Available</span>`
         : `<span class="pill" style="background: rgba(239,68,68,0.12); border:1px solid rgba(239,68,68,0.25); color:#fecaca;">Unavailable</span>`;
       return `
         <div class="row">
@@ -1926,7 +2332,7 @@ window.renderPosMenu = function () {
       items = items.slice(0, 32);
     } else {
       // no history yet
-      wrap.innerHTML = `<div class="muted" style="padding: 10px;">No favourites yet — complete a few orders first.</div>`;
+      wrap.innerHTML = `<div class="muted" style="padding: 10px;">No favourites yet.</div>`;
       return;
     }
   }
@@ -2700,7 +3106,7 @@ function renderEditSupplierItems() {
           </div>
         `;
       })
-      .join("") || `<div class="muted">No items yet. Click “Add item”.</div>`;
+      .join("") || `<div class="muted">No items yet.</div>`;
 }
 
 window.closeEditSupplier = function () {
@@ -3110,7 +3516,7 @@ function renderAttendanceChecklist() {
   const date = document.getElementById("attDate")?.value || todayISO();
   const names = staffNames();
   if (!names.length) {
-    el.innerHTML = `<div class="muted">No staff yet. Click + to add employees.</div>`;
+    el.innerHTML = `<div class="muted">No staff yet.</div>`;
     return;
   }
   el.innerHTML = names
@@ -3317,7 +3723,9 @@ window.resetAll = function () {
     suppliers: [],
     staff: [],
     fixedSalaries: [],
-    reminders: []
+    reminders: [],
+    balanceTransfers: [],
+    dailyClosings: []
   };
   withErr(async () => {
     await api.backup.import({ data: empty });
@@ -3659,22 +4067,39 @@ function renderStaffPayableTable() {
   if (!staffNames().length) table.innerHTML += `<div class="muted">No staff in master.</div>`;
 }
 
+function chartThemeColors() {
+  const s = getComputedStyle(document.documentElement);
+  const pick = (name, fallback) => {
+    const v = s.getPropertyValue(name).trim();
+    return v || fallback;
+  };
+  const dark = document.documentElement.getAttribute("data-theme") === "dark";
+  return {
+    text: pick("--chart-text", dark ? "#CBD5E1" : "#374151"),
+    muted: pick("--chart-muted", dark ? "#94A3B8" : "#6B7280"),
+    grid: pick("--chart-grid", dark ? "rgba(51, 65, 85, 0.65)" : "rgba(229, 231, 235, 0.85)")
+  };
+}
+
 function chartOptions(isDoughnut = false) {
+  const c = chartThemeColors();
   return {
     responsive: true,
     maintainAspectRatio: false,
-    plugins: { legend: { labels: { color: "#e2e8f0" } } },
+    animation: { duration: 600, easing: "easeOutQuart" },
+    plugins: { legend: { labels: { color: c.text, font: { family: "Inter", size: 12, weight: "500" } } } },
     scales: isDoughnut
       ? {}
       : {
-          x: { ticks: { color: "#cbd5e1" }, grid: { color: "rgba(148,163,184,0.2)" } },
-          y: { ticks: { color: "#cbd5e1" }, grid: { color: "rgba(148,163,184,0.2)" } }
+          x: { ticks: { color: c.muted }, grid: { color: c.grid } },
+          y: { ticks: { color: c.muted }, grid: { color: c.grid } }
         }
   };
 }
 
 window.renderAnalytics = async function () {
-  const range = document.getElementById("analyticsRange")?.value || "monthly";
+  const range = document.getElementById("analyticsRange")?.value || "month";
+  syncPeriodChips("analyticsPeriodFilter", ["today", "week", "month"].includes(range) ? range : "");
   const fromEl = document.getElementById("analyticsFrom");
   const toEl = document.getElementById("analyticsTo");
 
@@ -3688,6 +4113,7 @@ window.renderAnalytics = async function () {
     }
   }
 
+  const periodLabelEl = document.getElementById("analyticsPeriodLabel");
   setLoading(true);
   try {
     const parseDay = (iso) => new Date(`${String(iso).slice(0, 10)}T00:00:00`);
@@ -3708,6 +4134,15 @@ window.renderAnalytics = async function () {
     if (range === "custom") {
       fromISO = document.getElementById("analyticsFrom")?.value || isoAddDays(todayISO(), -30);
       toISO = document.getElementById("analyticsTo")?.value || todayISO();
+    } else if (range === "today") {
+      fromISO = todayISO();
+      toISO = todayISO();
+    } else if (range === "week") {
+      fromISO = startOfRangeISO("week");
+      toISO = todayISO();
+    } else if (range === "month") {
+      fromISO = startOfRangeISO("month");
+      toISO = todayISO();
     } else if (range === "daily") {
       fromISO = isoAddDays(todayISO(), -13);
       toISO = todayISO();
@@ -3743,10 +4178,15 @@ window.renderAnalytics = async function () {
     const toDate = parseDay(toISO);
     const daysSpan = Math.max(1, Math.round((toDate - fromDate) / (24 * 3600 * 1000)) + 1);
 
+    if (periodLabelEl) {
+      periodLabelEl.textContent = formatPeriodRangeLabel(fromISO, toISO);
+    }
+
     let bucketMode = "day";
     if (range === "weekly") bucketMode = "week";
     else if (range === "monthly" || range === "3m" || range === "6m" || range === "yearly") bucketMode = "month";
     else if (range === "custom") bucketMode = daysSpan <= 60 ? "day" : daysSpan <= 180 ? "week" : "month";
+    else if (range === "month" && daysSpan > 31) bucketMode = "week";
 
     const inRange = (dateISO) => {
       const x = String(dateISO || "").slice(0, 10);
@@ -3807,7 +4247,6 @@ window.renderAnalytics = async function () {
     const salesIn = state.sales.filter((s) => s?.date && inRange(s.date));
     salesIn.forEach((s) => add(s.date, saleAmounts(s).total, rev));
 
-    // Expenses = paid expenses + supplier payments + paid salary (master logic)
     const expPaidIn = state.expenses.filter((e) => e?.date && e.status === "paid" && inRange(e.date));
     const shopExpenseCats = new Set(["staff_food", "kitchen", "shop_other"]);
     const shopKitchenPaid = expPaidIn
@@ -3897,7 +4336,7 @@ window.renderAnalytics = async function () {
 
     const mkChart = (id, config) => {
       const el = document.getElementById(id);
-      if (!el) return null;
+      if (!el || typeof Chart === "undefined") return null;
       return new Chart(el, config);
     };
 
@@ -3907,9 +4346,9 @@ window.renderAnalytics = async function () {
       data: {
         labels: buckets.map((b) => b.label),
         datasets: [
-          { label: "Revenue", data: rev, borderColor: "#22c55e", backgroundColor: "rgba(34,197,94,0.14)", fill: true, tension: 0.33 },
-          { label: "Expenses", data: exp, borderColor: "#ef4444", backgroundColor: "rgba(239,68,68,0.12)", fill: true, tension: 0.33 },
-          { label: "Profit", data: profit, borderColor: "#3b82f6", backgroundColor: "rgba(59,130,246,0.10)", fill: false, tension: 0.33 }
+          { label: "Revenue", data: rev, borderColor: "#4AA9E9", backgroundColor: "rgba(74,169,233,0.14)", fill: true, tension: 0.33 },
+          { label: "Expenses", data: exp, borderColor: "#EF4444", backgroundColor: "rgba(239,68,68,0.12)", fill: true, tension: 0.33 },
+          { label: "Profit", data: profit, borderColor: "#F97316", backgroundColor: "rgba(249,115,22,0.10)", fill: false, tension: 0.33 }
         ]
       },
       options: chartOptions()
@@ -3923,7 +4362,7 @@ window.renderAnalytics = async function () {
         datasets: [
           {
             data: [salaryPaid, supplierPaid, grocery, expBreakdown.ShopKitchen, expBreakdown.Other],
-            backgroundColor: ["#60a5fa", "#22c55e", "#f97316", "#eab308", "#94a3b8"]
+            backgroundColor: ["#4AA9E9", "#22C55E", "#F97316", "#F59E0B", "#94A3B8"]
           }
         ]
       },
@@ -3935,7 +4374,7 @@ window.renderAnalytics = async function () {
       type: "bar",
       data: {
         labels: ["Cash", "Swiggy", "Zomato", "Other Online"],
-        datasets: [{ label: "Sales", data: [salesSplit.cash, salesSplit.swiggy, salesSplit.zomato, salesSplit.otherOnline], backgroundColor: ["#22c55e", "#fb923c", "#ef4444", "#3b82f6"], borderRadius: 10 }]
+        datasets: [{ label: "Sales", data: [salesSplit.cash, salesSplit.swiggy, salesSplit.zomato, salesSplit.otherOnline], backgroundColor: ["#4AA9E9", "#F97316", "#EF4444", "#2E97DD"], borderRadius: 10 }]
       },
       options: chartOptions()
     });
@@ -3945,7 +4384,7 @@ window.renderAnalytics = async function () {
       type: "bar",
       data: {
         labels: salaryMonthKeys.map((k) => k),
-        datasets: [{ label: "Salary Paid", data: salaryMonthKeys.map((k) => salaryByMonth[k]), backgroundColor: ["#60a5fa"], borderRadius: 10 }]
+        datasets: [{ label: "Salary Paid", data: salaryMonthKeys.map((k) => salaryByMonth[k]), backgroundColor: ["#4AA9E9"], borderRadius: 10 }]
       },
       options: chartOptions()
     });
@@ -3955,7 +4394,7 @@ window.renderAnalytics = async function () {
       type: "line",
       data: {
         labels: buckets.map((b) => b.label),
-        datasets: [{ label: "Supplier Payments", data: supplierPaySeries, borderColor: "#22c55e", backgroundColor: "rgba(34,197,94,0.10)", fill: true, tension: 0.33 }]
+        datasets: [{ label: "Supplier Payments", data: supplierPaySeries, borderColor: "#4AA9E9", backgroundColor: "rgba(74,169,233,0.10)", fill: true, tension: 0.33 }]
       },
       options: chartOptions()
     });
@@ -3965,12 +4404,13 @@ window.renderAnalytics = async function () {
       type: "line",
       data: {
         labels: buckets.map((b) => b.label),
-        datasets: [{ label: "Profit", data: profit, borderColor: "#3b82f6", backgroundColor: "rgba(59,130,246,0.10)", fill: true, tension: 0.33 }]
+        datasets: [{ label: "Profit", data: profit, borderColor: "#4AA9E9", backgroundColor: "rgba(74,169,233,0.10)", fill: true, tension: 0.33 }]
       },
       options: chartOptions()
     });
 
     renderStaffPayableTable();
+    renderAnalyticsTransferHistory();
   } catch (e) {
     console.error(e);
     toast(e?.message ? `Error: ${e.message}` : "Error occurred", "error");
@@ -3989,67 +4429,92 @@ function renderMasterSelects() {
 }
 
 function renderAll() {
-  renderMasterSelects();
-  renderDashboard();
-  renderSuppliers();
-  renderPurchases();
-  renderSupplierRemaining();
-  window.renderSupplierHistory?.();
-  renderBills();
-  renderReminders();
-  renderStaffMaster();
-  renderFixedSalaries();
-  renderAdvancesFilters();
-  window.renderAdvances?.();
-  renderAttendance();
-  renderAttendanceMonthUi();
-  renderSalaries();
-  window.renderSalaryOverview?.();
-  renderSales();
-  renderInventory();
+  safeRun("master selects", renderMasterSelects);
+  safeRun("dashboard", renderDashboard);
+  safeRun("suppliers", renderSuppliers);
+  safeRun("purchases", renderPurchases);
+  safeRun("supplier remaining", renderSupplierRemaining);
+  safeRun("supplier history", () => window.renderSupplierHistory?.());
+  safeRun("bills", renderBills);
+  safeRun("reminders", renderReminders);
+  safeRun("staff master", renderStaffMaster);
+  safeRun("fixed salaries", renderFixedSalaries);
+  safeRun("advances filters", renderAdvancesFilters);
+  safeRun("advances", () => window.renderAdvances?.());
+  safeRun("attendance", renderAttendance);
+  safeRun("attendance month", renderAttendanceMonthUi);
+  safeRun("salaries", renderSalaries);
+  safeRun("salary overview", () => window.renderSalaryOverview?.());
+  safeRun("sales", renderSales);
+  safeRun("inventory", renderInventory);
+  safeRun("balance transfer form", renderBalanceTransferForm);
+  safeRun("balance transfer history", renderBalanceTransferHistory);
+  safeRun("daily closing history", renderDailyClosingHistory);
+  safeRun("analytics transfer history", () => window.renderAnalyticsTransferHistory?.());
 }
 
 async function loadAll() {
   setLoading(true);
   try {
-    // Wait for `window.api` to be ready (Firebase or backend fallback).
     const start = Date.now();
-    while (!window.api && Date.now() - start < 5000) {
+    while (!window.api && Date.now() - start < 8000) {
       await new Promise((r) => setTimeout(r, 50));
     }
     api = window.api;
-    if (!api) throw new Error("API not initialized (check Firebase/backend)");
-    const [sales, purchases, supplierPayments, expenses, inventory, attendance, salaries, advances, fixedSalaries, reminders, supRes, stRes, menuItems, orders] = await Promise.all([
-      api.sales.list(),
-      api.purchases.list(),
-      api.supplierPayments?.list?.() || [],
-      api.expenses.list(),
-      api.inventory.list(),
-      api.attendance.list(),
-      api.salaries.list(),
-      api.advances.list(),
-      api.fixedSalaries?.list?.() || [],
-      api.reminders?.list?.() || [],
-      api.suppliers.list(),
-      api.staff.list(),
-      api.menuItems?.list?.() || [],
-      api.orders?.list?.({ date: todayISO() }) || []
+    if (!api) throw new Error("API not initialized — check internet and refresh the page");
+
+    const [
+      sales,
+      purchases,
+      supplierPayments,
+      expenses,
+      inventory,
+      attendance,
+      salaries,
+      advances,
+      fixedSalaries,
+      reminders,
+      supRes,
+      stRes,
+      menuItems,
+      orders,
+      balanceTransfers,
+      dailyClosings
+    ] = await Promise.all([
+      fetchList("sales", () => api.sales.list()),
+      fetchList("purchases", () => api.purchases.list()),
+      fetchList("supplier payments", () => (api.supplierPayments?.list ? api.supplierPayments.list() : [])),
+      fetchList("expenses", () => api.expenses.list()),
+      fetchList("inventory", () => api.inventory.list()),
+      fetchList("attendance", () => api.attendance.list()),
+      fetchList("salaries", () => api.salaries.list()),
+      fetchList("advances", () => api.advances.list()),
+      fetchList("fixed salaries", () => (api.fixedSalaries?.list ? api.fixedSalaries.list() : [])),
+      fetchList("reminders", () => (api.reminders?.list ? api.reminders.list() : [])),
+      fetchList("suppliers", () => api.suppliers.list()),
+      fetchList("staff", () => api.staff.list()),
+      fetchList("menu", () => (api.menuItems?.list ? api.menuItems.list() : [])),
+      fetchList("orders", () => (api.orders?.list ? api.orders.list({ date: todayISO() }) : [])),
+      fetchList("balance transfers", () => (api.balanceTransfers?.list ? api.balanceTransfers.list() : [])),
+      fetchList("daily closings", () => (api.dailyClosings?.list ? api.dailyClosings.list() : []))
     ]);
 
-    state.sales = Array.isArray(sales) ? sales : [];
-    state.purchases = Array.isArray(purchases) ? purchases : [];
-    state.supplierPayments = Array.isArray(supplierPayments) ? supplierPayments : [];
-    state.expenses = Array.isArray(expenses) ? expenses : [];
-    state.inventory = Array.isArray(inventory) ? inventory : [];
-    state.attendance = Array.isArray(attendance) ? attendance : [];
-    state.salaries = Array.isArray(salaries) ? salaries : [];
-    state.advances = Array.isArray(advances) ? advances : [];
-    state.fixedSalaries = Array.isArray(fixedSalaries) ? fixedSalaries : [];
-    state.reminders = Array.isArray(reminders) ? reminders : [];
-    state.suppliers = Array.isArray(supRes) ? supRes : [];
-    state.staff = Array.isArray(stRes) ? stRes : [];
-    state.menuItems = Array.isArray(menuItems) ? menuItems : (Array.isArray(menuItems?.items) ? menuItems.items : []);
-    state.orders = Array.isArray(orders) ? orders : [];
+    state.sales = sales;
+    state.purchases = purchases;
+    state.supplierPayments = supplierPayments;
+    state.expenses = expenses;
+    state.inventory = inventory;
+    state.attendance = attendance;
+    state.salaries = salaries;
+    state.advances = advances;
+    state.fixedSalaries = fixedSalaries;
+    state.reminders = reminders;
+    state.suppliers = supRes;
+    state.staff = stRes;
+    state.menuItems = menuItems;
+    state.orders = orders;
+    state.balanceTransfers = balanceTransfers;
+    state.dailyClosings = dailyClosings;
 
     renderAll();
     syncKilogramMenuInBackground();
@@ -4057,13 +4522,18 @@ async function loadAll() {
   } catch (e) {
     console.error(e);
     toast(e?.message ? `Error: ${e.message}` : "Error occurred", "error");
+    try {
+      renderAll();
+    } catch (renderErr) {
+      console.error(renderErr);
+    }
   } finally {
     setLoading(false);
   }
 }
 
 function setDefaults() {
-  ["saleDate", "purchaseDate", "billDate", "shopExpenseDate", "attDate", "advDate", "remDueDate"].forEach((id) => {
+  ["saleDate", "purchaseDate", "billDate", "shopExpenseDate", "attDate", "advDate", "remDueDate", "btDate", "dcDate"].forEach((id) => {
     const el = document.getElementById(id);
     if (el) el.value = todayISO();
   });
@@ -4076,11 +4546,11 @@ function setDefaults() {
 }
 
 window.addEventListener("load", async () => {
-  // Guard against double-initialization if scripts are injected twice
   if (window.__kgAppBooted) return;
   window.__kgAppBooted = true;
-  // Restore sidebar preference (useful for POS)
+  // Desktop: keep sidebar expanded. Mobile: drawer closed until Menu is tapped.
   setSidebarCollapsed(sidebarCollapsed());
+  if (isMobileSidebarLayout()) closeAppSidebar();
   setDefaults();
   const sellerSel = document.getElementById("purchaseSellerSelect");
   if (sellerSel) {
@@ -4101,7 +4571,21 @@ window.addEventListener("load", async () => {
   if (attMonthEl) attMonthEl.addEventListener("change", () => window.onAttMonthChange?.());
   const attDateEl = document.getElementById("attDate");
   if (attDateEl) attDateEl.addEventListener("change", () => window.onAttDateChange?.());
+  const dcOpeningEl = document.getElementById("dcOpeningCash");
+  if (dcOpeningEl) {
+    dcOpeningEl.addEventListener("input", () => {
+      dcOpeningEl.dataset.touched = "1";
+    });
+  }
   await loadAll();
+});
+
+window.addEventListener("kg-theme-change", () => {
+  safeRun("dashboard", renderDashboard);
+  if (activeSection === "analytics") {
+    safeRun("analytics", () => window.renderAnalytics?.());
+  }
+  if (window.lucide?.createIcons) window.lucide.createIcons();
 });
 
 window.clearAppCache = function () {
@@ -4109,6 +4593,7 @@ window.clearAppCache = function () {
   try {
     localStorage.removeItem("kg_pos_tickets_v1");
     localStorage.removeItem("kg_sidebar_collapsed");
+    /* keep kg_theme_pref */
   } catch {}
   location.reload();
 };

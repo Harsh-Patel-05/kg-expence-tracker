@@ -1,0 +1,273 @@
+/* KG Restaurant ERP — Kilogram Brand Design System */
+
+:root,
+[data-theme="light"] {
+  color-scheme: light;
+
+  --bg-main: #f7fafc;
+  --bg-secondary: #edf2f7;
+  --bg-card: #ffffff;
+  --bg-surface: #ffffff;
+  --bg-sidebar: #ffffff;
+  --input-bg: #ffffff;
+
+  --text-primary: #0f172a;
+  --text-secondary: #334155;
+  --text-muted: #64748b;
+
+  --primary: #4aa9e9;
+  --primary-hover: #2e97dd;
+  --primary-light: #ddf2ff;
+  --primary-rgb: 74, 169, 233;
+  --primary-glow: rgba(74, 169, 233, 0.14);
+  --primary-shadow: 0 8px 24px rgba(74, 169, 233, 0.22);
+  --nav-active-bg: #4aa9e9;
+
+  --secondary: #f97316;
+  --accent: #f97316;
+  --accent-red: #ef4444;
+  --accent-glow: rgba(249, 115, 22, 0.12);
+  --accent-yellow: #f59e0b;
+  --accent-yellow-soft: #fff7ed;
+
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --info: #4aa9e9;
+  --profit: #22c55e;
+  --expense: #ef4444;
+  --neutral: #4aa9e9;
+  --cash: #4aa9e9;
+
+  --border: #e2e8f0;
+  --shadow: 0 1px 3px rgba(15, 23, 42, 0.05), 0 6px 20px rgba(15, 23, 42, 0.04);
+  --shadow-hover: 0 4px 12px rgba(15, 23, 42, 0.07), 0 14px 32px rgba(74, 169, 233, 0.08);
+  --elevation-1: var(--shadow);
+
+  --overlay: rgba(15, 23, 42, 0.4);
+  --topbar-bg: rgba(255, 255, 255, 0.94);
+  --modal-bg: #ffffff;
+  --backdrop: rgba(15, 23, 42, 0.45);
+
+  --chart-text: #334155;
+  --chart-muted: #64748b;
+  --chart-grid: rgba(226, 232, 240, 0.9);
+  --chart-primary: rgba(74, 169, 233, 0.88);
+  --chart-orange: rgba(249, 115, 22, 0.88);
+  --chart-red: rgba(239, 68, 68, 0.85);
+  --chart-blue: rgba(74, 169, 233, 0.75);
+
+  --skeleton-a: #e2e8f0;
+  --skeleton-b: #f1f5f9;
+  --loading-bg: rgba(247, 250, 252, 0.94);
+
+  --toast-success-bg: #f0fdf4;
+  --toast-success-border: rgba(34, 197, 94, 0.35);
+  --toast-success-text: #15803d;
+  --toast-error-bg: #fef2f2;
+  --toast-error-border: rgba(239, 68, 68, 0.35);
+  --toast-error-text: #b91c1c;
+  --toast-warning-bg: #fffbeb;
+  --toast-warning-border: rgba(245, 158, 11, 0.35);
+  --toast-warning-text: #b45309;
+  --toast-info-bg: #ddf2ff;
+  --toast-info-border: rgba(74, 169, 233, 0.35);
+  --toast-info-text: #1e5a8a;
+
+  --pos-ticket-bg: #edf2f7;
+  --pos-item-bg: #ffffff;
+  --celebrate-bg: rgba(255, 255, 255, 0.96);
+  --celebrate-overlay: rgba(15, 23, 42, 0.12);
+
+  --radius: 16px;
+  --radius-small: 12px;
+  --radius-btn: 12px;
+  --transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  --theme-transition: background-color 0.2s ease, color 0.2s ease, border-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+[data-theme="dark"] {
+  color-scheme: dark;
+
+  --bg-main: #0f172a;
+  --bg-secondary: #162235;
+  --bg-card: #162235;
+  --bg-surface: #162235;
+  --bg-sidebar: #101b2d;
+  --input-bg: #0f172a;
+
+  --text-primary: #f8fafc;
+  --text-secondary: #cbd5e1;
+  --text-muted: #94a3b8;
+
+  --primary: #4aa9e9;
+  --primary-hover: #2e97dd;
+  --primary-light: rgba(74, 169, 233, 0.18);
+  --primary-rgb: 74, 169, 233;
+  --primary-glow: rgba(74, 169, 233, 0.16);
+  --primary-shadow: 0 8px 24px rgba(74, 169, 233, 0.28);
+  --nav-active-bg: #4aa9e9;
+
+  --secondary: #f97316;
+  --accent: #fb923c;
+  --accent-red: #f87171;
+  --accent-glow: rgba(249, 115, 22, 0.14);
+  --accent-yellow: #fbbf24;
+  --accent-yellow-soft: rgba(251, 191, 36, 0.14);
+
+  --success: #22c55e;
+  --warning: #f59e0b;
+  --danger: #ef4444;
+  --info: #4aa9e9;
+  --profit: #4ade80;
+  --expense: #f87171;
+  --neutral: #60a5fa;
+  --cash: #4aa9e9;
+
+  --border: #273549;
+  --shadow: 0 1px 3px rgba(0, 0, 0, 0.35), 0 8px 24px rgba(0, 0, 0, 0.28);
+  --shadow-hover: 0 4px 12px rgba(0, 0, 0, 0.4), 0 14px 32px rgba(74, 169, 233, 0.12);
+  --elevation-1: var(--shadow);
+
+  --overlay: rgba(0, 0, 0, 0.55);
+  --topbar-bg: rgba(16, 27, 45, 0.94);
+  --modal-bg: #162235;
+  --backdrop: rgba(0, 0, 0, 0.65);
+
+  --chart-text: #cbd5e1;
+  --chart-muted: #94a3b8;
+  --chart-grid: rgba(39, 53, 73, 0.85);
+  --chart-primary: rgba(74, 169, 233, 0.9);
+  --chart-orange: rgba(249, 115, 22, 0.88);
+  --chart-red: rgba(248, 113, 113, 0.85);
+  --chart-blue: rgba(96, 165, 250, 0.8);
+
+  --skeleton-a: #273549;
+  --skeleton-b: #334155;
+  --loading-bg: rgba(15, 23, 42, 0.94);
+
+  --toast-success-bg: rgba(34, 197, 94, 0.12);
+  --toast-success-border: rgba(74, 222, 128, 0.35);
+  --toast-success-text: #86efac;
+  --toast-error-bg: rgba(239, 68, 68, 0.12);
+  --toast-error-border: rgba(248, 113, 113, 0.35);
+  --toast-error-text: #fca5a5;
+  --toast-warning-bg: rgba(245, 158, 11, 0.12);
+  --toast-warning-border: rgba(251, 191, 36, 0.35);
+  --toast-warning-text: #fde68a;
+  --toast-info-bg: rgba(74, 169, 233, 0.14);
+  --toast-info-border: rgba(74, 169, 233, 0.35);
+  --toast-info-text: #bae6fd;
+
+  --pos-ticket-bg: #101b2d;
+  --pos-item-bg: #162235;
+  --celebrate-bg: rgba(22, 34, 53, 0.98);
+  --celebrate-overlay: rgba(0, 0, 0, 0.5);
+}
+
+html {
+  transition: var(--theme-transition);
+}
+
+body,
+.card,
+.sidebar .card,
+.app-topbar,
+input,
+select,
+textarea,
+button,
+.modal,
+.toast,
+.pos-shell,
+.pos-item,
+.kpi-card,
+.table-row,
+.nav-item,
+.period-chip,
+.theme-chip {
+  transition: var(--theme-transition);
+}
+
+.app-topbar {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.app-topbar-spacer {
+  flex: 1;
+}
+
+.theme-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 4px;
+  border-radius: 999px;
+  background: var(--bg-secondary);
+  border: 1px solid var(--border);
+}
+
+.theme-chip {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  padding: 0 !important;
+  border: none !important;
+  border-radius: 999px !important;
+  background: transparent !important;
+  color: var(--text-muted) !important;
+  box-shadow: none !important;
+  cursor: pointer;
+  transition: var(--theme-transition), transform 0.15s ease !important;
+}
+
+.theme-chip:hover {
+  color: var(--text-primary) !important;
+  background: var(--bg-card) !important;
+  transform: none !important;
+}
+
+.theme-chip.active {
+  background: var(--primary) !important;
+  color: #fff !important;
+  box-shadow: var(--primary-shadow) !important;
+}
+
+.theme-chip svg {
+  width: 18px;
+  height: 18px;
+  stroke-width: 2;
+}
+
+/* Kilogram brand accents */
+.kpi-card {
+  border-top-color: var(--primary);
+}
+
+.dash-title,
+.app-topbar-title {
+  color: var(--text-primary);
+}
+
+.period-chip.active,
+.tabBtn.active,
+.pos-chip.active {
+  background: var(--primary) !important;
+  border-color: var(--primary) !important;
+  color: #fff !important;
+  box-shadow: var(--primary-shadow) !important;
+}
+
+.pos-btn.green,
+button.pos-btn.green {
+  background: var(--primary) !important;
+  box-shadow: var(--primary-shadow) !important;
+}
+
+.pos-btn.green:hover {
+  background: var(--primary-hover) !important;
+}

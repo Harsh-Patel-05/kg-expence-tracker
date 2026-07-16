@@ -27,6 +27,22 @@
   }
 
   function buildBackendApi() {
+    const lsKey = (k) => `kg_api_${k}`;
+    const lsList = (k) => {
+      try {
+        const raw = localStorage.getItem(lsKey(k));
+        const arr = raw ? JSON.parse(raw) : [];
+        return Array.isArray(arr) ? arr : [];
+      } catch {
+        return [];
+      }
+    };
+    const lsSave = (k, arr) => {
+      try {
+        localStorage.setItem(lsKey(k), JSON.stringify(arr));
+      } catch {}
+    };
+
     return {
       menuItems: {
         list: () => fetchJson("/api/menu-items", { method: "GET" }),
@@ -126,6 +142,46 @@
       },
       analytics: {
         get: (type) => fetchJson(`/api/analytics?type=${encodeURIComponent(type || "monthly")}`, { method: "GET" })
+      },
+      balanceTransfers: {
+        list: async () => lsList("balance_transfers"),
+        create: async (body) => {
+          const rows = lsList("balance_transfers");
+          const id = `bt_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+          const row = {
+            id,
+            date: String(body.date || "").slice(0, 10),
+            fromAccount: String(body.fromAccount || "").toLowerCase(),
+            toAccount: String(body.toAccount || "").toLowerCase(),
+            amount: Number(body.amount),
+            notes: String(body.notes || ""),
+            createdAt: new Date().toISOString(),
+            updatedAt: new Date().toISOString()
+          };
+          rows.push(row);
+          lsSave("balance_transfers", rows);
+          return id;
+        },
+        remove: async (id) => {
+          const rows = lsList("balance_transfers").filter((r) => r.id !== id);
+          lsSave("balance_transfers", rows);
+          return { ok: true, id };
+        }
+      },
+      dailyClosings: {
+        list: async () => lsList("daily_closings"),
+        create: async (body) => {
+          const rows = lsList("daily_closings");
+          const id = `dc_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
+          rows.push({ id, ...body, createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() });
+          lsSave("daily_closings", rows);
+          return id;
+        },
+        remove: async (id) => {
+          const rows = lsList("daily_closings").filter((r) => r.id !== id);
+          lsSave("daily_closings", rows);
+          return { ok: true, id };
+        }
       }
     };
   }
@@ -156,6 +212,8 @@
     bulkUpsertMenuItems,
     getDocsByField,
     getDocById,
+    createBalanceTransfer,
+    deleteBalanceTransfer,
     exportAllData,
     importAllData
   } = fb;
@@ -343,6 +401,16 @@
       create: (body) => addData("reminders", body),
       update: (id, body) => updateData("reminders", id, body),
       remove: (id) => deleteData("reminders", id)
+    },
+    balanceTransfers: {
+      list: () => getData("balance_transfers"),
+      create: (body) => createBalanceTransfer(body),
+      remove: (id) => deleteBalanceTransfer(id)
+    },
+    dailyClosings: {
+      list: () => getData("daily_closings"),
+      create: (body) => addData("daily_closings", body),
+      remove: (id) => deleteData("daily_closings", id)
     },
     backup: {
       export: async () => {

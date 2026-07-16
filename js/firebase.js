@@ -173,10 +173,74 @@ const bulkUpsertMenuItems = async (items) => {
     return getData("menuItems");
 };
 
+const readCollectionTx = async (transaction, name) => {
+    const snap = await transaction.get(db.collection(name));
+    return snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+};
+
+const loadBalanceDataTx = async (transaction) => {
+    const names = ['sales', 'purchases', 'expenses', 'salaries', 'advances', 'supplierPayments', 'balance_transfers'];
+    const parts = await Promise.all(names.map((n) => readCollectionTx(transaction, n)));
+    const out = {};
+    names.forEach((n, i) => {
+        out[n === 'balance_transfers' ? 'balanceTransfers' : n] = parts[i];
+    });
+    return out;
+};
+
+const createBalanceTransfer = async (body) => {
+    assertReady();
+    const amt = Number(body.amount);
+    const from = String(body.fromAccount || '').toLowerCase();
+    const to = String(body.toAccount || '').toLowerCase();
+    const date = String(body.date || '').slice(0, 10);
+    const notes = String(body.notes || '').trim();
+
+    if (!(amt > 0)) throw new Error('Amount must be greater than zero');
+    if (from === to) throw new Error('Cannot transfer to the same account');
+    if (!['cash', 'bank'].includes(from) || !['cash', 'bank'].includes(to)) throw new Error('Invalid account');
+
+    return db.runTransaction(async (transaction) => {
+        const data = await loadBalanceDataTx(transaction);
+        const bm = window.balanceMath;
+        if (!bm) throw new Error('Balance math not loaded');
+        const { cashBalance, bankBalance } = bm.computeBalances(data);
+        const available = from === 'cash' ? cashBalance : bankBalance;
+        if (amt > available + 0.009) {
+            throw new Error(`Insufficient ${from} balance. Available: Rs ${Math.round(available).toLocaleString('en-IN')}`);
+        }
+
+        const ref = db.collection('balance_transfers').doc();
+        transaction.set(ref, {
+            date,
+            fromAccount: from,
+            toAccount: to,
+            amount: amt,
+            notes,
+            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
+            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
+        });
+        return ref.id;
+    });
+};
+
+const deleteBalanceTransfer = async (id) => {
+    assertReady();
+    const oid = String(id || '').trim();
+    if (!oid) throw new Error('Transfer id required');
+    return db.runTransaction(async (transaction) => {
+        const ref = db.collection('balance_transfers').doc(oid);
+        const snap = await transaction.get(ref);
+        if (!snap.exists) throw new Error('Transfer not found');
+        transaction.delete(ref);
+        return { ok: true, id: oid };
+    });
+};
+
 const exportAllData = async () => {
     assertReady();
     const data = {};
-    const collections = ['sales', 'purchases', 'expenses', 'inventory', 'attendance', 'salaries', 'advances', 'suppliers', 'staff', 'fixedSalaries', 'reminders'];
+    const collections = ['sales', 'purchases', 'expenses', 'inventory', 'attendance', 'salaries', 'advances', 'suppliers', 'staff', 'fixedSalaries', 'reminders', 'balance_transfers', 'daily_closings'];
     
     for (const name of collections) {
         try {
@@ -194,7 +258,7 @@ const exportAllData = async () => {
 const importAllData = async (payload) => {
     assertReady();
     const incoming = payload && payload.data ? payload.data : payload || {};
-    const collections = ['sales', 'purchases', 'expenses', 'inventory', 'attendance', 'salaries', 'advances', 'suppliers', 'staff', 'fixedSalaries', 'reminders'];
+    const collections = ['sales', 'purchases', 'expenses', 'inventory', 'attendance', 'salaries', 'advances', 'suppliers', 'staff', 'fixedSalaries', 'reminders', 'balance_transfers', 'daily_closings'];
 
     // Clear existing data
     for (const name of collections) {
@@ -236,6 +300,8 @@ window.firebaseDB = {
     deleteData,
     upsertByField,
     bulkUpsertMenuItems,
+    createBalanceTransfer,
+    deleteBalanceTransfer,
     exportAllData,
     importAllData
 };

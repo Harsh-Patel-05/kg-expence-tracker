@@ -4,6 +4,21 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>KG Restaurant Expense Tracker</title>
+  <script>
+    (function () {
+      try {
+        var p = localStorage.getItem("kg_theme_pref") || "system";
+        var d = p === "system"
+          ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+          : p;
+        document.documentElement.setAttribute("data-theme", d);
+        document.documentElement.style.colorScheme = d;
+      } catch (e) {
+        document.documentElement.setAttribute("data-theme", "light");
+      }
+    })();
+  </script>
+  <link rel="stylesheet" href="css/design-system.css?v=20260710g" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <style>
@@ -25,43 +40,7 @@
       line-height: 1.6;
     }
     
-    :root{
-      --bg-main: #F7FAFC;
-      --bg-secondary: #EDF2F7;
-      --bg-card: #FFFFFF;
-      --bg-sidebar: #FFFFFF;
-
-      --primary: #2F855A;
-      --primary-light: #38A169;
-      --primary-hover: #276749;
-      --primary-glow: rgba(47, 133, 90, 0.14);
-      --primary-shadow: 0 18px 38px rgba(47, 133, 90, 0.16);
-      --nav-active-bg: #E8F5E9;
-
-      --accent-yellow: #ECC94B;
-      --accent-yellow-soft: #F7EFD2;
-
-      --accent: #1A202C;
-      --accent-glow: rgba(26, 32, 44, 0.06);
-
-      --text-primary: #1A202C;
-      --text-secondary: #718096;
-      --text-muted: #718096;
-
-      --profit: #2F855A;
-      --expense: #F56565;
-      --neutral: #3182CE;
-      --cash: #2F855A;
-
-      --border: #E2E8F0;
-      --shadow: 0 8px 24px rgba(0, 0, 0, 0.05);
-      --shadow-hover: 0 12px 34px rgba(0, 0, 0, 0.08);
-      --radius: 16px;
-      --radius-small: 12px;
-      --transition: all 0.2s ease;
-    }
-
-    .page { 
+    .page {
       max-width: 1320px; 
       margin: 0 auto; 
       display: flex; 
@@ -76,17 +55,40 @@
       display: block;
     }
 
-    .appNavToggle{
-      display: none;
+    .app-topbar{
+      display: flex;
       align-items: center;
-      justify-content: center;
-      width: 44px;
-      height: 44px;
-      border-radius: 12px;
+      gap: 12px;
+      max-width: 1320px;
+      margin: 0 auto 12px;
+      padding: 10px 14px;
+      border-radius: 14px;
       border: 1px solid var(--border);
       background: var(--bg-card);
+      box-shadow: var(--shadow);
+      position: sticky;
+      top: 8px;
+      z-index: 10020;
+    }
+    .app-topbar-title{
+      font-size: 14px;
+      font-weight: 800;
       color: var(--text-primary);
-      font-size: 22px;
+      letter-spacing: -0.01em;
+    }
+    .appNavToggle{
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 44px;
+      padding: 0 14px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      font-size: 14px;
+      font-weight: 700;
       line-height: 1;
       cursor: pointer;
       box-shadow: var(--shadow);
@@ -94,7 +96,7 @@
     }
     .appNavToggle:hover{
       background: var(--primary-glow);
-      border-color: rgba(47, 133, 90, 0.35);
+      border-color: rgba(74, 169, 233, 0.35);
       color: var(--primary);
     }
 
@@ -108,17 +110,8 @@
     }
     body.sidebar-open .sidebarBackdrop{ display: block; }
 
-    .appNavToggle--fixed{
-      display: none;
-      position: fixed;
-      top: 16px;
-      left: 16px;
-      z-index: 9985;
-    }
-
-    @media (max-width: 1100px){
-      .appNavToggle{ display: inline-flex; }
-      .appNavToggle--fixed{ display: inline-flex; }
+    /* Small screens: sidebar slides in as drawer when menu is tapped */
+    @media (max-width: 900px){
       .sidebar{
         position: fixed;
         left: 0;
@@ -183,15 +176,16 @@
     }
     
     .nav-item.active {
-      background: var(--nav-active-bg);
-      color: var(--text-primary);
-      border-left: 4px solid var(--primary);
-      font-weight: 700;
+      background: var(--primary);
+      color: #fff;
+      border-left: none;
+      font-weight: 600;
+      box-shadow: var(--primary-shadow);
     }
 
     /* POS (clean, light theme like reference) */
     .pos-shell{
-      background: #fff;
+      background: var(--bg-card);
       border: 1px solid var(--border);
       border-radius: 20px;
       padding: 16px;
@@ -416,7 +410,7 @@
       padding: 10px;
       border-radius: 16px;
       border: 1px solid var(--border);
-      background: #fff;
+      background: var(--bg-card);
       box-shadow: var(--shadow);
     }
     .posTicketsTop{
@@ -507,7 +501,7 @@
       justify-content:center;
       z-index: 10050;
       pointer-events:none;
-      background: rgba(17, 24, 39, 0.10);
+      background: var(--celebrate-overlay);
       backdrop-filter: blur(2px);
     }
     .celebrateOverlay.show{ display:flex; }
@@ -515,8 +509,8 @@
       width: min(520px, calc(100vw - 32px));
       border-radius: 22px;
       padding: 22px 22px 18px;
-      background: rgba(255,255,255,0.92);
-      border: 1px solid rgba(226,232,240,0.9);
+      background: var(--celebrate-bg);
+      border: 1px solid var(--border);
       box-shadow: 0 18px 60px rgba(0,0,0,0.16);
       text-align:center;
       position: relative;
@@ -556,12 +550,12 @@
       background: var(--accent-yellow);
       opacity: 0;
     }
-    .spark:nth-child(2){ background: #60A5FA; animation: spark 0.9s ease-out infinite; --a:0deg; }
-    .spark:nth-child(3){ background: #34D399; animation: spark 0.9s ease-out infinite; --a:60deg; }
-    .spark:nth-child(4){ background: #F472B6; animation: spark 0.9s ease-out infinite; --a:120deg; }
-    .spark:nth-child(5){ background: #FBBF24; animation: spark 0.9s ease-out infinite; --a:180deg; }
-    .spark:nth-child(6){ background: #A78BFA; animation: spark 0.9s ease-out infinite; --a:240deg; }
-    .spark:nth-child(7){ background: #FB7185; animation: spark 0.9s ease-out infinite; --a:300deg; }
+    .spark:nth-child(2){ background: #4AA9E9; animation: spark 0.9s ease-out infinite; --a:0deg; }
+    .spark:nth-child(3){ background: #2E97DD; animation: spark 0.9s ease-out infinite; --a:60deg; }
+    .spark:nth-child(4){ background: #F97316; animation: spark 0.9s ease-out infinite; --a:120deg; }
+    .spark:nth-child(5){ background: #F59E0B; animation: spark 0.9s ease-out infinite; --a:180deg; }
+    .spark:nth-child(6){ background: #4AA9E9; animation: spark 0.9s ease-out infinite; --a:240deg; }
+    .spark:nth-child(7){ background: #EF4444; animation: spark 0.9s ease-out infinite; --a:300deg; }
     @keyframes spark{
       0%{ transform: rotate(var(--a)) translateX(0px); opacity: 0; }
       18%{ opacity: 1; }
@@ -634,7 +628,7 @@
       padding: 3px 8px;
       border-radius: 999px;
       background: var(--primary-glow);
-      border: 1px solid rgba(47, 133, 90, 0.25);
+      border: 1px solid rgba(74, 169, 233, 0.25);
       font-weight: 800;
       color: var(--primary);
     }
@@ -776,7 +770,7 @@
       justify-content:center;
       border-radius: 8px;
       background: var(--primary-glow);
-      border: 1px solid rgba(47, 133, 90, 0.12);
+      border: 1px solid rgba(74, 169, 233, 0.12);
     }
 
     .nav-icon svg{ width: 18px; height: 18px; display:block; }
@@ -785,12 +779,12 @@
     .nav-icon .accent{ fill: var(--primary); }
 
     .nav-item.active .nav-icon{
-      background: rgba(47, 133, 90, 0.12);
-      border-color: rgba(47, 133, 90, 0.28);
+      background: rgba(255, 255, 255, 0.2);
+      border-color: rgba(255, 255, 255, 0.35);
     }
-    .nav-item.active .nav-icon .stroke{ stroke: var(--primary); }
-    .nav-item.active .nav-icon .fill{ fill: var(--primary); opacity: 0.85; }
-    .nav-item.active .nav-icon .accent{ fill: var(--primary); }
+    .nav-item.active .nav-icon .stroke{ stroke: #fff; }
+    .nav-item.active .nav-icon .fill{ fill: #fff; opacity: 0.9; }
+    .nav-item.active .nav-icon .accent{ fill: #fff; }
     
     .nav-item.secondary {
       background: var(--bg-secondary);
@@ -836,7 +830,7 @@
     .card:hover {
       transform: translateY(-4px);
       box-shadow: var(--shadow-hover);
-      border-color: rgba(47, 133, 90, 0.22);
+      border-color: rgba(74, 169, 233, 0.22);
     }
     
     /* Dashboard premium layout */
@@ -948,33 +942,27 @@
     .kpi-card{
       background: var(--bg-card);
       border: 1px solid var(--border);
+      border-top: 3px solid var(--primary);
       border-radius: var(--radius);
-      padding: 16px;
+      padding: 18px 20px;
       box-shadow: var(--shadow);
       position: relative;
       overflow: hidden;
-      backdrop-filter: blur(10px);
       transition: var(--transition);
       display: flex;
       flex-direction: column;
       justify-content: center;
-      min-height: 120px;
+      min-height: 128px;
     }
     
     .kpi-card:hover{ 
-      transform: translateY(-6px); 
+      transform: translateY(-4px); 
       box-shadow: var(--shadow-hover);
-      border-color: var(--primary-glow);
+      border-color: rgba(74, 169, 233, 0.15);
     }
     
     .kpi-card::before{
-      content:"";
-      position:absolute;
-      inset:-40px -60px auto auto;
-      width:200px;
-      height:200px;
-      background: radial-gradient(circle at 30% 30%, var(--primary-glow), transparent 60%);
-      pointer-events:none;
+      display: none;
     }
     
     .kpi-top{
@@ -986,15 +974,15 @@
     }
     
     .kpi-ic{
-      width:56px;
-      height:56px;
-      border-radius: var(--radius-small);
+      width:44px;
+      height:44px;
+      border-radius: 14px;
       display:flex; 
       align-items:center; 
       justify-content:center;
       border:1px solid var(--border);
       background: var(--primary-glow);
-      font-size: 24px;
+      font-size: 20px;
       flex-shrink: 0;
     }
     
@@ -1008,22 +996,21 @@
     
     .kpi-label{
       color: var(--text-muted); 
-      font-weight: 600; 
-      font-size: 12px;
+      font-weight: 700; 
+      font-size: 11px;
       text-transform: uppercase;
-      letter-spacing: 0.5px;
+      letter-spacing: 0.06em;
     }
     
     .kpi-value{
-      font-size: 22px; 
-      font-weight: 800; 
-      letter-spacing: -0.02em; 
+      font-size: 26px;
+      font-weight: 800;
       color: var(--text-primary);
+      letter-spacing: -0.02em;
     }
     
     .kpi-hint{
-      color: var(--text-muted); 
-      font-size: 12px;
+      display: none;
     }
     
     .trend{
@@ -1557,17 +1544,38 @@
       font-weight:600;
     }
   </style>
+  <link rel="stylesheet" href="css/premium-theme.css?v=20260710h" />
 </head>
 <body>
-  <div id="appLoading">
-    <div style="text-align:center;color:#e2e8f0;">
-      <div class="spinner" aria-label="Loading"></div>
-      <div id="appLoadingText" style="margin-top:14px;font-size:14px;font-weight:600;">Loading…</div>
+  <div id="appLoading" aria-live="polite" aria-busy="true">
+    <div class="skeleton-loader" role="status">
+      <div class="skeleton-bar wide"></div>
+      <div class="skeleton-bar"></div>
+      <div class="skeleton-bar narrow"></div>
+      <div id="appLoadingText" style="margin-top:8px;font-size:14px;font-weight:600;color:var(--text-muted);text-align:center;">Loading…</div>
     </div>
   </div>
   <div id="toastRoot" aria-live="polite"></div>
   <div class="sidebarBackdrop" onclick="closeAppSidebar()" aria-hidden="true"></div>
-  <button type="button" class="appNavToggle appNavToggle--fixed" onclick="toggleAppSidebar()" aria-label="Open navigation menu" title="Menu">☰</button>
+
+  <div class="app-topbar">
+    <button type="button" class="appNavToggle" onclick="toggleAppSidebar()" aria-label="Open navigation menu" title="Menu">
+      <span aria-hidden="true">☰</span><span>Menu</span>
+    </button>
+    <div class="app-topbar-title">The Kilogram</div>
+    <div class="app-topbar-spacer"></div>
+    <div class="theme-toggle" role="group" aria-label="Color theme">
+      <button type="button" class="theme-chip" data-theme-pref="light" onclick="setThemePreference('light')" aria-label="Light theme" title="Light">
+        <i data-lucide="sun"></i>
+      </button>
+      <button type="button" class="theme-chip" data-theme-pref="dark" onclick="setThemePreference('dark')" aria-label="Dark theme" title="Dark">
+        <i data-lucide="moon"></i>
+      </button>
+      <button type="button" class="theme-chip" data-theme-pref="system" onclick="setThemePreference('system')" aria-label="System theme" title="System">
+        <i data-lucide="monitor"></i>
+      </button>
+    </div>
+  </div>
 
   <div class="page">
     <div class="sidebar">
@@ -1623,6 +1631,26 @@
               </svg>
             </span>
             <span>Expenses</span>
+          </div>
+          <div class="nav-item" onclick="showSection('balance-transfer')">
+            <span class="nav-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <path d="M7 10h10M7 14h6" class="stroke" stroke-width="2" stroke-linecap="round"/>
+                <rect x="3" y="5" width="8" height="14" rx="2" class="stroke" stroke-width="2"/>
+                <rect x="13" y="5" width="8" height="14" rx="2" class="stroke" stroke-width="2"/>
+                <path d="M11 12h2" class="accent" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </span>
+            <span>Balance Transfer</span>
+          </div>
+          <div class="nav-item" onclick="showSection('daily-closing')">
+            <span class="nav-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" fill="none">
+                <circle cx="12" cy="12" r="9" class="stroke" stroke-width="2"/>
+                <path d="M12 7v5l3 2" class="stroke" stroke-width="2" stroke-linecap="round"/>
+              </svg>
+            </span>
+            <span>Daily Closing</span>
           </div>
           <div class="nav-item" onclick="showSection('staff')">
             <span class="nav-icon" aria-hidden="true">
@@ -1689,7 +1717,12 @@
         <div class="dash-hero">
           <div>
             <div class="dash-title">Welcome back, Mihir 👋</div>
-            <div class="dash-sub">Here's your restaurant performance today</div>
+            <div class="period-filter" id="dashboardPeriodFilter" role="tablist" aria-label="Dashboard period">
+              <button type="button" class="period-chip active" data-period="today" onclick="setDashboardPeriod('today')">Today</button>
+              <button type="button" class="period-chip" data-period="week" onclick="setDashboardPeriod('week')">This Week</button>
+              <button type="button" class="period-chip" data-period="month" onclick="setDashboardPeriod('month')">This Month</button>
+            </div>
+            <div class="muted period-range-label" id="dashboardPeriodLabel"></div>
           </div>
           <div class="dash-right">
             <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
@@ -1701,60 +1734,60 @@
           <!-- First Row: 3 main balance cards -->
           <div class="kpi-card span-4 positive">
             <div class="kpi-top"><div class="kpi-ic">💰</div></div>
-            <div class="kpi-meta"><div class="kpi-label">Cash Balance</div><div class="kpi-value" id="kpiCashBalance">Rs 0</div><div class="kpi-hint">Available cash today</div></div>
+            <div class="kpi-meta"><div class="kpi-label">Cash Balance</div><div class="kpi-value" id="kpiCashBalance">Rs 0</div></div>
           </div>
           <div class="kpi-card span-4 positive">
             <div class="kpi-top"><div class="kpi-ic">🏦</div></div>
-            <div class="kpi-meta"><div class="kpi-label">Bank Balance</div><div class="kpi-value" id="kpiBankBalance">Rs 0</div><div class="kpi-hint">Online collections</div></div>
+            <div class="kpi-meta"><div class="kpi-label">Bank Balance</div><div class="kpi-value" id="kpiBankBalance">Rs 0</div></div>
           </div>
           <div class="kpi-card span-4 positive">
             <div class="kpi-top"><div class="kpi-ic">🧾</div></div>
-            <div class="kpi-meta"><div class="kpi-label">Total Balance</div><div class="kpi-value" id="kpiTotalBalance">Rs 0</div><div class="kpi-hint">Cash + bank combined</div></div>
+            <div class="kpi-meta"><div class="kpi-label">Total Balance</div><div class="kpi-value" id="kpiTotalBalance">Rs 0</div></div>
           </div>
 
           <!-- Second Row: 4 sales/expense cards in one row -->
           <div class="kpi-card span-3 positive">
             <div class="kpi-top"><div class="kpi-ic">📈</div></div>
-            <div class="kpi-meta"><div class="kpi-label">Total Revenue</div><div class="kpi-value" id="kpiTotalRevenue">Rs 0</div><div class="kpi-hint">All sales</div></div>
+            <div class="kpi-meta"><div class="kpi-label">Total Revenue</div><div class="kpi-value" id="kpiTotalRevenue">Rs 0</div></div>
           </div>
           <div class="kpi-card span-3 positive">
             <div class="kpi-top"><div class="kpi-ic" style="display: flex; align-items: center; justify-content: center; gap: 6px;"><img src="assets/swiggy.jpeg" style="width: 24px; height: 24px; object-fit: contain;" /><img src="assets/zomato.png" style="width: 24px; height: 24px; object-fit: contain;" /></div></div>
-            <div class="kpi-meta"><div class="kpi-label">Online Sales</div><div class="kpi-value" id="kpiOnlineSales">Rs 0</div><div class="kpi-hint">Swiggy + Zomato</div></div>
+            <div class="kpi-meta"><div class="kpi-label">Online Sales</div><div class="kpi-value" id="kpiOnlineSales">Rs 0</div></div>
           </div>
           <div class="kpi-card span-3 positive">
             <div class="kpi-top"><div class="kpi-ic">🏪</div></div>
-            <div class="kpi-meta"><div class="kpi-label">Retail Sales</div><div class="kpi-value" id="kpiRetailSales">Rs 0</div><div class="kpi-hint">Cash + UPI/other online (excl. Swiggy/Zomato)</div></div>
+            <div class="kpi-meta"><div class="kpi-label">Retail Sales</div><div class="kpi-value" id="kpiRetailSales">Rs 0</div></div>
           </div>
           <div class="kpi-card span-3 positive">
             <div class="kpi-top"><div class="kpi-ic">📄</div></div>
-            <div class="kpi-meta"><div class="kpi-label">Total Expenses</div><div class="kpi-value" id="kpiTotalExpenses">Rs 0</div><div class="kpi-hint">All expenses</div></div>
+            <div class="kpi-meta"><div class="kpi-label">Total Expenses</div><div class="kpi-value" id="kpiTotalExpenses">Rs 0</div></div>
           </div>
 
           <!-- Third Row: Net Profit card in full width -->
           <div class="kpi-card span-12" id="netProfitCard">
             <div class="kpi-top"><div class="kpi-ic">💎</div></div>
-            <div class="kpi-meta"><div class="kpi-label">Net Profit</div><div class="kpi-value" id="kpiNetProfit">Rs 0</div><div class="kpi-hint">Revenue - Expenses</div></div>
+            <div class="kpi-meta"><div class="kpi-label">Net Profit</div><div class="kpi-value" id="kpiNetProfit">Rs 0</div></div>
           </div>
         </div>
 
         <div class="content-grid">
           <div class="content-col">
             <div class="card">
-              <div class="section-title"><h2>Sales Overview</h2><div class="muted">Cash (green) vs Online (blue)</div></div>
+              <div class="section-title"><h2>Sales Overview</h2></div>
               <div class="chart-wrap"><canvas id="salesOverviewChart"></canvas></div>
             </div>
             <div class="card">
-              <div class="section-title"><h2>Recent Activity</h2><div class="muted">Last 5</div></div>
+              <div class="section-title"><h2>Recent Activity</h2></div>
               <div id="recentTransactionsList" class="list"></div>
             </div>
           </div>
           <div class="content-col">
             <div class="card">
-              <div class="section-title"><h2>Expense Breakdown</h2><div class="muted">Staff / Supplier / Rent / Utilities / Shop &amp; kitchen</div></div>
+              <div class="section-title"><h2>Expense Breakdown</h2></div>
               <div class="chart-wrap"><canvas id="expenseBreakdownChart"></canvas></div>
             </div>
             <div class="card">
-              <div class="section-title"><h2>Upcoming Payments</h2><div class="muted"><span class="pulse-bell" aria-hidden="true">🔔</span></div></div>
+              <div class="section-title"><h2>Upcoming Payments</h2></div>
               <div id="upcomingPaymentsList" class="list"></div>
             </div>
           </div>
@@ -1798,7 +1831,6 @@
               <input id="newSupplierItemRate" type="number" placeholder="Rate (optional)" />
               <button class="secondary" type="button" onclick="addTempSupplierItem()">Add Item</button>
             </div>
-            <div class="muted" style="margin-top: 8px;">Add items + rates before creating supplier (item-wise expenses).</div>
             <div id="tempSupplierItems" class="list"></div>
           </div>
           <div id="supplierList" class="list"></div>
@@ -1830,10 +1862,9 @@
               </select>
             </div>
             <button onclick="addPurchase()">Save Bill</button>
-            <div class="muted">Unpaid bills count toward “Unpaid Bills” KPI</div>
           </div>
           <div class="card" style="padding:14px;margin-top:12px;">
-            <div class="section-title"><h2 style="font-size:14px;">Selected items</h2><div class="muted">Add multiple items then save once</div></div>
+            <div class="section-title"><h2 style="font-size:14px;">Selected items</h2></div>
             <div id="tempPurchaseItems" class="list"></div>
           </div>
           <div id="purchaseList" class="list"></div>
@@ -1846,7 +1877,6 @@
             <h2>Supplier Remaining</h2>
             <button type="button" class="secondary" onclick="openPaySupplier()">Record Payment</button>
           </div>
-          <div class="muted">Remaining = total bills − total payments.</div>
           <div id="supplierRemainingList" class="list" style="margin-top:12px;"></div>
         </div>
         </div>
@@ -1868,7 +1898,6 @@
               <button type="button" class="secondary" onclick="renderSupplierHistory()">Refresh</button>
             </div>
           </div>
-          <div class="muted">Shows bills + lump-sum payments in one timeline (latest first).</div>
           <div id="supplierHistoryCards" class="list" style="margin-top:12px;"></div>
         </div>
         </div>
@@ -1880,7 +1909,6 @@
           <div class="modalHeader">
             <div>
               <div class="modalTitle">Edit supplier</div>
-              <div class="muted">Update supplier name and items. Rates are optional.</div>
             </div>
             <button type="button" class="secondary btn-sm" onclick="closeEditSupplier()">Close</button>
           </div>
@@ -1906,7 +1934,6 @@
           <div class="modalHeader">
             <div>
               <div class="modalTitle">Record payment</div>
-              <div class="muted">Add a lump-sum payment (reduces remaining balance).</div>
             </div>
             <button type="button" class="secondary btn-sm" onclick="closePaySupplier()">Close</button>
           </div>
@@ -1953,7 +1980,6 @@
           </div>
           <div class="grid-2" style="margin-top: 10px;">
             <input id="billNote" placeholder="Note (optional)" />
-            <div class="muted">Choose cash/online (affects balances when marked paid).</div>
           </div>
           <button onclick="addBill()" style="margin-top: 10px;">Save Expense</button>
           <div id="billsList" class="list"></div>
@@ -1962,7 +1988,6 @@
         <div class="card" style="margin-top: 14px;">
           <div class="section-title">
             <h2>Staff meals, kitchen &amp; shop</h2>
-            <div class="muted">Staff food, kitchen costs, small shop expenses — same as other expenses: choose <strong>Cash</strong> or <strong>Online</strong>; when <strong>Paid</strong>, it reduces Cash balance or Bank balance on the dashboard.</div>
           </div>
           <div class="grid-5">
             <input id="shopExpenseDate" type="date" />
@@ -1977,15 +2002,93 @@
               <option value="paid">Paid</option>
             </select>
             <select id="shopExpensePayMethod">
-              <option value="cash">Cash (deduct from cash)</option>
-              <option value="online">Online / bank (deduct from bank)</option>
+              <option value="cash">Cash</option>
+              <option value="online">Online</option>
             </select>
           </div>
           <div class="grid-2" style="margin-top: 10px;">
-            <input id="shopExpenseNote" placeholder="Note (optional, e.g. staff lunch, gas repair)" />
-            <div class="muted">These entries are included in <strong>Total Expenses</strong> and net profit when marked paid.</div>
+            <input id="shopExpenseNote" placeholder="Note (optional)" />
           </div>
           <button type="button" class="secondary" onclick="addShopExpense()" style="margin-top: 10px;">Save shop / kitchen expense</button>
+        </div>
+      </div>
+
+      <div id="balance-transfer-section" class="dashboard-section">
+        <div class="card">
+          <div class="section-title">
+            <h2>Balance Transfer</h2>
+          </div>
+          <div class="grid-2" style="margin-bottom:12px;">
+            <div class="kpi-card span-12 positive" style="margin:0;">
+              <div class="kpi-meta"><div class="kpi-label">Available Cash</div><div class="kpi-value" id="btAvailCash">Rs 0</div></div>
+            </div>
+            <div class="kpi-card span-12 positive" style="margin:0;">
+              <div class="kpi-meta"><div class="kpi-label">Available Bank</div><div class="kpi-value" id="btAvailBank">Rs 0</div></div>
+            </div>
+          </div>
+          <div class="grid-5">
+            <select id="btFromAccount" onchange="onBtAccountChange()" aria-label="Transfer from">
+              <option value="cash">Cash</option>
+              <option value="bank">Bank</option>
+            </select>
+            <select id="btToAccount" onchange="onBtAccountChange()" aria-label="Transfer to">
+              <option value="bank">Bank</option>
+              <option value="cash">Cash</option>
+            </select>
+            <input id="btAmount" type="number" min="0" step="1" placeholder="Amount" />
+            <input id="btDate" type="date" aria-label="Transfer date" />
+            <input id="btNotes" placeholder="Notes (optional)" />
+          </div>
+          <button type="button" onclick="addBalanceTransfer()" style="margin-top:12px;">Transfer</button>
+        </div>
+        <div class="card" style="margin-top:14px;">
+          <div class="section-title">
+            <h2>Transfer History</h2>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+              <select id="btHistoryRange" onchange="renderBalanceTransferHistory()">
+                <option value="today">Today</option>
+                <option value="week">This Week</option>
+                <option value="month" selected>This Month</option>
+                <option value="custom">Custom</option>
+              </select>
+              <input id="btHistoryFrom" type="date" style="display:none;" onchange="renderBalanceTransferHistory()" />
+              <input id="btHistoryTo" type="date" style="display:none;" onchange="renderBalanceTransferHistory()" />
+            </div>
+          </div>
+          <div id="btHistoryTable" class="table-like"></div>
+        </div>
+      </div>
+
+      <div id="daily-closing-section" class="dashboard-section">
+        <div class="card">
+          <div class="section-title">
+            <h2>Daily Closing</h2>
+          </div>
+          <div class="grid-3" style="margin-bottom:14px;">
+            <input id="dcDate" type="date" onchange="refreshDailyClosingPreview()" aria-label="Closing date" />
+            <input id="dcOpeningCash" type="number" min="0" step="1" placeholder="Opening cash" oninput="refreshDailyClosingPreview()" />
+            <div style="display:flex;align-items:flex-end;">
+              <button type="button" class="secondary" onclick="refreshDailyClosingPreview()">Recalculate</button>
+            </div>
+          </div>
+          <div class="table-like" id="dcPreviewTable">
+            <div class="table-row"><div>Opening Cash</div><div id="dcPreviewOpening">Rs 0</div></div>
+            <div class="table-row"><div>Cash Sales</div><div id="dcPreviewSales">Rs 0</div></div>
+            <div class="table-row"><div>Cash Expenses</div><div id="dcPreviewExpenses">Rs 0</div></div>
+            <div class="table-row"><div>Cash Deposited to Bank</div><div id="dcPreviewDeposited">Rs 0</div></div>
+            <div class="table-row"><div>Cash Received from Bank</div><div id="dcPreviewFromBank">Rs 0</div></div>
+            <div class="table-row"><div><strong>Expected Cash</strong></div><div><strong id="dcPreviewExpected">Rs 0</strong></div></div>
+          </div>
+          <div class="grid-3" style="margin-top:14px;">
+            <input id="dcActualCash" type="number" min="0" step="1" placeholder="Actual cash counted" oninput="refreshDailyClosingPreview()" />
+            <input id="dcDifference" type="text" readonly style="font-weight:800;" aria-label="Difference" />
+            <input id="dcReason" placeholder="Reason (if difference)" />
+          </div>
+          <button type="button" onclick="closeDay()" style="margin-top:12px;">Close Day</button>
+        </div>
+        <div class="card" style="margin-top:14px;">
+          <div class="section-title"><h2>Closing History</h2></div>
+          <div id="dcHistoryList" class="list"></div>
         </div>
       </div>
 
@@ -2009,13 +2112,12 @@
               <input id="newStaffSalary" type="number" placeholder="Monthly salary" />
               <button onclick="addStaff()">Add Employee</button>
             </div>
-            <div class="muted" style="margin-top:8px;">Salary is used for 30-day salary calculation: daily = monthly / 30.</div>
           </div>
 
           <div id="staffList" class="list"></div>
         </div>
         <div class="card">
-          <div class="section-title"><h2>Fixed Salary Setup</h2><div class="muted">Edit salary (optional)</div></div>
+          <div class="section-title"><h2>Fixed Salary Setup</h2></div>
           <div class="grid-3">
             <select id="fixedSalaryStaff"></select>
             <input id="fixedSalaryAmount" type="number" placeholder="Monthly Salary" />
@@ -2029,22 +2131,14 @@
           <div class="card">
           <div class="section-title">
             <h2>Date-wise Attendance</h2>
-            <div class="muted">Pick month → pick day (1, 2, 3…) → mark each staff → Save. Salary uses only <strong>saved</strong> present / half-day days (unmarked days are not deducted).</div>
           </div>
           <div class="att-month-bar">
-            <div>
-              <div class="muted" style="margin-bottom:4px;">Month</div>
-              <input id="attMonth" type="month" onchange="onAttMonthChange()" />
-            </div>
-            <div>
-              <div class="muted" style="margin-bottom:4px;">Date</div>
-              <input id="attDate" type="date" onchange="onAttDateChange()" />
-            </div>
+            <input id="attMonth" type="month" onchange="onAttMonthChange()" aria-label="Month" />
+            <input id="attDate" type="date" onchange="onAttDateChange()" aria-label="Date" />
             <button type="button" class="secondary" onclick="shiftAttendanceDate(-1)" title="Previous day">← Prev</button>
             <button type="button" class="secondary" onclick="shiftAttendanceDate(1)" title="Next day">Next →</button>
             <button type="button" class="secondary" onclick="selectAttendanceDate(todayISO())">Today</button>
           </div>
-          <div class="muted" style="margin-top:10px;">Tap a day to mark attendance for that date (e.g. on 4th June, fill 1st–4th one by one).</div>
           <div id="attDayStrip" class="att-day-strip" aria-label="Days in month"></div>
           <div id="attMonthSummary" class="muted" style="margin-top:10px;"></div>
           <div class="section-title" style="margin-top:16px;">
@@ -2059,29 +2153,23 @@
           </div>
           <div id="attendanceChecklist" class="list" style="margin-top:10px;"></div>
           <button style="margin-top:10px;" onclick="saveBulkAttendance()">Save attendance for this date</button>
-          <div class="section-title" style="margin-top:14px;"><h2>Attendance History</h2><div class="muted">Last 25 saved records</div></div>
+          <div class="section-title" style="margin-top:14px;"><h2>Attendance History</h2></div>
           <div id="attendanceList" class="list"></div>
         </div>
         </div>
 
         <div id="staffTab-salary" class="tabPanel">
           <div class="card">
-          <div class="section-title"><h2>Salary & Advances</h2><div class="muted">Employee summary + attendance %</div></div>
+          <div class="section-title"><h2>Salary & Advances</h2></div>
           <div class="grid-2">
-            <div>
-              <div class="muted" style="margin-bottom:6px;">Month</div>
-              <input id="salMonth" type="month" onchange="renderSalaryOverview()" />
-            </div>
-            <div>
-              <div class="muted" style="margin-bottom:6px;">Salary = (monthly ÷ 30) × present days marked in Attendance tab. Only saved present / half-day count.</div>
-              <button class="secondary" type="button" onclick="renderSalaryOverview()">Refresh Summary</button>
-            </div>
+            <input id="salMonth" type="month" onchange="renderSalaryOverview()" aria-label="Month" />
+            <button class="secondary" type="button" onclick="renderSalaryOverview()">Refresh Summary</button>
           </div>
 
-          <div class="section-title" style="margin-top:14px;"><h2>All Employees</h2><div class="muted">Salary • Attendance % • Advances • Payable</div></div>
+          <div class="section-title" style="margin-top:14px;"><h2>All Employees</h2></div>
           <div id="salaryOverviewList" class="table-like"></div>
 
-          <div class="section-title" style="margin-top:14px;"><h2>Add Staff Advance</h2><div class="muted">Directly reflects in payable</div></div>
+          <div class="section-title" style="margin-top:14px;"><h2>Add Staff Advance</h2></div>
           <div class="grid-5" style="margin-top: 10px;">
             <input id="advDate" type="date" />
             <input id="advMonth" type="month" />
@@ -2099,12 +2187,11 @@
               <select id="advancesFilterStaff" onchange="renderAdvances()">
                 <option value="">All staff</option>
               </select>
-              <div class="muted">Latest 25</div>
             </div>
           </div>
           <div id="advancesList" class="list"></div>
 
-          <div class="section-title" style="margin-top:14px;"><h2>Salary Payments</h2><div class="muted">Mark paid with cash/online</div></div>
+          <div class="section-title" style="margin-top:14px;"><h2>Salary Payments</h2></div>
           <div id="salaryList" class="list"></div>
           </div>
         </div>
@@ -2113,64 +2200,71 @@
       <div id="analytics-section" class="dashboard-section">
         <div class="card dark">
           <div class="section-title">
-            <h2>Restaurant Analytics</h2>
-            <div class="grid-4" style="gap:10px;align-items:center;">
-              <select id="analyticsRange" onchange="renderAnalytics()">
-                <option value="daily">Daily</option>
-                <option value="weekly">Weekly</option>
-                <option value="monthly" selected>Monthly</option>
-                <option value="3m">3 Months</option>
-                <option value="6m">6 Months</option>
-                <option value="yearly">Yearly</option>
-                <option value="custom">Custom Range</option>
-              </select>
-              <input id="analyticsFrom" type="date" style="display:none" onchange="renderAnalytics()" />
-              <input id="analyticsTo" type="date" style="display:none" onchange="renderAnalytics()" />
-              <button type="button" class="secondary" onclick="renderAnalytics()">Apply</button>
+            <div>
+              <h2>Restaurant Analytics</h2>
+              <div class="muted period-range-label" id="analyticsPeriodLabel"></div>
+            </div>
+            <div class="analytics-filter-bar">
+              <div class="period-filter" id="analyticsPeriodFilter" role="tablist" aria-label="Analytics period">
+                <button type="button" class="period-chip" data-period="today" onclick="setAnalyticsPeriod('today')">Today</button>
+                <button type="button" class="period-chip" data-period="week" onclick="setAnalyticsPeriod('week')">This Week</button>
+                <button type="button" class="period-chip active" data-period="month" onclick="setAnalyticsPeriod('month')">This Month</button>
+              </div>
+              <div class="grid-4" style="gap:10px;align-items:center;">
+                <select id="analyticsRange" onchange="renderAnalytics()">
+                  <option value="today">Today</option>
+                  <option value="week">This Week</option>
+                  <option value="month" selected>This Month</option>
+                  <option value="daily">Last 14 Days (trend)</option>
+                  <option value="weekly">Last 8 Weeks (trend)</option>
+                  <option value="monthly">Last 6 Months (trend)</option>
+                  <option value="3m">Last 3 Months</option>
+                  <option value="6m">Last 6 Months</option>
+                  <option value="yearly">Year to Date</option>
+                  <option value="custom">Custom Range</option>
+                </select>
+                <input id="analyticsFrom" type="date" style="display:none" onchange="renderAnalytics()" />
+                <input id="analyticsTo" type="date" style="display:none" onchange="renderAnalytics()" />
+                <button type="button" class="secondary" onclick="renderAnalytics()">Apply</button>
+              </div>
             </div>
           </div>
 
           <div class="kpi-grid" style="margin-top:10px;">
-            <div class="kpi-card span-3 positive"><div class="kpi-meta"><div class="kpi-label">Total Revenue</div><div class="kpi-value" id="anKpiRevenue">Rs 0</div><div class="kpi-hint">Selected range</div></div></div>
-            <div class="kpi-card span-3"><div class="kpi-meta"><div class="kpi-label">Total Expenses</div><div class="kpi-value" id="anKpiExpenses">Rs 0</div><div class="kpi-hint">Paid outflows</div></div></div>
-            <div class="kpi-card span-3"><div class="kpi-meta"><div class="kpi-label">Net Profit</div><div class="kpi-value" id="anKpiProfit">Rs 0</div><div class="kpi-hint">Revenue − Expenses</div></div></div>
-            <div class="kpi-card span-3"><div class="kpi-meta"><div class="kpi-label">Salary Paid</div><div class="kpi-value" id="anKpiSalaryPaid">Rs 0</div><div class="kpi-hint">Paid salaries</div></div></div>
-            <div class="kpi-card span-3"><div class="kpi-meta"><div class="kpi-label">Supplier Payments</div><div class="kpi-value" id="anKpiSupplierPaid">Rs 0</div><div class="kpi-hint">Payments recorded</div></div></div>
-            <div class="kpi-card span-3"><div class="kpi-meta"><div class="kpi-label">Grocery Expenses</div><div class="kpi-value" id="anKpiGrocery">Rs 0</div><div class="kpi-hint">Supplier bills total</div></div></div>
+            <div class="kpi-card span-3 positive"><div class="kpi-meta"><div class="kpi-label">Total Revenue</div><div class="kpi-value" id="anKpiRevenue">Rs 0</div></div></div>
+            <div class="kpi-card span-3"><div class="kpi-meta"><div class="kpi-label">Total Expenses</div><div class="kpi-value" id="anKpiExpenses">Rs 0</div></div></div>
+            <div class="kpi-card span-3"><div class="kpi-meta"><div class="kpi-label">Net Profit</div><div class="kpi-value" id="anKpiProfit">Rs 0</div></div></div>
+            <div class="kpi-card span-3"><div class="kpi-meta"><div class="kpi-label">Salary Paid</div><div class="kpi-value" id="anKpiSalaryPaid">Rs 0</div></div></div>
+            <div class="kpi-card span-3"><div class="kpi-meta"><div class="kpi-label">Supplier Payments</div><div class="kpi-value" id="anKpiSupplierPaid">Rs 0</div></div></div>
+            <div class="kpi-card span-3"><div class="kpi-meta"><div class="kpi-label">Grocery Expenses</div><div class="kpi-value" id="anKpiGrocery">Rs 0</div></div></div>
           </div>
 
           <div class="grid-3" style="margin-top:14px;">
             <div class="card dark" style="padding: 14px;">
-              <div class="muted" style="margin-bottom: 6px;">Revenue vs Expenses vs Profit</div>
               <div class="chart-wrap"><canvas id="anLineRevExpProfit"></canvas></div>
             </div>
             <div class="card dark" style="padding: 14px;">
-              <div class="muted" style="margin-bottom: 6px;">Expense Breakdown</div>
               <div class="chart-wrap"><canvas id="anPieExpenseBreakdown"></canvas></div>
             </div>
             <div class="card dark" style="padding: 14px;">
-              <div class="muted" style="margin-bottom: 6px;">Sales Breakdown (Cash/Swiggy/Zomato/Online)</div>
               <div class="chart-wrap"><canvas id="anBarSalesBreakdown"></canvas></div>
             </div>
           </div>
 
           <div class="grid-3" style="margin-top:12px;">
             <div class="card dark" style="padding: 14px;">
-              <div class="muted" style="margin-bottom: 6px;">Monthly Salary Payments</div>
               <div class="chart-wrap"><canvas id="anBarSalaryMonthly"></canvas></div>
             </div>
             <div class="card dark" style="padding: 14px;">
-              <div class="muted" style="margin-bottom: 6px;">Supplier Payments Trend</div>
               <div class="chart-wrap"><canvas id="anLineSupplierPayments"></canvas></div>
             </div>
             <div class="card dark" style="padding: 14px;">
-              <div class="muted" style="margin-bottom: 6px;">Profit Trend</div>
               <div class="chart-wrap"><canvas id="anLineProfitTrend"></canvas></div>
             </div>
           </div>
 
           <div class="card dark" style="margin-top:12px;padding:14px;">
-            <div class="section-title"><h2>Insights</h2><div class="muted">Auto-generated</div></div>
+            <div class="section-title"><h2>Insights</h2></div>
             <div class="grid-3">
               <div class="card dark" style="padding:14px;"><div class="muted">Highest expense category</div><div style="font-weight:900;margin-top:6px;" id="anInsightHighestExpense">—</div></div>
               <div class="card dark" style="padding:14px;"><div class="muted">Most profitable day</div><div style="font-weight:900;margin-top:6px;" id="anInsightBestDay">—</div></div>
@@ -2193,6 +2287,22 @@
           </div>
           <div id="inventoryList" class="list"></div>
         </div>
+        <div class="card" style="margin-top:14px;">
+          <div class="section-title">
+            <h2>Balance Transfer History</h2>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:8px;">
+              <select id="anBtRange" onchange="renderAnalyticsTransferHistory()">
+                <option value="today">Today</option>
+                <option value="week">This Week</option>
+                <option value="month" selected>This Month</option>
+                <option value="custom">Custom</option>
+              </select>
+              <input id="anBtFrom" type="date" style="display:none;" onchange="renderAnalyticsTransferHistory()" />
+              <input id="anBtTo" type="date" style="display:none;" onchange="renderAnalyticsTransferHistory()" />
+            </div>
+          </div>
+          <div id="anBtHistoryTable" class="table-like"></div>
+        </div>
       </div>
 
       <div id="backup-section" class="dashboard-section">
@@ -2200,8 +2310,7 @@
           <div class="section-title"><h2>Backup</h2></div>
           <div class="grid-3">
             <button onclick="exportData()">Export JSON</button>
-            <label class="card" style="padding: 10px; background: rgba(51, 65, 85, 0.35); color: #e5e7eb;">
-              <div class="muted" style="margin-bottom: 6px;">Import JSON</div>
+            <label class="backup-import-card">
               <input type="file" accept="application/json" onchange="restoreData(event)" />
             </label>
             <button class="warn" onclick="resetAll()">Reset All Data</button>
@@ -2213,7 +2322,6 @@
         <div class="card">
           <div class="section-title">
             <h2>Menu Management</h2>
-            <div class="muted">Add / edit / delete items for POS</div>
           </div>
 
           <div class="content-grid" style="grid-template-columns: 1fr; gap: 14px;">
@@ -2224,7 +2332,7 @@
                   <input id="menuName" class="input" placeholder="e.g. Paneer Tikka" />
                 </div>
                 <div style="flex: 1; min-width: 180px;">
-                  <label class="label">Hindi name (auto if blank)</label>
+                  <label class="label">Hindi name</label>
                   <input id="menuNameHi" class="input" placeholder="Filled from English on save, or click Fill" />
                 </div>
                 <div style="width: 160px;">
@@ -2253,12 +2361,6 @@
                 <button class="btn" onclick="saveMenuItem()">Save Item</button>
                 <button class="btn btn-secondary" type="button" onclick="menuAutoFillHindiFromEnglish()">Fill Hindi</button>
                 <button class="btn btn-secondary" onclick="resetMenuForm()">Clear</button>
-              </div>
-              <div class="muted" style="margin-top:10px; font-size: 12px;">
-                Import <b>.xlsx</b>: columns <b>name</b> + <b>price</b> (also accepts <b>Rate</b>, <b>MRP</b>, <b>Amount</b>, <b>Rs</b>).
-                Prices can be <b>120</b>, <b>Rs 120</b>, <b>₹1,200</b>, or <b>200/-</b>. Optional: <b>category</b>, <b>available</b>. Images: add manually per item.
-                Full Kilogram menu: <b>data/kilogram-takeaway-menu-full.csv</b> (306 items, same as website).
-                Hindi: leave blank and <b>Save</b> fills from English, or use <b>Fill all missing Hindi</b> after import.
               </div>
               <div style="display:flex; gap: 10px; flex-wrap: wrap; align-items:center; margin-top: 10px;">
                 <input id="menuExcelFile" type="file" accept=".xlsx,.xls,.csv" class="input" style="max-width: 340px;" />
@@ -2301,7 +2403,6 @@
                 <button class="pos-btn gray" type="button" onclick="clearAppCache()">Clear cache</button>
               </div>
             </div>
-            <div class="pos-small">Tap items to add • Fast billing</div>
           </div>
 
           <div id="posCategoryChips" class="pos-chiprow"></div>
@@ -2345,32 +2446,22 @@
               <div class="pos-cart-list" id="posCartList"></div>
 
               <div style="margin-top: 10px;">
-                <div class="pos-small">Order note (optional)</div>
-                <input id="posOrderNote" class="pos-note" placeholder="e.g. table 3 / no onion" />
+                <input id="posOrderNote" class="pos-note" placeholder="Order note (optional)" />
               </div>
 
               <div class="pos-pay-row" style="grid-template-columns: 1fr;">
-                <div>
-                  <div class="pos-small">Payment mode</div>
-                  <select id="posPayMode" class="pos-note" onchange="renderPosPayment()">
+                <select id="posPayMode" class="pos-note" onchange="renderPosPayment()" aria-label="Payment mode">
                     <option value="cash">Cash</option>
                     <option value="online">Online</option>
                     <option value="split">Split</option>
                   </select>
-                </div>
               </div>
 
               <div style="margin-top: 12px;">
                 <div class="pos-section-label" style="margin-top:0;">Quick add (custom)</div>
                 <div class="pos-pay-row" style="grid-template-columns: 1.3fr .7fr; margin-top: 0;">
-                  <div>
-                    <div class="pos-small">Item name</div>
-                    <input id="posCustomName" class="pos-note" placeholder="e.g. Pau Extra" />
-                  </div>
-                  <div>
-                    <div class="pos-small">Price</div>
-                    <input id="posCustomPrice" class="pos-note" type="number" min="0" step="1" placeholder="e.g. 10" />
-                  </div>
+                  <input id="posCustomName" class="pos-note" placeholder="Item name" />
+                  <input id="posCustomPrice" class="pos-note" type="number" min="0" step="1" placeholder="Price" />
                 </div>
                 <div style="display:flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
                   <button class="pos-btn gray" type="button" onclick="posAddCustomItem()">Add to cart</button>
@@ -2380,14 +2471,8 @@
 
               <div id="posPaySplit" style="display:none; margin-top: 10px;">
                 <div class="pos-pay-row">
-                  <div>
-                    <div class="pos-small">Cash</div>
-                    <input id="posPayCash" class="pos-note" type="number" min="0" step="1" value="0" oninput="renderPosPayment()" />
-                  </div>
-                  <div>
-                    <div class="pos-small">Online</div>
-                    <input id="posPayOnline" class="pos-note" type="number" min="0" step="1" value="0" oninput="renderPosPayment()" />
-                  </div>
+                  <input id="posPayCash" class="pos-note" type="number" min="0" step="1" value="0" placeholder="Cash" oninput="renderPosPayment()" />
+                  <input id="posPayOnline" class="pos-note" type="number" min="0" step="1" value="0" placeholder="Online" oninput="renderPosPayment()" />
                 </div>
                 <div class="pos-small" id="posPayHint" style="margin-top: 8px;"></div>
               </div>
@@ -2412,7 +2497,6 @@
                 <button class="pos-btn gray" type="button" id="thermalPrinterConnectBtn" onclick="thermalPrinterConnect()">Connect thermal printer</button>
                 <span class="pos-small" id="thermalPrinterStatus" style="flex:1; min-width: 200px;">Checking printer…</span>
               </div>
-              <div class="pos-small" style="margin-top: 8px;">KOT in Hindi on <b>58mm Bluetooth thermal</b> (Chrome + printer paired). Uses saved Hindi names. No printer? Falls back to normal print.</div>
               <div style="margin-top: 12px;">
                 <button class="pos-btn green" type="button" style="width:100%; padding: 12px; font-size: 15px;" onclick="posGenerateBill()">Charge</button>
               </div>
@@ -2455,11 +2539,17 @@
   <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script src="js/theme.js?v=20260710g"></script>
     <script src="js/config.js"></script>
+    <script src="js/balanceMath.js"></script>
     <script src="js/firebase.js"></script>
     <script src="js/api.js"></script>
     <script src="constants/kilogramMenuSeed.js"></script>
     <script src="js/thermalPrinter.js"></script>
-    <script src="js/app.js"></script>
+    <script src="js/app.js?v=20260710g"></script>
+    <script>
+      if (window.lucide && typeof lucide.createIcons === "function") lucide.createIcons();
+    </script>
 </body>
 </html>
