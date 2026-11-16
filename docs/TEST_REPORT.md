@@ -12,7 +12,7 @@ node --test js/pos/__tests__/*.test.js js/finance/__tests__/*.test.js js/printin
 npm test
 ```
 
-## Unit tests (ran)
+## Unit tests (ran) — **20/20 PASS**
 
 | Suite | Result | Notes |
 |-------|--------|-------|
@@ -20,7 +20,7 @@ npm test
 | `js/pos/__tests__/salesBridge.test.js` | **PASS** (3) | mapping, aggregates/void, business-day cut-off |
 | `js/finance/__tests__/netMargin.test.js` | **PASS** (5) | leap Feb, partial month, commission, zero revenue, negative |
 | `js/printing/__tests__/escpos.test.js` | **PASS** (4) | init/cut/feed, raster dims 58/80 |
-| `js/printing/__tests__/printerManager.test.js` | see below | mock transport |
+| `js/printing/__tests__/printerManager.test.js` | **PASS** (2) | mock transport + Hindi bill bytes |
 
 ## Printer manager mock
 
