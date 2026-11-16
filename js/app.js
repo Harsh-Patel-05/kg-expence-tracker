@@ -7402,6 +7402,9 @@ async function loadAll() {
     }
     api = window.api;
     if (!api) throw new Error("API not initialized — check internet and refresh the page");
+    // Expose for POS upgrade modules (KG.posCheckout soft refresh / stock)
+    window.loadAll = loadAll;
+    window.state = state;
 
     const [
       sales,

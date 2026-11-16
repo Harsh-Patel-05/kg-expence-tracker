@@ -283,14 +283,16 @@
 
       // Inventory — failure tolerant
       try {
-        if (root.KgPhase2?.deductRecipeForCart && root.api?.inventory?.adjust) {
+        const api = root.api;
+        const appState = root.state || {};
+        if (root.KgPhase2?.deductRecipeForCart && api?.inventory?.adjust) {
           root.KgPhase2
             .deductRecipeForCart({
               cart: bill.items,
-              menuItems: root.state?.menuItems || root.KG.posMenu.getAll(),
-              inventory: root.state?.inventory || [],
+              menuItems: appState.menuItems || root.KG.posMenu.getAll(),
+              inventory: appState.inventory || [],
               today: bill.date,
-              adjustFn: (id, body) => root.api.inventory.adjust(id, body)
+              adjustFn: (id, body) => api.inventory.adjust(id, body)
             })
             .catch((err) => {
               console.warn(err);
