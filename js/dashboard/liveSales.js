@@ -107,30 +107,57 @@
     };
   }
 
-  function renderCharts(buckets, summary) {
+  function sameWeekdayLastWeekISO(iso) {
+    const p = String(iso || "").split("-").map(Number);
+    if (p.length !== 3) return "";
+    const d = new Date(p[0], p[1] - 1, p[2]);
+    d.setDate(d.getDate() - 7);
+    return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
+  }
+
+  function renderCharts(buckets, summary, compareBuckets) {
     if (typeof Chart === "undefined") return;
     const hourlyCanvas = $("kgLiveHourlyChart");
     const donutCanvas = $("kgLiveDonutChart");
     if (hourlyCanvas) {
       if (chartHourly) chartHourly.destroy();
+      const datasets = [
+        {
+          label: "Cash",
+          data: buckets.cash,
+          backgroundColor: "rgba(34,197,94,0.7)",
+          stack: "s",
+          type: "bar"
+        },
+        {
+          label: "Online",
+          data: buckets.online,
+          backgroundColor: "rgba(59,130,246,0.7)",
+          stack: "s",
+          type: "bar"
+        }
+      ];
+      if (compareBuckets) {
+        const lastWeekTotal = compareBuckets.hours.map(
+          (h, i) => (compareBuckets.cash[i] || 0) + (compareBuckets.online[i] || 0)
+        );
+        datasets.push({
+          label: "Same weekday last week",
+          data: lastWeekTotal,
+          type: "line",
+          borderColor: "rgba(148,163,184,0.95)",
+          borderDash: [6, 4],
+          pointRadius: 0,
+          tension: 0.25,
+          yAxisID: "y",
+          order: 0
+        });
+      }
       chartHourly = new Chart(hourlyCanvas, {
         type: "bar",
         data: {
           labels: buckets.labels,
-          datasets: [
-            {
-              label: "Cash",
-              data: buckets.cash,
-              backgroundColor: "rgba(34,197,94,0.7)",
-              stack: "s"
-            },
-            {
-              label: "Online",
-              data: buckets.online,
-              backgroundColor: "rgba(59,130,246,0.7)",
-              stack: "s"
-            }
-          ]
+          datasets
         },
         options: {
           responsive: true,
@@ -199,15 +226,35 @@
         }
       );
 
+    const lastWeek = sameWeekdayLastWeekISO(selectedDate);
+    let compareBucketsCache = null;
+    let latestBuckets = null;
+    let latestSummary = null;
+
+    function paint() {
+      if (latestBuckets) renderCharts(latestBuckets, latestSummary, compareBucketsCache);
+    }
+
+    if (lastWeek) {
+      db.collection("sales")
+        .where("date", "==", lastWeek)
+        .get()
+        .then((snap) => {
+          const sales = snap.docs.map((d) => Object.assign({ id: d.id }, d.data()));
+          compareBucketsCache = hourBuckets(sales, lastWeek);
+          paint();
+        })
+        .catch(() => {});
+    }
+
     unsubSales = db
       .collection("sales")
       .where("date", "==", selectedDate)
       .onSnapshot(
         (snap) => {
           const sales = snap.docs.map((d) => Object.assign({ id: d.id }, d.data()));
-          const buckets = hourBuckets(sales, selectedDate);
-          // Re-read summary fields from KPI or compute
-          const summary = {
+          latestBuckets = hourBuckets(sales, selectedDate);
+          latestSummary = {
             cashSales: sales.reduce((s, x) => s + (x.status === "void" ? 0 : Number(x.cashAmount) || 0), 0),
             onlineSales: sales.reduce(
               (s, x) =>
@@ -220,7 +267,7 @@
               0
             )
           };
-          renderCharts(buckets, summary);
+          paint();
         },
         (err) => console.warn(err)
       );

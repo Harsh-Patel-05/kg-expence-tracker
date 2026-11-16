@@ -6,7 +6,7 @@
 
   const HOLD_KEY = "kg_pos_hold_v2";
   const SETTINGS_KEY = "kg_pos_settings_v1";
-  const QUEUE_KEY = "kg_pos_offline_queue_v1";
+  const QUEUE_KEY = "kg_pos_offline_queue_v1"; // kept for offlineQueue LS mirror
 
   const defaultSettings = () => ({
     gstEnabled: true,
@@ -116,11 +116,23 @@
     emit("table", state.tableId);
   }
 
+  function setCustomer(name, phone) {
+    state.customerName = String(name || "").trim();
+    state.customerPhone = String(phone || "").trim();
+    emit("customer", { name: state.customerName, phone: state.customerPhone });
+  }
+
   function addLine(item) {
     const t0 = performance.now();
     const menuItemId = String(item.menuItemId || item.id || "");
+    const addonKey = String(item.addonOf || "");
     const existing = state.cart.find(
-      (l) => l.menuItemId === menuItemId && !l.note && (l.prep || "regular") === (item.prep || "regular")
+      (l) =>
+        l.menuItemId === menuItemId &&
+        !l.note &&
+        (l.prep || "regular") === (item.prep || "regular") &&
+        String(l.addonOf || "") === addonKey &&
+        String(l.variantLabel || "") === String(item.variantLabel || "")
     );
     if (existing) {
       existing.qty += Math.max(1, Number(item.qty) || 1);
@@ -135,7 +147,9 @@
         qty: Math.max(1, Math.floor(Number(item.qty) || 1)),
         note: String(item.note || ""),
         prep: item.prep || "regular",
-        veg: item.veg
+        veg: item.veg,
+        variantLabel: item.variantLabel || "",
+        addonOf: addonKey || undefined
       };
       state.cart.push(line);
       emit("cart", { type: "add", line });
@@ -260,19 +274,52 @@
   }
 
   function enqueueOffline(job) {
+    const oq = root.KG && root.KG.offlineQueue;
+    if (oq) {
+      return oq.enqueue(job).then((n) => {
+        state.syncPending = n;
+        emit("sync", state.syncPending);
+        return n;
+      });
+    }
     const q = loadJSON(QUEUE_KEY, []);
     q.push(Object.assign({ queuedAt: Date.now() }, job));
     saveJSON(QUEUE_KEY, q);
     state.syncPending = q.length;
     emit("sync", state.syncPending);
+    return Promise.resolve(state.syncPending);
   }
 
   function peekQueue() {
+    const oq = root.KG && root.KG.offlineQueue;
+    if (oq) return oq.peekSync();
+    return loadJSON(QUEUE_KEY, []);
+  }
+
+  async function peekQueueAsync() {
+    const oq = root.KG && root.KG.offlineQueue;
+    if (oq) return oq.peek();
     return loadJSON(QUEUE_KEY, []);
   }
 
   function setQueue(q) {
+    const oq = root.KG && root.KG.offlineQueue;
+    if (oq) {
+      return oq.setAll(q).then((n) => {
+        state.syncPending = n;
+        emit("sync", state.syncPending);
+      });
+    }
     saveJSON(QUEUE_KEY, q);
+    state.syncPending = q.length;
+    emit("sync", state.syncPending);
+    return Promise.resolve();
+  }
+
+  async function hydrateOfflineQueue() {
+    const oq = root.KG && root.KG.offlineQueue;
+    if (!oq) return;
+    const q = await oq.hydrate();
     state.syncPending = q.length;
     emit("sync", state.syncPending);
   }
@@ -296,6 +343,7 @@
     setSettings,
     setOrderType,
     setTable,
+    setCustomer,
     addLine,
     updateQty,
     setLineNote,
@@ -307,7 +355,9 @@
     reopenHold,
     enqueueOffline,
     peekQueue,
+    peekQueueAsync,
     setQueue,
+    hydrateOfflineQueue,
     ensureTables,
     uid,
     resetForTests() {

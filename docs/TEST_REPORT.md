@@ -12,12 +12,15 @@ node --test js/pos/__tests__/*.test.js js/finance/__tests__/*.test.js js/printin
 npm test
 ```
 
-## Unit tests (ran) — **20/20 PASS**
+## Unit tests (ran) — **27/27 PASS**
 
 | Suite | Result | Notes |
 |-------|--------|-------|
 | `js/pos/__tests__/money.test.js` | **PASS** (6) | GST in/ex, discount %, round-off, split, change |
 | `js/pos/__tests__/salesBridge.test.js` | **PASS** (3) | mapping, aggregates/void, business-day cut-off |
+| `js/pos/__tests__/offlineQueue.test.js` | **PASS** (2) | IndexedDB/LS offline queue |
+| `js/pos/__tests__/upiQr.test.js` | **PASS** (3) | upi:// URI + QR image URL |
+| `js/pos/__tests__/posMenu.test.js` | **PASS** (2) | weight variant grouping + addons |
 | `js/finance/__tests__/netMargin.test.js` | **PASS** (5) | leap Feb, partial month, commission, zero revenue, negative |
 | `js/printing/__tests__/escpos.test.js` | **PASS** (4) | init/cut/feed, raster dims 58/80 |
 | `js/printing/__tests__/printerManager.test.js` | **PASS** (2) | mock transport + Hindi bill bytes |

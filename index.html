@@ -1639,7 +1639,7 @@
   <link rel="stylesheet" href="css/dash-polish.css?v=20260902sal30" />
   <link rel="stylesheet" href="css/dashboard-pro.css?v=20260902sal30" />
   <link rel="stylesheet" href="css/ui-fixes.css?v=20260902sal30" />
-  <link rel="stylesheet" href="css/pos-upgrade.css?v=20261116pos1" />
+  <link rel="stylesheet" href="css/pos-upgrade.css?v=20261116pos2" />
 </head>
 <body>
   <div id="appLoading" aria-live="polite" aria-busy="true">
@@ -3069,6 +3069,9 @@
               <span>Cashier: <b id="kgPosCashier">—</b></span>
               <span>Ticket: <b id="kgPosBillPreview">—</b></span>
               <span class="kg-pos-sync ok" id="kgPosSync">Synced</span>
+              <input id="kgPosCustomerName" class="kg-pos-cust" placeholder="Customer name" autocomplete="name" />
+              <input id="kgPosCustomerPhone" class="kg-pos-cust" placeholder="Phone" inputmode="tel" autocomplete="tel" />
+              <button type="button" data-pos-action="void">Void last bill</button>
               <button type="button" data-pos-action="settings">Printer / Settings</button>
               <button type="button" onclick="toggleSidebar()"><span id="posSidebarBtnText">Sidebar</span></button>
               <button type="button" onclick="posShowHistory()">History</button>
@@ -3190,6 +3193,24 @@
       </label>
       <label><input type="checkbox" id="kgPosAutoCut" checked /> Auto-cut</label>
       <label><input type="checkbox" id="kgPosDrawer" /> Cash drawer kick</label>
+      <label>KOT printer
+        <select id="kgPosKotTransport">
+          <option value="auto">Auto (connected)</option>
+          <option value="usb">USB</option>
+          <option value="serial">Serial</option>
+          <option value="bluetooth">Bluetooth</option>
+          <option value="browser">System printer</option>
+        </select>
+      </label>
+      <label>Bill printer
+        <select id="kgPosBillTransport">
+          <option value="auto">Auto (connected)</option>
+          <option value="usb">USB</option>
+          <option value="serial">Serial</option>
+          <option value="bluetooth">Bluetooth</option>
+          <option value="browser">System printer</option>
+        </select>
+      </label>
       <hr/>
       <label><input type="checkbox" id="kgPosGstOn" checked /> GST enabled</label>
       <label>GST % <input id="kgPosGstPct" type="number" value="5" min="0" step="0.5" /></label>
@@ -3204,7 +3225,45 @@
     </div>
   </div>
 
-  <div id="kgMarginOverlay" class="kg-pos-overlay" style="display:none;">
+  
+  <div id="kgPosInputOverlay" class="kg-pos-overlay" style="display:none;">
+    <div class="kg-pos-modal" role="dialog" aria-modal="true">
+      <h3 id="kgPosInputTitle">Input</h3>
+      <p class="muted" id="kgPosInputHint"></p>
+      <input id="kgPosInputValue" />
+      <div style="display:flex;gap:8px;margin-top:12px;">
+        <button type="button" id="kgPosInputOk">OK</button>
+        <button type="button" id="kgPosInputCancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="kgPosVariantOverlay" class="kg-pos-overlay" style="display:none;">
+    <div class="kg-pos-modal" role="dialog" aria-modal="true" style="width:min(520px,100%);">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <h3 style="margin:0;" id="kgPosVariantTitle">Choose size</h3>
+        <button type="button" id="kgPosVariantClose">Close</button>
+      </div>
+      <div id="kgPosVariantList" class="kg-pos-variant-list"></div>
+      <div class="kg-pos-section-label" style="margin-top:12px;font-weight:800;">Add-ons</div>
+      <div id="kgPosAddonList" class="kg-pos-addon-list"></div>
+      <button type="button" id="kgPosVariantAdd" class="primary" style="width:100%;margin-top:12px;min-height:44px;">Add to cart</button>
+    </div>
+  </div>
+
+  <div id="kgPosVoidOverlay" class="kg-pos-overlay" style="display:none;">
+    <div class="kg-pos-modal" role="dialog" aria-modal="true">
+      <h3>Void bill</h3>
+      <p class="muted">Owner/manager only. Creates a reversal — does not delete sales history.</p>
+      <label>Bill ID / Bill no <input id="kgPosVoidBillId" placeholder="bill id or KG-YYYYMMDD-0001" /></label>
+      <label>Reason <input id="kgPosVoidReason" placeholder="Wrong payment / cancelled order" /></label>
+      <div style="display:flex;gap:8px;margin-top:12px;">
+        <button type="button" id="kgPosVoidConfirm">Void bill</button>
+        <button type="button" id="kgPosVoidCancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+<div id="kgMarginOverlay" class="kg-pos-overlay" style="display:none;">
     <div class="kg-pos-modal" style="width:min(720px,100%);" role="dialog" aria-modal="true">
       <div style="display:flex;justify-content:space-between;align-items:center;">
         <h3 style="margin:0;">Net margin breakdown</h3>
@@ -3271,21 +3330,23 @@
     <script src="js/opsPhase2.js?v=20260810p2"></script>
     <script src="constants/kilogramMenuSeed.js"></script>
     <script src="js/thermalPrinter.js"></script>
-    <script src="js/pos/money.js?v=20261116"></script>
-    <script src="js/pos/posState.js?v=20261116"></script>
-    <script src="js/pos/posMenu.js?v=20261116"></script>
-    <script src="js/pos/salesBridge.js?v=20261116"></script>
-    <script src="js/pos/posCheckout.js?v=20261116"></script>
+    <script src="js/pos/money.js?v=20261116b"></script>
+    <script src="js/pos/offlineQueue.js?v=20261116b"></script>
+    <script src="js/pos/upiQr.js?v=20261116b"></script>
+    <script src="js/pos/posState.js?v=20261116b"></script>
+    <script src="js/pos/posMenu.js?v=20261116b"></script>
+    <script src="js/pos/salesBridge.js?v=20261116b"></script>
+    <script src="js/pos/posCheckout.js?v=20261116b"></script>
     <script src="js/printing/escpos.js?v=20261116"></script>
     <script src="js/printing/rasterText.js?v=20261116"></script>
     <script src="js/printing/transports/webSerial.js?v=20261116"></script>
     <script src="js/printing/transports/webUsb.js?v=20261116"></script>
     <script src="js/printing/transports/browserPrint.js?v=20261116"></script>
     <script src="js/printing/transports/bluetooth.js?v=20261116"></script>
-    <script src="js/printing/printerManager.js?v=20261116"></script>
-    <script src="js/pos/posUI.js?v=20261116"></script>
+    <script src="js/printing/printerManager.js?v=20261116b"></script>
+    <script src="js/pos/posUI.js?v=20261116b"></script>
     <script src="js/finance/netMargin.js?v=20261116"></script>
-    <script src="js/dashboard/liveSales.js?v=20261116"></script>
+    <script src="js/dashboard/liveSales.js?v=20261116b"></script>
     <script src="js/app.js?v=20260902sal30"></script>
     <script>
       if (window.lucide && typeof lucide.createIcons === "function") lucide.createIcons();

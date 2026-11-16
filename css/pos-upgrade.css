@@ -411,3 +411,46 @@ html[data-theme="dark"] .kg-pos-root {
   margin-bottom: 12px;
   font-size: 13px;
 }
+.kg-pos-cust {
+  min-height: 40px;
+  border-radius: 10px;
+  border: 1px solid var(--kg-pos-border);
+  padding: 6px 10px;
+  min-width: 120px;
+  background: transparent;
+}
+.kg-pos-var-badge {
+  font-size: 10px;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 999px;
+  background: rgba(31, 122, 77, 0.15);
+}
+.kg-pos-variant-list,
+.kg-pos-addon-list {
+  display: grid;
+  gap: 8px;
+  margin-top: 10px;
+}
+.kg-pos-variant-btn {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 4px 10px;
+  text-align: left;
+  min-height: 48px;
+  border-radius: 10px;
+  border: 1px solid var(--kg-pos-border);
+  background: transparent;
+  padding: 10px;
+  cursor: pointer;
+}
+.kg-pos-variant-btn.active {
+  border-color: var(--kg-pos-accent);
+  background: rgba(31, 122, 77, 0.1);
+}
+.kg-pos-addon {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+  min-height: 40px;
+}

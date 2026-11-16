@@ -12,7 +12,7 @@
     "firebase:login": "firebase login",
     "firebase:deploy": "firebase deploy --only hosting",
     "firebase:deploy:all": "firebase deploy",
-    "test": "node --test js/pos/__tests__/*.test.js js/finance/__tests__/*.test.js js/printing/__tests__/*.test.js",
+    "test": "node --test js/pos/__tests__/money.test.js js/pos/__tests__/salesBridge.test.js js/pos/__tests__/offlineQueue.test.js js/pos/__tests__/upiQr.test.js js/pos/__tests__/posMenu.test.js js/finance/__tests__/netMargin.test.js js/printing/__tests__/escpos.test.js js/printing/__tests__/printerManager.test.js",
     "test:unit": "npm test"
   },
   "keywords": ["firebase", "restaurant", "expense", "tracker"],

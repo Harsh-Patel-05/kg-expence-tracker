@@ -152,7 +152,9 @@
   }
 
   async function syncQueue() {
-    const q = root.KG.posState.peekQueue();
+    const peek =
+      root.KG.posState.peekQueueAsync || (() => Promise.resolve(root.KG.posState.peekQueue()));
+    const q = await peek.call(root.KG.posState);
     if (!q.length) return;
     const remaining = [];
     for (const job of q) {
@@ -167,7 +169,7 @@
         remaining.push(job);
       }
     }
-    root.KG.posState.setQueue(remaining);
+    await root.KG.posState.setQueue(remaining);
   }
 
   /**
@@ -264,14 +266,16 @@
       const localMs = performance.now() - t0;
       if (root.KG.pos?.devPerf) console.log("[POS perf] checkout local", localMs.toFixed(2), "ms");
 
-      // Background sync
-      root.KG.posState.enqueueOffline({ type: "settle", bill });
+      // Background sync (IndexedDB queue)
+      Promise.resolve(root.KG.posState.enqueueOffline({ type: "settle", bill })).catch(() => {});
       persistBillRemote(bill)
-        .then(() => {
-          const q = root.KG.posState.peekQueue().filter((j) => j.bill?.billId !== bill.billId);
-          root.KG.posState.setQueue(q);
+        .then(async () => {
+          const peek =
+            root.KG.posState.peekQueueAsync ||
+            (() => Promise.resolve(root.KG.posState.peekQueue()));
+          const q = (await peek.call(root.KG.posState)).filter((j) => j.bill?.billId !== bill.billId);
+          await root.KG.posState.setQueue(q);
           toast("Bill synced", "success");
-          // Soft refresh sales into legacy state if present
           if (typeof root.loadAll === "function") {
             root.loadAll().catch(() => {});
           }

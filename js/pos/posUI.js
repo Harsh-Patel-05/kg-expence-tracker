@@ -1,5 +1,5 @@
 /**
- * PetPooja-style POS UI — event delegation, partial DOM updates, keyboard shortcuts.
+ * PetPooja-style POS UI — event delegation, modals, variants, void, keyboard.
  */
 (function (root) {
   "use strict";
@@ -8,6 +8,10 @@
   let mounted = false;
   let unsub = null;
   let menuListCache = [];
+  let inputResolver = null;
+  let pendingVariantGroup = null;
+  let selectedVariantId = "";
+  let selectedAddons = new Set();
 
   function $(id) {
     return document.getElementById(id);
@@ -21,13 +25,41 @@
       .replace(/"/g, "&quot;");
   }
 
+  function toast(msg, type) {
+    if (typeof root.toast === "function") root.toast(msg, type || "info");
+    else console.log("[POS]", msg);
+  }
+
+  function openInputModal({ title, hint, value, type }) {
+    return new Promise((resolve) => {
+      inputResolver = resolve;
+      $("kgPosInputTitle").textContent = title || "Input";
+      $("kgPosInputHint").textContent = hint || "";
+      const inp = $("kgPosInputValue");
+      inp.type = type || "text";
+      inp.value = value != null ? String(value) : "";
+      $("kgPosInputOverlay").style.display = "flex";
+      setTimeout(() => inp.focus(), 30);
+    });
+  }
+
+  function closeInputModal(result) {
+    $("kgPosInputOverlay").style.display = "none";
+    const r = inputResolver;
+    inputResolver = null;
+    if (r) r(result);
+  }
+
   function syncIndicator() {
     const el = $("kgPosSync");
     if (!el) return;
     const n = root.KG.posState.getState().syncPending;
     el.className = "kg-pos-sync " + (n ? "pending" : "ok");
     el.textContent = n ? `Sync pending (${n})` : "Synced";
-    el.title = n ? "Offline queue waiting to sync" : "All bills synced";
+  }
+
+  function syncCustomerFromInputs() {
+    root.KG.posState.setCustomer($("kgPosCustomerName")?.value || "", $("kgPosCustomerPhone")?.value || "");
   }
 
   function renderCategories() {
@@ -35,7 +67,7 @@
     if (!el) return;
     const cats = root.KG.posMenu.categories();
     const active = root.KG.posState.getState().activeCategory;
-    const allCount = root.KG.posMenu.getAll().length;
+    const allCount = root.KG.posMenu.getGroups().length;
     el.innerHTML =
       `<button type="button" class="kg-pos-cat${active === "all" ? " active" : ""}" data-cat="all">All <span>${allCount}</span></button>` +
       cats
@@ -51,7 +83,9 @@
   function renderMenu() {
     const st = root.KG.posState.getState();
     menuListCache = root.KG.posMenu.search(st.searchQuery, st.activeCategory);
-    root.KG.posMenu.renderGrid($("kgPosMenuGrid"), menuListCache, { pageSize: menuListCache.length > 200 ? 100 : 500 });
+    root.KG.posMenu.renderGrid($("kgPosMenuGrid"), menuListCache, {
+      pageSize: menuListCache.length > 200 ? 100 : 500
+    });
   }
 
   function renderCart() {
@@ -65,10 +99,13 @@
       list.innerHTML = st.cart
         .map((l) => {
           const lineTotal = (Number(l.price) || 0) * (Number(l.qty) || 0);
+          const variant = l.variantLabel ? ` · ${esc(l.variantLabel)}` : "";
           return `<div class="kg-pos-line" data-line="${esc(l.lineId)}">
             <div class="kg-pos-line-main">
-              <div class="kg-pos-line-name">${esc(l.nameHi || l.name)}</div>
-              <div class="kg-pos-line-en">${l.nameHi ? esc(l.name) : ""}</div>
+              <div class="kg-pos-line-name">${esc(l.nameHi || l.name)}${variant}</div>
+              <div class="kg-pos-line-en">${l.nameHi ? esc(l.name) : ""}${
+            l.note ? ` · ${esc(l.note)}` : ""
+          }</div>
               <button type="button" class="kg-pos-line-note-btn" data-act="note">Note</button>
             </div>
             <div class="kg-pos-line-qty">
@@ -95,7 +132,7 @@
     set("kgPosGrand", m.formatINR(totals.grandTotal));
     set("kgPosCartCount", `${st.cart.reduce((s, l) => s + l.qty, 0)} items`);
     const billEl = $("kgPosBillPreview");
-    if (billEl) billEl.textContent = st.billNoPreview || "—";
+    if (billEl) billEl.textContent = st.lastBillId || st.billNoPreview || "—";
   }
 
   function renderHeld() {
@@ -114,7 +151,7 @@
         .map(
           (h) =>
             `<button type="button" class="kg-pos-held-chip" data-hold="${esc(h.id)}">${esc(
-              h.tableId || h.orderType || "Hold"
+              h.customerName || h.tableId || h.orderType || "Hold"
             )} · ${esc(money().formatINR(h.totals?.grandTotal || 0))}</button>`
         )
         .join("");
@@ -144,19 +181,79 @@
     renderTables();
   }
 
-  function openSettleModal() {
-    const totals = root.KG.posState.computeTotals();
+  function openVariantPicker(group) {
+    pendingVariantGroup = group;
+    selectedAddons = new Set();
+    selectedVariantId = String(group.variants[0]?.id || group.variants[0]?.menuItemId || "");
+    $("kgPosVariantTitle").textContent = group.baseName;
+    const list = $("kgPosVariantList");
     const m = money();
+    list.innerHTML = group.variants
+      .map((v) => {
+        const id = String(v.id || v.menuItemId);
+        return `<button type="button" class="kg-pos-variant-btn${
+          id === selectedVariantId ? " active" : ""
+        }" data-variant-id="${esc(id)}">
+          <b>${esc(v.__variantLabel || "Default")}</b>
+          <span>${esc(m.formatINR(v.price))}</span>
+          <div class="muted">${esc(v.nameHi || v.name)}</div>
+        </button>`;
+      })
+      .join("");
+    const addons = group.addons || root.KG.posMenu.DEFAULT_ADDONS;
+    $("kgPosAddonList").innerHTML = addons
+      .map(
+        (a) =>
+          `<label class="kg-pos-addon"><input type="checkbox" data-addon-id="${esc(
+            a.id
+          )}" /> ${esc(a.nameHi || a.name)} · ${esc(m.formatINR(a.price))}</label>`
+      )
+      .join("");
+    $("kgPosVariantOverlay").style.display = "flex";
+  }
+
+  function confirmVariantAdd() {
+    if (!pendingVariantGroup) return;
+    const item = pendingVariantGroup.variants.find(
+      (v) => String(v.id || v.menuItemId) === selectedVariantId
+    );
+    if (!item) return toast("Pick a size", "error");
+    root.KG.posState.addLine({
+      ...item,
+      menuItemId: item.id || item.menuItemId,
+      variantLabel: item.__variantLabel || ""
+    });
+    const addons = pendingVariantGroup.addons || root.KG.posMenu.DEFAULT_ADDONS;
+    selectedAddons.forEach((aid) => {
+      const a = addons.find((x) => x.id === aid);
+      if (a) {
+        root.KG.posState.addLine({
+          menuItemId: a.id,
+          name: a.name,
+          nameHi: a.nameHi || "",
+          price: a.price,
+          qty: 1,
+          addonOf: item.id || item.menuItemId
+        });
+      }
+    });
+    $("kgPosVariantOverlay").style.display = "none";
+    pendingVariantGroup = null;
+    renderCart();
+  }
+
+  function openSettleModal() {
+    syncCustomerFromInputs();
+    const totals = root.KG.posState.computeTotals();
     const ov = $("kgPosSettleOverlay");
     if (!ov) return;
     ov.style.display = "flex";
-    $("kgPosSettleTotal").textContent = m.formatINR(totals.grandTotal);
+    $("kgPosSettleTotal").textContent = money().formatINR(totals.grandTotal);
     const st = root.KG.posState.getState();
-    const ot = st.orderType;
     const mode = $("kgPosSettleMode");
     if (mode) {
-      if (ot === "swiggy") mode.value = "swiggy";
-      else if (ot === "zomato") mode.value = "zomato";
+      if (st.orderType === "swiggy") mode.value = "swiggy";
+      else if (st.orderType === "zomato") mode.value = "zomato";
       else mode.value = "cash";
     }
     applySettleMode();
@@ -169,30 +266,22 @@
     const cashBox = $("kgPosSettleCashBox");
     if (split) split.style.display = mode === "split" ? "grid" : "none";
     if (cashBox) cashBox.style.display = mode === "cash" ? "block" : "none";
-    if (mode === "cash") {
-      if ($("kgPosReceived")) $("kgPosReceived").value = String(totals.grandTotal);
+    if (mode === "cash" && $("kgPosReceived")) {
+      $("kgPosReceived").value = String(totals.grandTotal);
       updateChange();
-    }
-    if (mode === "split") {
-      if ($("kgPosPayCash")) $("kgPosPayCash").value = "";
-      if ($("kgPosPayOnline")) $("kgPosPayOnline").value = "";
-      if ($("kgPosPaySwiggy")) $("kgPosPaySwiggy").value = "";
-      if ($("kgPosPayZomato")) $("kgPosPayZomato").value = "";
     }
   }
 
   function updateChange() {
     const totals = root.KG.posState.computeTotals();
     const received = Number($("kgPosReceived")?.value) || 0;
-    const change = Math.max(0, received - totals.grandTotal);
     const el = $("kgPosChange");
-    if (el) el.textContent = money().formatINR(change);
+    if (el) el.textContent = money().formatINR(Math.max(0, received - totals.grandTotal));
   }
 
   function paymentFromModal() {
     const mode = $("kgPosSettleMode")?.value || "cash";
-    const totals = root.KG.posState.computeTotals();
-    const t = totals.grandTotal;
+    const t = root.KG.posState.computeTotals().grandTotal;
     if (mode === "cash") return { cash: t, online: 0, swiggy: 0, zomato: 0 };
     if (mode === "online") return { cash: 0, online: t, swiggy: 0, zomato: 0 };
     if (mode === "swiggy") return { cash: 0, online: 0, swiggy: t, zomato: 0 };
@@ -206,6 +295,7 @@
   }
 
   async function doSettle(printBill) {
+    syncCustomerFromInputs();
     const payment = paymentFromModal();
     const ov = $("kgPosSettleOverlay");
     if (ov) ov.style.display = "none";
@@ -215,21 +305,122 @@
     syncIndicator();
   }
 
+  async function handleAction(a) {
+    const st = root.KG.posState.getState();
+    if (a === "hold") {
+      syncCustomerFromInputs();
+      root.KG.posState.holdCurrent();
+      renderCart();
+      renderHeld();
+      toast("Bill held", "success");
+    }
+    if (a === "kot" || a === "kotprint") {
+      if (!st.cart.length) return toast("Cart empty", "error");
+      root.KG.print.printKOT({
+        items: st.cart,
+        cart: st.cart,
+        orderType: st.orderType,
+        tableId: st.tableId,
+        helpers: {
+          prepLabel: root.prepLabel || ((p) => p),
+          translateEnToHi: root.translateEnToHi || (async (x) => x),
+          escapeHtml: esc
+        }
+      });
+    }
+    if (a === "bill") {
+      if (!st.cart.length) return toast("Cart empty", "error");
+      const totals = root.KG.posState.computeTotals();
+      root.KG.print.printBill({
+        billNo: "PREVIEW",
+        items: st.cart,
+        subtotal: totals.subtotal,
+        discount: totals.discount,
+        gst: totals.gst,
+        grandTotal: totals.grandTotal,
+        paymentLabel: "UNPAID"
+      });
+    }
+    if (a === "settle" || a === "settleprint") openSettleModal();
+    if (a === "discount") {
+      const pct = await openInputModal({
+        title: "Discount %",
+        hint: "Employee max may apply",
+        value: st.discountPercent || 0,
+        type: "number"
+      });
+      if (pct == null) return;
+      st.discountPercent = Math.max(0, Number(pct) || 0);
+      st.discountPaise = 0;
+      renderCart();
+    }
+    if (a === "charges") {
+      const v = await openInputModal({
+        title: "Packaging / service charge",
+        hint: "Amount in ₹",
+        value: money().fromPaise(st.chargesPaise),
+        type: "number"
+      });
+      if (v == null) return;
+      st.chargesPaise = money().toPaise(v);
+      renderCart();
+    }
+    if (a === "settings") {
+      const p = root.KG.print.prefs();
+      if ($("kgPosKotTransport")) $("kgPosKotTransport").value = p.kotTransport || "auto";
+      if ($("kgPosBillTransport")) $("kgPosBillTransport").value = p.billTransport || "auto";
+      if ($("kgPosPaperWidth")) $("kgPosPaperWidth").value = String(p.paperWidthMm || 80);
+      if ($("kgPosBaud")) $("kgPosBaud").value = String(p.baudRate || 9600);
+      const s = st.settings;
+      if ($("kgPosGstOn")) $("kgPosGstOn").checked = !!s.gstEnabled;
+      if ($("kgPosGstPct")) $("kgPosGstPct").value = s.gstPercent ?? 5;
+      if ($("kgPosAddress")) $("kgPosAddress").value = s.address || "";
+      if ($("kgPosGstin")) $("kgPosGstin").value = s.gstin || "";
+      if ($("kgPosPhone")) $("kgPosPhone").value = s.phone || "";
+      if ($("kgPosUpi")) $("kgPosUpi").value = s.upiId || "";
+      $("kgPosSettingsOverlay").style.display = "flex";
+    }
+    if (a === "clear") {
+      root.KG.posState.clearCart();
+      renderCart();
+    }
+    if (a === "reprint-kot") root.KG.print.reprintLastKOT();
+    if (a === "reprint-bill") root.KG.print.reprintLastBill();
+    if (a === "void") {
+      const last = st.lastBillId || "";
+      if ($("kgPosVoidBillId")) $("kgPosVoidBillId").value = last;
+      $("kgPosVoidOverlay").style.display = "flex";
+    }
+  }
+
   function bindEvents() {
     const rootEl = $("kgPosRoot");
     if (!rootEl || rootEl.__kgBound) return;
     rootEl.__kgBound = true;
 
-    rootEl.addEventListener("click", (e) => {
-      const t = e.target.closest("[data-menu-id],[data-cat],[data-order-type],[data-act],[data-hold],[data-table],[data-pos-action]");
+    rootEl.addEventListener("click", async (e) => {
+      const t = e.target.closest(
+        "[data-menu-id],[data-group-key],[data-cat],[data-order-type],[data-act],[data-hold],[data-table],[data-pos-action]"
+      );
       if (!t) return;
 
+      if (t.hasAttribute("data-group-key")) {
+        const g = root.KG.posMenu.getGroup(t.getAttribute("data-group-key"));
+        if (!g) return;
+        if (g.hasVariants || (g.addons && g.addons.length)) openVariantPicker(g);
+        else {
+          const item = g.variants[0];
+          if (item) {
+            root.KG.posState.addLine({ ...item, menuItemId: item.id || item.menuItemId });
+            renderCart();
+          }
+        }
+        return;
+      }
       if (t.hasAttribute("data-menu-id")) {
-        const id = t.getAttribute("data-menu-id");
-        const item = root.KG.posMenu.getById(id);
+        const item = root.KG.posMenu.getById(t.getAttribute("data-menu-id"));
         if (item) {
           root.KG.posState.addLine(item);
-          // Partial cart update only
           renderCart();
         }
         return;
@@ -241,9 +432,8 @@
         return;
       }
       if (t.hasAttribute("data-order-type")) {
-        const ot = t.getAttribute("data-order-type");
-        root.KG.posState.setOrderType(ot);
-        setOrderTypeUi(ot);
+        root.KG.posState.setOrderType(t.getAttribute("data-order-type"));
+        setOrderTypeUi(t.getAttribute("data-order-type"));
         return;
       }
       if (t.hasAttribute("data-table")) {
@@ -253,9 +443,12 @@
       }
       if (t.hasAttribute("data-hold")) {
         root.KG.posState.reopenHold(t.getAttribute("data-hold"));
+        const st = root.KG.posState.getState();
+        if ($("kgPosCustomerName")) $("kgPosCustomerName").value = st.customerName || "";
+        if ($("kgPosCustomerPhone")) $("kgPosCustomerPhone").value = st.customerPhone || "";
         renderCart();
         renderHeld();
-        setOrderTypeUi(root.KG.posState.getState().orderType);
+        setOrderTypeUi(st.orderType);
         return;
       }
       if (t.hasAttribute("data-act")) {
@@ -269,102 +462,47 @@
         if (act === "dec") root.KG.posState.updateQty(lineId, row.qty - 1);
         if (act === "rm") root.KG.posState.removeLine(lineId);
         if (act === "note") {
-          const note = prompt("Line note", row.note || "");
+          const note = await openInputModal({
+            title: "Line note",
+            hint: "e.g. less spicy",
+            value: row.note || ""
+          });
           if (note != null) root.KG.posState.setLineNote(lineId, note);
         }
         if (act === "setqty") {
-          const v = prompt("Quantity", String(row.qty));
+          const v = await openInputModal({
+            title: "Quantity",
+            value: row.qty,
+            type: "number"
+          });
           if (v != null) root.KG.posState.updateQty(lineId, v);
         }
         renderCart();
         return;
       }
-      if (t.hasAttribute("data-pos-action")) {
-        const a = t.getAttribute("data-pos-action");
-        handleAction(a);
-      }
+      if (t.hasAttribute("data-pos-action")) handleAction(t.getAttribute("data-pos-action"));
     });
 
-    const search = $("kgPosSearch");
-    if (search) {
-      search.addEventListener("input", () => {
-        root.KG.posState.getState().searchQuery = search.value;
-        root.KG.posMenu.debouncedSearch(search.value, root.KG.posState.getState().activeCategory, (list) => {
+    $("kgPosSearch")?.addEventListener("input", () => {
+      root.KG.posState.getState().searchQuery = $("kgPosSearch").value;
+      root.KG.posMenu.debouncedSearch(
+        $("kgPosSearch").value,
+        root.KG.posState.getState().activeCategory,
+        (list) => {
           menuListCache = list;
           root.KG.posMenu.renderGrid($("kgPosMenuGrid"), list, {
             pageSize: list.length > 200 ? 100 : 500
           });
-        });
-      });
-    }
+        }
+      );
+    });
+
+    ["kgPosCustomerName", "kgPosCustomerPhone"].forEach((id) => {
+      $(id)?.addEventListener("change", syncCustomerFromInputs);
+      $(id)?.addEventListener("blur", syncCustomerFromInputs);
+    });
 
     document.addEventListener("keydown", onKey);
-  }
-
-  function handleAction(a) {
-    const st = root.KG.posState.getState();
-    if (a === "hold") {
-      root.KG.posState.holdCurrent();
-      renderCart();
-      renderHeld();
-      if (typeof root.toast === "function") root.toast("Bill held", "success");
-    }
-    if (a === "kot") {
-      if (!st.cart.length) return root.toast?.("Cart empty", "error");
-      root.KG.print.printKOT({
-        items: st.cart,
-        cart: st.cart,
-        orderType: st.orderType,
-        tableId: st.tableId,
-        helpers: {
-          prepLabel: root.prepLabel || ((p) => p),
-          translateEnToHi: root.translateEnToHi || (async (x) => x),
-          escapeHtml: esc
-        }
-      });
-    }
-    if (a === "kotprint") {
-      handleAction("kot");
-    }
-    if (a === "bill") {
-      if (!st.cart.length) return root.toast?.("Cart empty", "error");
-      const totals = root.KG.posState.computeTotals();
-      root.KG.print.printBill({
-        billNo: "PREVIEW",
-        items: st.cart,
-        subtotal: totals.subtotal,
-        discount: totals.discount,
-        gst: totals.gst,
-        grandTotal: totals.grandTotal,
-        paymentLabel: "UNPAID"
-      });
-    }
-    if (a === "settle" || a === "settleprint") {
-      openSettleModal();
-    }
-    if (a === "discount") {
-      const pct = prompt("Discount %", String(st.discountPercent || 0));
-      if (pct == null) return;
-      st.discountPercent = Math.max(0, Number(pct) || 0);
-      st.discountPaise = 0;
-      renderCart();
-    }
-    if (a === "charges") {
-      const v = prompt("Packaging / service charge ₹", String(money().fromPaise(st.chargesPaise)));
-      if (v == null) return;
-      st.chargesPaise = money().toPaise(v);
-      renderCart();
-    }
-    if (a === "settings") {
-      const ov = $("kgPosSettingsOverlay");
-      if (ov) ov.style.display = "flex";
-    }
-    if (a === "clear") {
-      root.KG.posState.clearCart();
-      renderCart();
-    }
-    if (a === "reprint-kot") root.KG.print.reprintLastKOT();
-    if (a === "reprint-bill") root.KG.print.reprintLastBill();
   }
 
   function onKey(e) {
@@ -387,21 +525,36 @@
       handleAction("settle");
     }
     if (e.key === "Escape") {
-      const search = $("kgPosSearch");
-      if (search) {
-        search.value = "";
+      closeInputModal(null);
+      ["kgPosSettleOverlay", "kgPosSettingsOverlay", "kgPosVariantOverlay", "kgPosVoidOverlay"].forEach(
+        (id) => {
+          const el = $(id);
+          if (el) el.style.display = "none";
+        }
+      );
+      if ($("kgPosSearch") && document.activeElement === $("kgPosSearch")) {
+        $("kgPosSearch").value = "";
         root.KG.posState.getState().searchQuery = "";
         renderMenu();
       }
-      const ov = $("kgPosSettleOverlay");
-      if (ov) ov.style.display = "none";
     }
     if (e.key === "Enter" && document.activeElement === $("kgPosSearch")) {
       e.preventDefault();
-      if (menuListCache[0]) {
-        root.KG.posState.addLine(menuListCache[0]);
+      const flat = root.KG.posMenu.searchItems(
+        root.KG.posState.getState().searchQuery,
+        root.KG.posState.getState().activeCategory,
+        1
+      );
+      if (flat[0]) {
+        root.KG.posState.addLine(flat[0]);
         renderCart();
+      } else if (menuListCache[0]?.variants?.[0]) {
+        openVariantPicker(menuListCache[0]);
       }
+    }
+    if (e.key === "Enter" && $("kgPosInputOverlay")?.style.display === "flex") {
+      e.preventDefault();
+      closeInputModal($("kgPosInputValue")?.value);
     }
   }
 
@@ -426,6 +579,9 @@
   async function onEnter() {
     root.KG.pos = root.KG.pos || {};
     root.KG.pos.devPerf = true;
+    try {
+      await root.KG.posState.hydrateOfflineQueue?.();
+    } catch (_) {}
     await loadMenuIntoIndex();
     renderCart();
     renderHeld();
@@ -470,7 +626,56 @@
       }
     });
 
-    // Settle modal buttons
+    $("kgPosInputOk")?.addEventListener("click", () => closeInputModal($("kgPosInputValue")?.value));
+    $("kgPosInputCancel")?.addEventListener("click", () => closeInputModal(null));
+
+    $("kgPosVariantClose")?.addEventListener("click", () => {
+      $("kgPosVariantOverlay").style.display = "none";
+      pendingVariantGroup = null;
+    });
+    $("kgPosVariantList")?.addEventListener("click", (e) => {
+      const btn = e.target.closest("[data-variant-id]");
+      if (!btn) return;
+      selectedVariantId = btn.getAttribute("data-variant-id");
+      $("kgPosVariantList")
+        .querySelectorAll(".kg-pos-variant-btn")
+        .forEach((b) => b.classList.toggle("active", b.getAttribute("data-variant-id") === selectedVariantId));
+    });
+    $("kgPosAddonList")?.addEventListener("change", (e) => {
+      const cb = e.target.closest("[data-addon-id]");
+      if (!cb) return;
+      const id = cb.getAttribute("data-addon-id");
+      if (cb.checked) selectedAddons.add(id);
+      else selectedAddons.delete(id);
+    });
+    $("kgPosVariantAdd")?.addEventListener("click", confirmVariantAdd);
+
+    $("kgPosVoidCancel")?.addEventListener("click", () => {
+      $("kgPosVoidOverlay").style.display = "none";
+    });
+    $("kgPosVoidConfirm")?.addEventListener("click", async () => {
+      const billId = ($("kgPosVoidBillId")?.value || "").trim();
+      const reason = ($("kgPosVoidReason")?.value || "").trim();
+      if (!billId) return toast("Enter bill id", "error");
+      try {
+        // Allow billNo lookup
+        let id = billId;
+        if (!billId.startsWith("bill_") && firebase?.firestore) {
+          const snap = await firebase
+            .firestore()
+            .collection("posBills")
+            .where("billNo", "==", billId)
+            .limit(1)
+            .get();
+          if (!snap.empty) id = snap.docs[0].id;
+        }
+        await root.KG.posCheckout.voidBill(id, reason);
+        $("kgPosVoidOverlay").style.display = "none";
+      } catch (e) {
+        toast(e.message || "Void failed", "error");
+      }
+    });
+
     $("kgPosSettleMode")?.addEventListener("change", applySettleMode);
     $("kgPosReceived")?.addEventListener("input", updateChange);
     document.querySelectorAll("[data-quick-cash]").forEach((btn) => {
@@ -485,43 +690,42 @@
     $("kgPosSettleConfirm")?.addEventListener("click", () => doSettle(false));
     $("kgPosSettlePrint")?.addEventListener("click", () => doSettle(true));
     $("kgPosSettleCancel")?.addEventListener("click", () => {
-      const ov = $("kgPosSettleOverlay");
-      if (ov) ov.style.display = "none";
+      $("kgPosSettleOverlay").style.display = "none";
     });
 
-    // Printer settings
     $("kgPosConnectUsb")?.addEventListener("click", async () => {
       try {
         await root.KG.transports.webUsb.connect();
-        root.toast?.("USB printer connected", "success");
+        toast("USB printer connected", "success");
       } catch (e) {
-        root.toast?.(e.message || "USB connect failed", "error");
+        toast(e.message || "USB connect failed", "error");
       }
     });
     $("kgPosConnectSerial")?.addEventListener("click", async () => {
       try {
         await root.KG.transports.webSerial.connect(root.KG.print.prefs());
-        root.toast?.("Serial printer connected", "success");
+        toast("Serial printer connected", "success");
       } catch (e) {
-        root.toast?.(e.message || "Serial connect failed", "error");
+        toast(e.message || "Serial connect failed", "error");
       }
     });
     $("kgPosConnectBle")?.addEventListener("click", async () => {
       try {
         await root.KG.transports.bluetooth.connect();
-        root.toast?.("Bluetooth printer connected", "success");
+        toast("Bluetooth printer connected", "success");
       } catch (e) {
-        root.toast?.(e.message || "Bluetooth connect failed", "error");
+        toast(e.message || "Bluetooth connect failed", "error");
       }
     });
     $("kgPosTestPrint")?.addEventListener("click", () => root.KG.print.testPrint());
     $("kgPosUseSystemPrinter")?.addEventListener("click", () => {
       root.KG.print.savePrefs({ kotTransport: "browser", billTransport: "browser" });
-      root.toast?.("Using system printer (browser dialog)", "success");
+      if ($("kgPosKotTransport")) $("kgPosKotTransport").value = "browser";
+      if ($("kgPosBillTransport")) $("kgPosBillTransport").value = "browser";
+      toast("Using system printer (browser dialog)", "success");
     });
     $("kgPosSettingsClose")?.addEventListener("click", () => {
-      const ov = $("kgPosSettingsOverlay");
-      if (ov) ov.style.display = "none";
+      $("kgPosSettingsOverlay").style.display = "none";
     });
     $("kgPosSaveSettings")?.addEventListener("click", () => {
       const paper = Number($("kgPosPaperWidth")?.value) || 80;
@@ -531,7 +735,9 @@
         paperWidthMm: paper,
         baudRate: baud,
         autoCut: !!$("kgPosAutoCut")?.checked,
-        cashDrawer: !!$("kgPosDrawer")?.checked
+        cashDrawer: !!$("kgPosDrawer")?.checked,
+        kotTransport: $("kgPosKotTransport")?.value || "auto",
+        billTransport: $("kgPosBillTransport")?.value || "auto"
       });
       root.KG.posState.setSettings({
         gstPercent: Number.isFinite(gst) ? gst : 5,
@@ -541,9 +747,8 @@
         phone: $("kgPosPhone")?.value || "",
         upiId: $("kgPosUpi")?.value || ""
       });
-      root.toast?.("Settings saved", "success");
-      const ov = $("kgPosSettingsOverlay");
-      if (ov) ov.style.display = "none";
+      toast("Settings saved", "success");
+      $("kgPosSettingsOverlay").style.display = "none";
       renderCart();
     });
   }
@@ -554,7 +759,8 @@
     renderCart,
     renderMenu,
     openSettleModal,
-    handleAction
+    handleAction,
+    openInputModal
   };
 
   root.KG = root.KG || {};

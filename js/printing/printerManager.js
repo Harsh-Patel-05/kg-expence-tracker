@@ -132,11 +132,37 @@
     if (bill.gst) lines.push({ text: `GST: ${money.formatINR(bill.gst)}`, font: "small" });
     lines.push({ text: `TOTAL: ${money.formatINR(bill.grandTotal || bill.total || 0)}`, font: "title" });
     lines.push({ text: `Paid: ${bill.paymentLabel || ""}`, font: "small" });
+    if (settings.upiId) {
+      lines.push({ text: `UPI: ${settings.upiId}`, align: "center", font: "small" });
+      lines.push({ text: "Scan UPI QR (see receipt / display)", align: "center", font: "small" });
+    }
     lines.push({ text: "धन्यवाद · Thank you", align: "center", font: "main" });
 
     const parts = [escpos.init()];
     const rasterOut = await raster.renderLinesToRaster(lines, width);
     parts.push(rasterOut.full);
+    // Optional UPI QR raster (best-effort; browser print always includes img)
+    try {
+      const upi = root.KG && root.KG.upiQr;
+      if (upi && settings.upiId) {
+        const uri = upi.buildUpiUri({
+          upiId: settings.upiId,
+          amount: bill.grandTotal || bill.total || 0,
+          billNo: bill.billNo,
+          payeeName: "The Kilogram"
+        });
+        if (uri && typeof document !== "undefined") {
+          const canvas = await upi.drawQrToCanvas(uri, 180);
+          if (canvas) {
+            const qrRaster = raster.canvasToRaster(canvas, escpos);
+            parts.push(escpos.align("center"));
+            parts.push(qrRaster.full);
+          }
+        }
+      }
+    } catch (e) {
+      console.warn("UPI QR raster skipped", e);
+    }
     parts.push(escpos.feed(3));
     if (prefs().autoCut) parts.push(escpos.cut());
     if (prefs().cashDrawer) parts.push(escpos.drawerKick(0));
@@ -169,6 +195,20 @@
         money.formatINR(bill.grandTotal || bill.total || 0)
       )}</span></div>
       <div class="c">${esc(bill.paymentLabel || "")}</div>
+      ${(() => {
+        const upi = root.KG && root.KG.upiQr;
+        if (!upi || !settings.upiId) return "";
+        const uri = upi.buildUpiUri({
+          upiId: settings.upiId,
+          amount: bill.grandTotal || bill.total || 0,
+          billNo: bill.billNo,
+          payeeName: "The Kilogram"
+        });
+        if (!uri) return "";
+        return `<div class="c" style="margin-top:8px;">Pay via UPI<br/><img alt="UPI QR" width="140" height="140" src="${esc(
+          upi.qrImageUrl(uri, 140)
+        )}"/><div style="font-size:10px;word-break:break-all;">${esc(settings.upiId)}</div></div>`;
+      })()}
       <div class="c">धन्यवाद</div>`;
   }
 
