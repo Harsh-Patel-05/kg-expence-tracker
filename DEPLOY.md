@@ -1,11 +1,14 @@
 # Deploy — Restaurant Tracker (SaaS)
 
+> **Note (2026-11):** Primary production path for The Kilogram is **Firebase Hosting + Firestore** (`npm run dev` serves static files on port **3000**). Scripts named `npm run local` / serve-on-8765 in older docs are **not** in root `package.json`; use `npm run dev` or `node scripts/static-server.js` if needed. The Mongo/`server/` path below remains optional for API fallback.
+
 ## Architecture
 
-- **Auth:** Single-user mode — no login. The API auto-creates one MongoDB user (`local@localhost`) and attaches it to every request. Data persists in MongoDB until you delete it.
-- **Frontend:** Static files (`index.html`, `js/`) — `login.html` / `signup.html` redirect to the app. Host on Firebase Hosting, Netlify, or any static host.
-- **Backend:** Node.js + Express in `server/` — deploy to [Render](https://render.com) or [Railway](https://railway.app).
-- **Database:** [MongoDB Atlas](https://www.mongodb.com/atlas) (free tier works).
+- **Auth (Firebase path):** Email/password via `login.html` + `js/auth.js` roles.
+- **Auth (Mongo API path):** Single-user mode — no login. The API auto-creates one MongoDB user (`local@localhost`) and attaches it to every request.
+- **Frontend:** Static files (`index.html`, `js/`) — Host on Firebase Hosting.
+- **Backend (optional):** Node.js + Express in `server/` — deploy to [Render](https://render.com) or [Railway](https://railway.app).
+- **Database:** Firestore (primary) or [MongoDB Atlas](https://www.mongodb.com/atlas) for the Express API.
 
 ## 1. MongoDB Atlas
 

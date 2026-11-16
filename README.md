@@ -1,8 +1,21 @@
-# KG Restaurant Expense Tracker
+# KG Restaurant Expense Tracker — The Kilogram
 
-A modern restaurant expense management web application built with React and Firebase, featuring real-time analytics, staff management, and comprehensive financial tracking.
+Restaurant / takeaway ops for **The Kilogram** (India, **₹**). Production UI is the **legacy Firebase app** (`index.html` + `js/`).
 
 ## 🚀 Features
+
+### POS (PetPooja-style upgrade)
+- Three-pane POS: categories · menu search · cart
+- Order types: Dine-In / Takeaway / Delivery / Swiggy / Zomato
+- Hold bills, tables, discount/charges, GST (default 5%), split payments
+- Keyboard: F2 search, F4 KOT, F6 Bill, F8 Settle
+- Local-first checkout + background Firestore sync; sequential bill nos `KG-YYYYMMDD-0001`
+- USB / Serial / Bluetooth / system-printer thermal printing with **Hindi KOT** (see `docs/PRINTING.md`)
+
+### Live sales & net margin
+- Settled POS bills auto-create `sales` (`source: "pos"`) + `dailySalesSummary`
+- Dashboard **LIVE** KPIs (cash vs online, Swiggy/Zomato chips) + hourly chart
+- **Net Margin** box (1st → today) with fixed costs (rent, electricity, …) and CSV breakdown
 
 ### Main Dashboard
 - **Real-time KPIs**: Cash balance, bank balance, total revenue, net profit
@@ -145,10 +158,16 @@ kg-expense-tracker/
 ```
 
 ### Available Scripts
-- `npm start`: Serve the application in production mode
-- `npm run dev`: Serve in development mode
-- `npm run firebase:deploy`: Deploy to Firebase Hosting
+- `npm start` / `npm run dev`: Serve legacy app on port **3000** (`serve -s . -l 3000`)
+- `npm test`: Unit tests (`node --test` for money, salesBridge, netMargin, escpos)
+- `npm run firebase:deploy`: Deploy Hosting
 - `npm run firebase:deploy:all`: Deploy all Firebase resources
+- Deploy rules + indexes: `firebase deploy --only firestore:rules,firestore:indexes`
+
+### Docs
+- `docs/AUDIT.md` — baseline audit before POS upgrade
+- `docs/PRINTING.md` — USB/Serial/system printer setup
+- `docs/TEST_REPORT.md` — test results and manual checklist
 
 ## 💡 Usage Guide
 

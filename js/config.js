@@ -16,7 +16,7 @@ window.firebaseConfig = firebaseConfig;
 const APP_CONFIG = {
     appName: "KG Restaurant Expense Tracker",
     welcomeMessage: "Welcome back Mihir 👋",
-    currency: "$",
+    currency: "₹",
     dateFormat: "MM/DD/YYYY",
     monthFormat: "MMMM YYYY"
 };

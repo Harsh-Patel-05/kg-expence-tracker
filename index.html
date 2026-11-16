@@ -18,11 +18,11 @@
       }
     })();
   </script>
-  <link rel="stylesheet" href="css/design-system.css?v=20260710g" />
+  <link rel="stylesheet" href="css/design-system.css?v=20260902sal30" />
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
   <style>
-    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
     @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;700&display=swap');
     
     * { 
@@ -32,12 +32,14 @@
     }
     
     body {
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
       background: var(--bg-main);
       color: var(--text-primary);
       min-height: 100vh;
       padding: 20px;
       line-height: 1.6;
+      letter-spacing: 0.3px;
+      font-weight: 500;
     }
     
     .page {
@@ -276,12 +278,13 @@
     .pos-item{
       border: 1px solid rgba(47,133,90,0.22);
       border-radius: 18px;
-      overflow:hidden;
+      overflow:visible;
       background: var(--bg-card);
       box-shadow: var(--shadow);
       transition: var(--transition);
       position: relative;
       cursor: default;
+      min-height: 0;
     }
     .pos-item:hover{
       transform: translateY(-2px);
@@ -290,23 +293,29 @@
       border-color: rgba(47,133,90,0.35);
     }
     .pos-item-media{
-      padding: 16px 10px 8px;
+      padding: 12px 10px 4px;
       display:flex;
       justify-content:center;
       align-items:center;
     }
-    .pos-item-media img{
-      width: 92px;
-      height: 92px;
-      border-radius: 999px;
-      object-fit: cover;
-      background: var(--bg-secondary);
-      border: 1px solid var(--border);
-      display:block;
+    .pos-item-media img{ display:none; }
+    .pos-item-initial{
+      width: 52px;
+      height: 52px;
+      border-radius: 16px;
+      display:grid;
+      place-items:center;
+      font-weight: 800;
+      font-size: 15px;
+      letter-spacing: -0.02em;
+      color: #fff;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      box-shadow: var(--primary-shadow);
     }
     .pos-item-body{
-      padding: 0 12px 12px;
+      padding: 0 10px 12px;
       text-align:center;
+      overflow: visible;
     }
     .pos-item-name{
       font-weight: 650;
@@ -353,23 +362,27 @@
     .pos-item-btn:disabled{ opacity: 0.6; cursor:not-allowed; }
     .pos-variant-row{
       display:flex;
-      gap:10px;
-      flex-wrap:nowrap;
+      gap:6px;
+      flex-wrap:wrap;
       margin-top:10px;
       justify-content:center;
-      align-items:center;
+      align-items:stretch;
     }
     .pos-variant-chip{
-      padding: 10px 14px;
+      padding: 8px 10px;
       border-radius: 999px;
       border: 1px solid var(--border);
       background: #EEF2F7;
       color: #111827;
       font-weight: 700;
-      font-size: 13px;
+      font-size: 11px;
       cursor: pointer;
       box-shadow: none;
-      line-height: 1;
+      line-height: 1.1;
+      white-space: nowrap;
+      flex: 1 1 auto;
+      min-width: 64px;
+      max-width: 100%;
     }
     .pos-variant-chip.active{
       background: var(--primary);
@@ -753,11 +766,75 @@
       .pos-menu-grid{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
     }
 
-    /* Print */
+    /* Print — hide all app chrome; only #printArea */
     @media print{
-      body{ background:#fff; color:#000; padding:0; }
-      .page, .sidebar, .main-content, #toastRoot, #appLoading{ display:none !important; }
-      #printArea{ display:block !important; padding: 12px; font-family: Arial, sans-serif; }
+      @page { margin: 12mm; }
+      html, body{
+        background:#fff !important;
+        color:#000 !important;
+        padding:0 !important;
+        margin:0 !important;
+      }
+      body.printing-slip *{ visibility: hidden !important; }
+      body.printing-slip #printArea,
+      body.printing-slip #printArea *{ visibility: visible !important; }
+      .app-topbar,
+      .page,
+      .sidebar,
+      .sidebarBackdrop,
+      .main-content,
+      #toastRoot,
+      #appLoading,
+      #celebrateOverlay,
+      .notif-wrap,
+      .theme-toggle,
+      .kg-user-chip,
+      .topbar-live,
+      .modalOverlay{
+        display:none !important;
+      }
+      #printArea{
+        display:block !important;
+        position: absolute !important;
+        left: 0; top: 0; width: 100%;
+        padding: 8px 12px;
+        font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+        color: #111 !important;
+        background: #fff !important;
+      }
+      /* POS thermal slips */
+      #printArea:not(.salary-doc) .slip{ max-width: 320px; margin: 0 auto; }
+      /* Salary PDF — full page */
+      #printArea.salary-doc .slip{
+        max-width: 100% !important;
+        margin: 0 0 16px !important;
+        border: 1px solid #333 !important;
+        padding: 14px !important;
+        color: #111 !important;
+        background: #fff !important;
+      }
+      #printArea.salary-doc table{
+        width: 100% !important;
+        border-collapse: collapse !important;
+        color: #111 !important;
+      }
+      #printArea.salary-doc td,
+      #printArea.salary-doc th{
+        color: #111 !important;
+        border-color: #999 !important;
+      }
+      #printArea .slip-brand{ text-align:center; font-weight:900; font-size:20px; }
+      #printArea .slip-sub{ text-align:center; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; }
+      #printArea .slip-meta{ display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:10px; font-size:12px; }
+      #printArea .slip-meta span{ display:block; color:#666; font-size:10px; }
+      #printArea .slip-rule{ border-top:1px dashed #999; margin:10px 0; }
+      #printArea .slip-title{ text-align:center; font-weight:800; margin-bottom:8px; }
+      #printArea .slip-line{ display:flex; justify-content:space-between; gap:10px; font-size:13px; margin-bottom:8px; }
+      #printArea .slip-line .name{ font-weight:800; }
+      #printArea .slip-line .prep{ font-size:11px; color:#444; }
+      #printArea .slip-totals .row{ display:flex; justify-content:space-between; gap:10px; font-size:13px; }
+      #printArea .slip-totals .row.big{ font-size:15px; font-weight:900; }
+      #printArea .slip-footer{ text-align:center; margin-top:12px; font-weight:700; font-size:12px; }
     }
     #printArea{ display:none; }
 
@@ -768,15 +845,24 @@
       display:inline-flex;
       align-items:center;
       justify-content:center;
-      border-radius: 8px;
-      background: var(--primary-glow);
-      border: 1px solid rgba(74, 169, 233, 0.12);
+      border-radius: 999px;
+      background: rgba(92, 42, 31, 0.55);
+      border: 1px solid rgba(253, 232, 216, 0.35);
+      color: #fde8d8;
     }
 
-    .nav-icon svg{ width: 18px; height: 18px; display:block; }
-    .nav-icon .stroke{ stroke: var(--text-secondary); }
-    .nav-icon .fill{ fill: var(--text-secondary); }
-    .nav-icon .accent{ fill: var(--primary); }
+    .nav-icon svg{ width: 18px; height: 18px; display:block; color: inherit; stroke: currentColor; }
+    .nav-icon .stroke{ stroke: #fde8d8; }
+    .nav-icon .fill{ fill: #fde8d8; }
+    .nav-icon .accent{ fill: #e87a3a; }
+
+    [data-theme="light"] .nav-icon{
+      background: rgba(232, 122, 58, 0.12);
+      border: 1px solid rgba(232, 122, 58, 0.28);
+      color: #e87a3a;
+    }
+    [data-theme="light"] .nav-icon .stroke{ stroke: #e87a3a; }
+    [data-theme="light"] .nav-icon .fill{ fill: #e87a3a; }
 
     .nav-item.active .nav-icon{
       background: rgba(255, 255, 255, 0.2);
@@ -821,7 +907,7 @@
       background: var(--bg-card);
       border: 1px solid var(--border);
       border-radius: var(--radius);
-      padding: 24px;
+      padding: 16px 18px;
       box-shadow: var(--shadow);
       backdrop-filter: blur(10px);
       transition: var(--transition);
@@ -830,7 +916,7 @@
     .card:hover {
       transform: translateY(-4px);
       box-shadow: var(--shadow-hover);
-      border-color: rgba(74, 169, 233, 0.22);
+      border-color: rgba(99, 102, 241, 0.22);
     }
     
     /* Dashboard premium layout */
@@ -1030,10 +1116,11 @@
 
     .span-4{grid-column: span 4}
     .span-3{grid-column: span 3}
+    .span-6{grid-column: span 6}
     .span-12{grid-column: span 12}
     
     @media (max-width: 900px){ 
-      .span-4,.span-3{grid-column: span 6} 
+      .span-4,.span-3,.span-6{grid-column: span 6} 
       .span-12{grid-column: span 12} 
     }
     
@@ -1193,13 +1280,16 @@
     
     #toastRoot { 
       position: fixed; 
-      bottom: 20px; 
+      top: 84px; 
       right: 20px; 
-      z-index: 9999; 
+      bottom: auto;
+      left: auto;
+      z-index: 20000; 
       display: flex; 
       flex-direction: column; 
+      align-items: flex-end;
       gap: 8px; 
-      max-width: 360px; 
+      max-width: min(380px, calc(100vw - 32px)); 
     }
     
     .toast { 
@@ -1310,7 +1400,7 @@
 
     /* Form Styles */
     input, select, button {
-      font-family: 'Inter', sans-serif;
+      font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
       font-size: 14px;
     }
     
@@ -1346,7 +1436,6 @@
     button:hover {
       transform: translateY(-2px);
       box-shadow: var(--primary-shadow);
-      color: #FFFFFF;
     }
     
     button.secondary {
@@ -1544,7 +1633,13 @@
       font-weight:600;
     }
   </style>
-  <link rel="stylesheet" href="css/premium-theme.css?v=20260710h" />
+  <link rel="stylesheet" href="css/premium-theme.css?v=20260902sal30" />
+  <link rel="stylesheet" href="css/saas-premium.css?v=20260902sal30" />
+  <link rel="stylesheet" href="css/app-shell.css?v=20260902sal30" />
+  <link rel="stylesheet" href="css/dash-polish.css?v=20260902sal30" />
+  <link rel="stylesheet" href="css/dashboard-pro.css?v=20260902sal30" />
+  <link rel="stylesheet" href="css/ui-fixes.css?v=20260902sal30" />
+  <link rel="stylesheet" href="css/pos-upgrade.css?v=20261116pos1" />
 </head>
 <body>
   <div id="appLoading" aria-live="polite" aria-busy="true">
@@ -1564,6 +1659,33 @@
     </button>
     <div class="app-topbar-title">The Kilogram</div>
     <div class="app-topbar-spacer"></div>
+    <div class="topbar-live" id="topbarLive" aria-label="Time and weather">
+      <div class="topbar-clock" id="topbarClock">--:--</div>
+      <div class="topbar-weather" id="topbarWeather" title="Local weather">--°C</div>
+    </div>
+    <div class="notif-wrap">
+      <button type="button" class="notif-bell" id="notifBellBtn" onclick="toggleNotifPanel(event)" aria-label="Reminders" title="Reminders">
+        <svg class="notif-bell-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
+          <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+        </svg>
+        <span class="notif-badge" id="notifBadge" hidden>0</span>
+      </button>
+      <div class="notif-panel" id="notifPanel" hidden role="dialog" aria-label="Reminders">
+        <div class="notif-panel-head">
+          <strong>Reminders &amp; alerts</strong>
+          <button type="button" class="btn btn-secondary" style="padding:6px 10px;font-size:12px;" onclick="showSection('reminders');closeNotifPanel();">Open</button>
+        </div>
+        <div id="notifList"></div>
+      </div>
+    </div>
+    <div class="kg-user-chip" id="kgUserChip" hidden>
+      <div class="kg-user-text">
+        <span class="kg-user-name" id="kgUserName">—</span>
+        <span class="kg-user-role" id="kgUserRole">—</span>
+      </div>
+      <button type="button" class="btn btn-secondary kg-logout-btn" onclick="KgAuth.logout()" title="Sign out">Sign out</button>
+    </div>
     <div class="theme-toggle" role="group" aria-label="Color theme">
       <button type="button" class="theme-chip" data-theme-pref="light" onclick="setThemePreference('light')" aria-label="Light theme" title="Light">
         <i data-lucide="sun"></i>
@@ -1580,132 +1702,71 @@
   <div class="page">
     <div class="sidebar">
       <div class="card dark">
-        <div class="section-title" style="margin-bottom:25px; padding: 20px 0;">
-          <div style="display:flex; flex-direction:column; align-items:center; gap:12px;">
-            <img src="assets/the-kilogram-logo.png" alt="The Kilogram logo" class="logo-bounce" style="width:68%;height:auto;border-radius:0px;object-fit:cover;border:none;" />
+        <div class="sidebar-brand">
+          <div class="sidebar-brand-text">
+            <strong>The Kilogram</strong>
+            <span>Restaurant ERP</span>
           </div>
         </div>
         <div class="nav-list">
-          <div class="nav-item active" onclick="showSection('dashboard')">
-            <span class="nav-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none">
-                <rect x="3" y="3" width="8" height="8" rx="2" class="stroke" stroke-width="2"/>
-                <rect x="13" y="3" width="8" height="5" rx="2" class="stroke" stroke-width="2"/>
-                <rect x="13" y="10" width="8" height="11" rx="2" class="stroke" stroke-width="2"/>
-                <rect x="3" y="13" width="8" height="8" rx="2" class="stroke" stroke-width="2"/>
-              </svg>
-            </span>
+          <div class="nav-item active" data-section="dashboard" onclick="showSection('dashboard')">
+            <span class="nav-icon" aria-hidden="true"><i data-lucide="layout-dashboard"></i></span>
             <span>Dashboard</span>
           </div>
-          <div class="nav-item" onclick="showSection('sales')">
-            <span class="nav-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none">
-                <path d="M4 20V4" class="stroke" stroke-width="2" stroke-linecap="round"/>
-                <path d="M4 20H20" class="stroke" stroke-width="2" stroke-linecap="round"/>
-                <rect x="6.5" y="12" width="3" height="6" rx="1" class="accent"/>
-                <rect x="11" y="9" width="3" height="9" rx="1" class="fill" opacity="0.6"/>
-                <rect x="15.5" y="6" width="3" height="12" rx="1" class="fill" opacity="0.75"/>
-                <path d="M8 8l4 3 4-5 4 3" class="stroke" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/>
-              </svg>
-            </span>
+          <div class="nav-item" data-section="sales" onclick="showSection('sales')">
+            <span class="nav-icon" aria-hidden="true"><i data-lucide="trending-up"></i></span>
             <span>Sales</span>
           </div>
-          <div class="nav-item" onclick="showSection('supplier')">
-            <span class="nav-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none">
-                <path d="M4 7l8-4 8 4v10l-8 4-8-4V7z" class="stroke" stroke-width="2" stroke-linejoin="round"/>
-                <path d="M12 3v18" class="stroke" stroke-width="2" opacity="0.45"/>
-                <path d="M4 7l8 4 8-4" class="stroke" stroke-width="2" stroke-linejoin="round"/>
-              </svg>
-            </span>
+          <div class="nav-item" data-section="supplier" onclick="showSection('supplier')">
+            <span class="nav-icon" aria-hidden="true"><i data-lucide="package"></i></span>
             <span>Suppliers</span>
           </div>
-          <div class="nav-item" onclick="showSection('expenses')">
-            <span class="nav-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none">
-                <path d="M7 3h10v3H7V3z" class="fill" opacity="0.6"/>
-                <path d="M6 6h12v15a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V6z" class="stroke" stroke-width="2"/>
-                <path d="M8.5 10h7" class="stroke" stroke-width="2" stroke-linecap="round"/>
-                <path d="M8.5 14h7" class="stroke" stroke-width="2" stroke-linecap="round"/>
-                <path d="M8.5 18h4.5" class="stroke" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
-              </svg>
-            </span>
+          <div class="nav-item" data-section="expenses" onclick="showSection('expenses')">
+            <span class="nav-icon" aria-hidden="true"><i data-lucide="receipt"></i></span>
             <span>Expenses</span>
           </div>
-          <div class="nav-item" onclick="showSection('balance-transfer')">
-            <span class="nav-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none">
-                <path d="M7 10h10M7 14h6" class="stroke" stroke-width="2" stroke-linecap="round"/>
-                <rect x="3" y="5" width="8" height="14" rx="2" class="stroke" stroke-width="2"/>
-                <rect x="13" y="5" width="8" height="14" rx="2" class="stroke" stroke-width="2"/>
-                <path d="M11 12h2" class="accent" stroke-width="2" stroke-linecap="round"/>
-              </svg>
-            </span>
-            <span>Balance Transfer</span>
+          <div class="nav-item" data-section="reminders" onclick="showSection('reminders')">
+            <span class="nav-icon" aria-hidden="true"><i data-lucide="bell-ring"></i></span>
+            <span>Reminders</span>
           </div>
-          <div class="nav-item" onclick="showSection('daily-closing')">
-            <span class="nav-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none">
-                <circle cx="12" cy="12" r="9" class="stroke" stroke-width="2"/>
-                <path d="M12 7v5l3 2" class="stroke" stroke-width="2" stroke-linecap="round"/>
-              </svg>
-            </span>
+          <div class="nav-item" data-section="daily-closing" onclick="showSection('daily-closing')" hidden aria-hidden="true" style="display:none !important">
+            <span class="nav-icon" aria-hidden="true"><i data-lucide="clock-3"></i></span>
             <span>Daily Closing</span>
           </div>
-          <div class="nav-item" onclick="showSection('staff')">
-            <span class="nav-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none">
-                <path d="M9 11a3 3 0 1 1 6 0" class="stroke" stroke-width="2" stroke-linecap="round"/>
-                <path d="M6 20a6 6 0 0 1 12 0" class="stroke" stroke-width="2" stroke-linecap="round"/>
-                <path d="M12 2.5l1.2 2.5 2.8.4-2 2 .5 2.8-2.5-1.3-2.5 1.3.5-2.8-2-2 2.8-.4L12 2.5z" class="accent" opacity="0.85"/>
-              </svg>
-            </span>
+          <div class="nav-item" data-section="staff" onclick="showSection('staff')">
+            <span class="nav-icon" aria-hidden="true"><i data-lucide="users"></i></span>
             <span>Manage Staff</span>
           </div>
-          <div class="nav-item" onclick="showSection('analytics')">
-            <span class="nav-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none">
-                <rect x="4" y="12" width="3" height="8" rx="1" class="fill" opacity="0.55"/>
-                <rect x="10.5" y="9" width="3" height="11" rx="1" class="fill" opacity="0.75"/>
-                <rect x="17" y="5" width="3" height="15" rx="1" class="accent"/>
-                <path d="M4 20h16" class="stroke" stroke-width="2" stroke-linecap="round"/>
-              </svg>
-            </span>
+          <div class="nav-item" data-section="analytics" onclick="showSection('analytics')">
+            <span class="nav-icon" aria-hidden="true"><i data-lucide="bar-chart-3"></i></span>
             <span>Analytics</span>
           </div>
-          <div class="nav-item" onclick="showSection('menu')">
-            <span class="nav-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none">
-                <path d="M4 6h16" class="stroke" stroke-width="2" stroke-linecap="round"/>
-                <path d="M4 12h16" class="stroke" stroke-width="2" stroke-linecap="round"/>
-                <path d="M4 18h16" class="stroke" stroke-width="2" stroke-linecap="round"/>
-                <circle cx="7" cy="6" r="1.5" class="accent"/>
-                <circle cx="7" cy="12" r="1.5" class="fill" opacity="0.7"/>
-                <circle cx="7" cy="18" r="1.5" class="fill" opacity="0.7"/>
-              </svg>
-            </span>
+          <div class="nav-item" data-section="profit-analysis" onclick="showSection('profit-analysis')">
+            <span class="nav-icon" aria-hidden="true"><i data-lucide="trending-up"></i></span>
+            <span>Profit Analysis</span>
+          </div>
+          <div class="nav-item" data-section="menu" onclick="showSection('menu')">
+            <span class="nav-icon" aria-hidden="true"><i data-lucide="utensils-crossed"></i></span>
             <span>Menu</span>
           </div>
-          <div class="nav-item" onclick="showSection('pos')">
-            <span class="nav-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none">
-                <path d="M7 4h10a2 2 0 0 1 2 2v12a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2z" class="stroke" stroke-width="2"/>
-                <path d="M8 9h8" class="stroke" stroke-width="2" stroke-linecap="round"/>
-                <path d="M8 13h5" class="stroke" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
-                <path d="M15.5 13h.5" class="stroke" stroke-width="3" stroke-linecap="round"/>
-              </svg>
-            </span>
+          <div class="nav-item" data-section="pos" onclick="showSection('pos')">
+            <span class="nav-icon" aria-hidden="true"><i data-lucide="monitor-smartphone"></i></span>
             <span>POS Billing</span>
           </div>
-          <div class="nav-item" onclick="showSection('backup')">
-            <span class="nav-icon" aria-hidden="true">
-              <svg viewBox="0 0 24 24" fill="none">
-                <path d="M7 3h10v5H7V3z" class="stroke" stroke-width="2" stroke-linejoin="round"/>
-                <path d="M6 8h12v13H6V8z" class="stroke" stroke-width="2" stroke-linejoin="round"/>
-                <path d="M9 12h6" class="stroke" stroke-width="2" stroke-linecap="round"/>
-                <path d="M9 15h6" class="stroke" stroke-width="2" stroke-linecap="round" opacity="0.7"/>
-              </svg>
-            </span>
+          <div class="nav-item" data-section="inventory" onclick="showSection('inventory')">
+            <span class="nav-icon" aria-hidden="true"><i data-lucide="boxes"></i></span>
+            <span>Inventory</span>
+          </div>
+          <div class="nav-item" data-section="documents" onclick="showSection('documents')">
+            <span class="nav-icon" aria-hidden="true"><i data-lucide="folder-open"></i></span>
+            <span>Documents</span>
+          </div>
+          <div class="nav-item" data-section="balance-transfer" onclick="showSection('balance-transfer')">
+            <span class="nav-icon" aria-hidden="true"><i data-lucide="arrow-left-right"></i></span>
+            <span>Balance Transfer</span>
+          </div>
+          <div class="nav-item" data-section="backup" onclick="showSection('backup')">
+            <span class="nav-icon" aria-hidden="true"><i data-lucide="hard-drive"></i></span>
             <span>Backup</span>
           </div>
         </div>
@@ -1713,98 +1774,274 @@
     </div>
 
     <div class="main-content">
-      <div id="dashboard-section" class="dashboard-section active">
-        <div class="dash-hero">
-          <div>
-            <div class="dash-title">Welcome back, Mihir 👋</div>
-            <div class="period-filter" id="dashboardPeriodFilter" role="tablist" aria-label="Dashboard period">
-              <button type="button" class="period-chip active" data-period="today" onclick="setDashboardPeriod('today')">Today</button>
-              <button type="button" class="period-chip" data-period="week" onclick="setDashboardPeriod('week')">This Week</button>
-              <button type="button" class="period-chip" data-period="month" onclick="setDashboardPeriod('month')">This Month</button>
+      <div id="dashboard-section" class="dashboard-section active dashboard-pro">
+        <header class="dpro-hero">
+          <div class="dpro-hero-main">
+            <p class="dpro-eyebrow" id="todayLabel"></p>
+            <h1 class="dpro-title">Business overview</h1>
+            <p class="dpro-sub muted" id="dashboardPeriodLabel">Select a period to refresh metrics</p>
+            <div class="period-filter dpro-periods" id="dashboardPeriodFilter" role="tablist" aria-label="Dashboard period">
+              <button type="button" class="period-chip" data-period="d7" onclick="setDashboardPeriod('d7')">7 days</button>
+              <button type="button" class="period-chip" data-period="w2" onclick="setDashboardPeriod('w2')">2 weeks</button>
+              <button type="button" class="period-chip" data-period="w3" onclick="setDashboardPeriod('w3')">3 weeks</button>
+              <button type="button" class="period-chip active" data-period="month" onclick="setDashboardPeriod('month')">1 month</button>
+              <span id="dashboardMonthChips" class="dpro-month-chips"></span>
+              <button type="button" class="period-chip" data-period="m6" onclick="setDashboardPeriod('m6')">6 months</button>
             </div>
-            <div class="muted period-range-label" id="dashboardPeriodLabel"></div>
           </div>
-          <div class="dash-right">
-            <div style="display:flex;flex-direction:column;align-items:flex-end;gap:8px;">
-              <div class="muted" id="todayLabel"></div>
-            </div>
-          </div>
-        </div>
-          <div class="kpi-grid" aria-label="KPIs">
-          <!-- First Row: 3 main balance cards -->
-          <div class="kpi-card span-4 positive">
-            <div class="kpi-top"><div class="kpi-ic">💰</div></div>
-            <div class="kpi-meta"><div class="kpi-label">Cash Balance</div><div class="kpi-value" id="kpiCashBalance">Rs 0</div></div>
-          </div>
-          <div class="kpi-card span-4 positive">
-            <div class="kpi-top"><div class="kpi-ic">🏦</div></div>
-            <div class="kpi-meta"><div class="kpi-label">Bank Balance</div><div class="kpi-value" id="kpiBankBalance">Rs 0</div></div>
-          </div>
-          <div class="kpi-card span-4 positive">
-            <div class="kpi-top"><div class="kpi-ic">🧾</div></div>
-            <div class="kpi-meta"><div class="kpi-label">Total Balance</div><div class="kpi-value" id="kpiTotalBalance">Rs 0</div></div>
-          </div>
+        </header>
 
-          <!-- Second Row: 4 sales/expense cards in one row -->
-          <div class="kpi-card span-3 positive">
-            <div class="kpi-top"><div class="kpi-ic">📈</div></div>
-            <div class="kpi-meta"><div class="kpi-label">Total Revenue</div><div class="kpi-value" id="kpiTotalRevenue">Rs 0</div></div>
+        <section class="dpro-charts-row" aria-label="Sales charts">
+          <div class="card dpro-panel dpro-panel-analytics">
+            <div class="section-title">
+              <div>
+                <h2>Sales analytics</h2>
+                <div class="muted" id="dashTrendChartNote">Revenue · expenses · profit</div>
+              </div>
+            </div>
+            <div class="chart-wrap dpro-chart-lg dpro-chart-stage">
+              <canvas id="salesExpenseTrendChart"></canvas>
+            </div>
           </div>
-          <div class="kpi-card span-3 positive">
-            <div class="kpi-top"><div class="kpi-ic" style="display: flex; align-items: center; justify-content: center; gap: 6px;"><img src="assets/swiggy.jpeg" style="width: 24px; height: 24px; object-fit: contain;" /><img src="assets/zomato.png" style="width: 24px; height: 24px; object-fit: contain;" /></div></div>
-            <div class="kpi-meta"><div class="kpi-label">Online Sales</div><div class="kpi-value" id="kpiOnlineSales">Rs 0</div></div>
+          <div class="card dpro-panel">
+            <div class="section-title">
+              <div>
+                <h2>Swiggy &amp; Zomato</h2>
+                <div class="muted" id="onlinePayoutChartNote">Weekly platform sales</div>
+              </div>
+            </div>
+            <div class="chart-wrap dpro-chart-md dpro-chart-stage dpro-chart-stage-soft">
+              <canvas id="onlinePayoutTrendChart"></canvas>
+            </div>
           </div>
-          <div class="kpi-card span-3 positive">
-            <div class="kpi-top"><div class="kpi-ic">🏪</div></div>
-            <div class="kpi-meta"><div class="kpi-label">Retail Sales</div><div class="kpi-value" id="kpiRetailSales">Rs 0</div></div>
-          </div>
-          <div class="kpi-card span-3 positive">
-            <div class="kpi-top"><div class="kpi-ic">📄</div></div>
-            <div class="kpi-meta"><div class="kpi-label">Total Expenses</div><div class="kpi-value" id="kpiTotalExpenses">Rs 0</div></div>
-          </div>
+        </section>
 
-          <!-- Third Row: Net Profit card in full width -->
-          <div class="kpi-card span-12" id="netProfitCard">
-            <div class="kpi-top"><div class="kpi-ic">💎</div></div>
-            <div class="kpi-meta"><div class="kpi-label">Net Profit</div><div class="kpi-value" id="kpiNetProfit">Rs 0</div></div>
-          </div>
-        </div>
+        <section class="dpro-kpi-grid" aria-label="Key metrics">
+          <article class="dpro-kpi" data-tone="cyan">
+            <div class="dpro-kpi-strip"></div>
+            <div class="dpro-kpi-head">
+              <div class="dpro-kpi-icon"><i data-lucide="trending-up"></i></div>
+            </div>
+            <div class="dpro-kpi-label">Sales</div>
+            <div class="dpro-kpi-value" id="kpiTotalRevenue">Rs 0</div>
+            <canvas class="dpro-spark" id="sparkSales" width="120" height="36" aria-hidden="true"></canvas>
+          </article>
+          <article class="dpro-kpi" data-tone="green" id="netProfitCard">
+            <div class="dpro-kpi-strip"></div>
+            <div class="dpro-kpi-head">
+              <div class="dpro-kpi-icon"><i data-lucide="gem"></i></div>
+            </div>
+            <div class="dpro-kpi-label">Period profit / loss</div>
+            <div class="dpro-kpi-value" id="kpiNetProfit">Rs 0</div>
+            <div class="dpro-kpi-hint muted" id="kpiGrossHint">Sales − expenses this period</div>
+            <canvas class="dpro-spark" id="sparkProfit" width="120" height="36" aria-hidden="true"></canvas>
+          </article>
+          <article class="dpro-kpi" data-tone="rose">
+            <div class="dpro-kpi-strip"></div>
+            <div class="dpro-kpi-head">
+              <div class="dpro-kpi-icon"><i data-lucide="receipt"></i></div>
+            </div>
+            <div class="dpro-kpi-label">Total expenses</div>
+            <div class="dpro-kpi-value" id="kpiTotalExpenses">Rs 0</div>
+            <canvas class="dpro-spark" id="sparkExpenses" width="120" height="36" aria-hidden="true"></canvas>
+          </article>
+          <article class="dpro-kpi" data-tone="amber">
+            <div class="dpro-kpi-strip"></div>
+            <div class="dpro-kpi-head">
+              <div class="dpro-kpi-icon"><i data-lucide="file-warning"></i></div>
+            </div>
+            <div class="dpro-kpi-label">Pending payments</div>
+            <div class="dpro-kpi-value" id="kpiPendingBills">Rs 0</div>
+            <div class="dpro-kpi-hint muted" id="kpiPendingHint">Unpaid supplier + expenses</div>
+          </article>
+          <article class="dpro-kpi" data-tone="cyan">
+            <div class="dpro-kpi-strip"></div>
+            <div class="dpro-kpi-head">
+              <div class="dpro-kpi-icon"><i data-lucide="wallet"></i></div>
+            </div>
+            <div class="dpro-kpi-label">Cash in hand</div>
+            <div class="dpro-kpi-value" id="kpiCashBalance">Rs 0</div>
+            <div class="dpro-kpi-hint muted" id="kpiCashHint">Physical cash</div>
+          </article>
+          <article class="dpro-kpi" data-tone="blue">
+            <div class="dpro-kpi-strip"></div>
+            <div class="dpro-kpi-head">
+              <div class="dpro-kpi-icon"><i data-lucide="landmark"></i></div>
+            </div>
+            <div class="dpro-kpi-label">Bank balance</div>
+            <div class="dpro-kpi-value" id="kpiBankBalance">Rs 0</div>
+            <div class="dpro-kpi-hint muted" id="kpiBankHint">Bank account</div>
+          </article>
+          <article class="dpro-kpi" data-tone="violet" id="netPositionCard">
+            <div class="dpro-kpi-strip"></div>
+            <div class="dpro-kpi-head">
+              <div class="dpro-kpi-icon"><i data-lucide="scale"></i></div>
+            </div>
+            <div class="dpro-kpi-label">Total balance</div>
+            <div class="dpro-kpi-value" id="kpiTotalBalance">Rs 0</div>
+            <div class="dpro-kpi-hint muted" id="kpiTotalBalanceHint">Cash + bank − pending</div>
+          </article>
+          <article class="dpro-kpi" data-tone="violet">
+            <div class="dpro-kpi-strip"></div>
+            <div class="dpro-kpi-head">
+              <div class="dpro-kpi-icon"><i data-lucide="smartphone"></i></div>
+            </div>
+            <div class="dpro-kpi-label">UPI / Online</div>
+            <div class="dpro-kpi-value" id="kpiUpiOnline">Rs 0</div>
+            <div class="dpro-kpi-hint muted" id="kpiOnlineHint">Platforms separate below</div>
+          </article>
+          <!-- Legacy hooks -->
+          <span id="kpiOnlineSales" class="sr-only" hidden>Rs 0</span>
+          <span id="kpiRetailSales" class="sr-only" hidden>Rs 0</span>
+          <span id="kpiMarginPct" class="sr-only" hidden>0%</span>
+          <span id="kpiMarginHint" class="sr-only" hidden></span>
+          <span id="kpiOrdersAov" class="sr-only" hidden>0</span>
+          <span id="kpiStaffPresent" class="sr-only" hidden>0</span>
+        </section>
 
-        <div class="content-grid">
-          <div class="content-col">
-            <div class="card">
-              <div class="section-title"><h2>Sales Overview</h2></div>
-              <div class="chart-wrap"><canvas id="salesOverviewChart"></canvas></div>
+        <section class="kg-live-wrap" aria-label="Live sales and net margin">
+          <div class="kg-live-card">
+            <div class="kg-live-head">
+              <div>
+                <h2 style="margin:0;font-size:16px;">Today's live sales</h2>
+                <div class="muted" id="kgLiveUpdated">Waiting…</div>
+              </div>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <input type="date" id="kgLiveDate" aria-label="Business date" />
+                <span class="kg-live-badge" id="kgLiveBadge">LIVE</span>
+              </div>
             </div>
-            <div class="card">
-              <div class="section-title"><h2>Recent Activity</h2></div>
-              <div id="recentTransactionsList" class="list"></div>
+            <div class="kg-live-kpis">
+              <div class="kg-live-kpi"><div class="label">Total sales</div><div class="value" id="kgLiveTotalSales">₹0</div></div>
+              <div class="kg-live-kpi"><div class="label">Bills</div><div class="value" id="kgLiveBillCount">0</div></div>
+              <div class="kg-live-kpi"><div class="label">Avg bill</div><div class="value" id="kgLiveAov">₹0</div></div>
+              <div class="kg-live-kpi"><div class="label">Cash</div><div class="value" id="kgLiveCashSales">₹0</div><div class="muted" id="kgLiveCashCount">0 bills</div></div>
+              <div class="kg-live-kpi"><div class="label">Online (UPI)</div><div class="value" id="kgLiveOnlineSales">₹0</div><div class="muted" id="kgLiveOnlineCount">0 bills</div></div>
+              <div class="kg-live-kpi"><div class="label">Platforms</div>
+                <div class="kg-live-chips"><span>Swiggy <b id="kgLiveSwiggy">₹0</b></span><span>Zomato <b id="kgLiveZomato">₹0</b></span></div>
+              </div>
             </div>
+            <div class="kg-live-chart" style="margin-top:12px;"><canvas id="kgLiveHourlyChart"></canvas></div>
+            <div class="muted" id="kgLiveEmpty" style="display:none;margin-top:8px;">No sales yet today</div>
+            <button type="button" class="btn btn-secondary" id="kgRebuildSummaries" style="margin-top:8px;">Rebuild daily summaries</button>
           </div>
-          <div class="content-col">
-            <div class="card">
-              <div class="section-title"><h2>Expense Breakdown</h2></div>
-              <div class="chart-wrap"><canvas id="expenseBreakdownChart"></canvas></div>
-            </div>
-            <div class="card">
-              <div class="section-title"><h2>Upcoming Payments</h2></div>
-              <div id="upcomingPaymentsList" class="list"></div>
-            </div>
+          <div class="kg-live-card">
+            <h2 style="margin:0 0 8px;font-size:16px;">Cash vs Online</h2>
+            <div class="kg-live-chart"><canvas id="kgLiveDonutChart"></canvas></div>
           </div>
-        </div>
+          <div id="kgNetMarginBox" class="kg-margin-box" aria-label="Net margin">
+            <div class="kg-margin-label">Net Margin</div>
+            <div class="muted">Loading…</div>
+          </div>
+        </section>
+
+        <section class="dpro-widgets">
+          <div class="card dpro-panel">
+            <div class="section-title">
+              <div>
+                <h2>Payment mix</h2>
+                <div class="muted" id="paymentMixNote">Cash · UPI · platforms</div>
+              </div>
+            </div>
+            <div class="chart-wrap dpro-chart-md"><canvas id="paymentMixChart"></canvas></div>
+          </div>
+          <div class="card dpro-panel">
+            <div class="section-title">
+              <div>
+                <h2>Monthly cash vs online</h2>
+                <div class="muted" id="cashOnlineMonthlyNote">Cash &amp; online received by month</div>
+              </div>
+            </div>
+            <div class="chart-wrap dpro-chart-md"><canvas id="cashOnlineMonthlyChart"></canvas></div>
+          </div>
+          <div class="card dpro-panel">
+            <div class="section-title">
+              <h2>Inventory &amp; expiry</h2>
+              <button type="button" class="btn-ghost" onclick="showSection('inventory')">Open</button>
+            </div>
+            <div id="dashStockAlertsList" class="dpro-list"></div>
+          </div>
+          <div class="card dpro-panel">
+            <div class="section-title">
+              <h2>Reminders</h2>
+              <button type="button" class="btn-ghost" onclick="showSection('reminders')">Open</button>
+            </div>
+            <div class="dpro-rem-stats" id="dashReminderStats"></div>
+            <div id="dashRemindersList" class="dpro-list"></div>
+          </div>
+          <div class="card dpro-panel">
+            <div class="section-title"><h2>Best sellers</h2></div>
+            <div id="dashBestSellers" class="dpro-list dpro-sellers"></div>
+          </div>
+          <div class="card dpro-panel">
+            <div class="section-title"><h2>Expense summary</h2></div>
+            <div class="chart-wrap dpro-chart-md"><canvas id="expenseBreakdownChart"></canvas></div>
+          </div>
+          <div class="card dpro-panel">
+            <div class="section-title">
+              <h2>Staff snapshot</h2>
+              <button type="button" class="btn-ghost" onclick="showSection('staff')">Open</button>
+            </div>
+            <div id="dashStaffSnapshot" class="dpro-list"></div>
+          </div>
+          <div class="card dpro-panel">
+            <div class="section-title"><h2>Recent activity</h2></div>
+            <div id="recentTransactionsList" class="dpro-timeline"></div>
+          </div>
+        </section>
+
+        <!-- Keep canvases for resize-safe legacy refs (hidden) -->
+        <canvas id="salesOverviewChart" hidden width="1" height="1"></canvas>
+        <div id="upcomingPaymentsList" class="sr-only" hidden></div>
       </div>
 
       <div id="sales-section" class="dashboard-section">
         <div class="card">
-          <div class="section-title"><h2>Add Daily Sales</h2></div>
-          <div class="grid-5">
-            <input id="saleDate" type="date" />
-            <input id="saleCashAmount" type="number" placeholder="Cash amount" />
-            <input id="saleSwiggyAmount" type="number" placeholder="Swiggy amount" />
-            <input id="saleZomatoAmount" type="number" placeholder="Zomato amount" />
-            <input id="saleOtherOnlineAmount" type="number" placeholder="Other online amount" />
-            <input id="saleNote" placeholder="Notes (optional)" />
-            <button onclick="addSale()">Save Sale</button>
+          <div class="section-title">
+            <div>
+              <h2>Add Daily Sales</h2>
+              <div class="kg-sales-banner" role="status" style="margin-top:8px;">
+                POS bills are added automatically. Use this only for sales not billed in POS.
+              </div>
+              <div class="muted" id="salesListPeriodLabel">Showing this month</div>
+            </div>
+            <div class="period-filter" id="salesListPeriodFilter" role="tablist" aria-label="Sales list period">
+              <button type="button" class="period-chip active" data-period="month" onclick="setListPeriod('sales','month')">Month</button>
+              <button type="button" class="period-chip" data-period="m2" onclick="setListPeriod('sales','m2')">2M</button>
+              <button type="button" class="period-chip" data-period="m3" onclick="setListPeriod('sales','m3')">3M</button>
+              <button type="button" class="period-chip" data-period="m6" onclick="setListPeriod('sales','m6')">6M</button>
+              <button type="button" class="period-chip" data-period="year" onclick="setListPeriod('sales','year')">Year</button>
+            </div>
+          </div>
+          <div class="sales-form">
+            <div class="sales-field">
+              <label for="saleDate">Date</label>
+              <input id="saleDate" type="date" />
+            </div>
+            <div class="sales-field">
+              <label for="saleCashAmount">Cash</label>
+              <input id="saleCashAmount" type="number" min="0" step="1" placeholder="0" />
+            </div>
+            <div class="sales-field">
+              <label for="saleSwiggyAmount">Swiggy</label>
+              <input id="saleSwiggyAmount" type="number" min="0" step="1" placeholder="0" />
+            </div>
+            <div class="sales-field">
+              <label for="saleZomatoAmount">Zomato</label>
+              <input id="saleZomatoAmount" type="number" min="0" step="1" placeholder="0" />
+            </div>
+            <div class="sales-field">
+              <label for="saleOtherOnlineAmount">Online / UPI</label>
+              <input id="saleOtherOnlineAmount" type="number" min="0" step="1" placeholder="0" />
+            </div>
+            <div class="sales-field sales-field-wide">
+              <label for="saleNote">Notes</label>
+              <input id="saleNote" placeholder="Optional" />
+            </div>
+            <div class="sales-field sales-field-action">
+              <label aria-hidden="true">&nbsp;</label>
+              <button type="button" onclick="addSale()">Save Sale</button>
+            </div>
           </div>
           <div id="salesList" class="list"></div>
         </div>
@@ -1840,28 +2077,61 @@
         <div id="supplierTab-bills" class="tabPanel">
         <div class="card">
           <div class="section-title"><h2>Supplier Bills</h2></div>
-          <div class="grid-5">
-            <input id="purchaseDate" type="date" />
-            <select id="purchaseSellerSelect"></select>
-            <select id="purchaseItemSelect"></select>
-            <input id="purchaseRate" type="number" placeholder="Rate (optional)" />
-            <input id="purchasePrice" type="number" placeholder="Amount" />
-            <select id="purchasePaidStatus" onchange="onPurchasePaidStatusChanged()">
-              <option value="unpaid" selected>Unpaid</option>
-              <option value="paid">Paid</option>
-            </select>
-          </div>
-          <div class="grid-5" style="margin-top: 10px;">
-            <input id="purchaseQty" type="number" placeholder="Qty (optional)" />
-            <button type="button" class="secondary" onclick="addTempPurchaseItem()">+ Add item</button>
-            <input id="purchaseTotalAmount" type="number" placeholder="Total amount (optional)" />
-            <div id="purchasePayMethodWrap" style="display:none">
+          <div class="purchase-form">
+            <div class="sales-field">
+              <label for="purchaseDate">Date</label>
+              <input id="purchaseDate" type="date" />
+            </div>
+            <div class="sales-field">
+              <label for="purchaseSellerSelect">Supplier name</label>
+              <select id="purchaseSellerSelect" onchange="fillItemSelectForSupplier()"></select>
+            </div>
+            <div class="sales-field">
+              <label for="purchaseItemSelect">Supplier item</label>
+              <select id="purchaseItemSelect" onchange="onPurchaseItemChanged()"></select>
+            </div>
+            <div class="sales-field">
+              <label for="purchaseRate">Price</label>
+              <input id="purchaseRate" type="number" min="0" step="1" placeholder="0" oninput="recalcPurchaseAmount()" />
+            </div>
+            <div class="sales-field">
+              <label for="purchaseQty">Quantity</label>
+              <input id="purchaseQty" type="number" min="0" step="any" placeholder="0" oninput="recalcPurchaseAmount()" />
+            </div>
+            <div class="sales-field">
+              <label for="purchasePrice">Amount</label>
+              <input id="purchasePrice" type="number" min="0" step="1" placeholder="Auto = price × qty" readonly />
+            </div>
+            <div class="sales-field">
+              <label for="purchaseExpiry">Expiry (milk/paneer)</label>
+              <input id="purchaseExpiry" type="date" />
+            </div>
+            <div class="sales-field">
+              <label for="purchasePaidStatus">Status</label>
+              <select id="purchasePaidStatus" onchange="onPurchasePaidStatusChanged()">
+                <option value="unpaid" selected>Unpaid</option>
+                <option value="paid">Paid</option>
+              </select>
+            </div>
+            <div class="sales-field" id="purchasePayMethodWrap" style="display:none">
+              <label for="purchasePaymentMethod">Payment</label>
               <select id="purchasePaymentMethod">
                 <option value="cash">Cash</option>
                 <option value="online">Online</option>
               </select>
             </div>
-            <button onclick="addPurchase()">Save Bill</button>
+            <div class="sales-field sales-field-action">
+              <label aria-hidden="true">&nbsp;</label>
+              <button type="button" class="secondary" onclick="addTempPurchaseItem()">+ Add item</button>
+            </div>
+            <div class="sales-field">
+              <label for="purchaseTotalAmount">Bill total</label>
+              <input id="purchaseTotalAmount" type="number" min="0" step="1" placeholder="0" readonly />
+            </div>
+            <div class="sales-field sales-field-action">
+              <label aria-hidden="true">&nbsp;</label>
+              <button type="button" onclick="addPurchase()">Save Bill</button>
+            </div>
           </div>
           <div class="card" style="padding:14px;margin-top:12px;">
             <div class="section-title"><h2 style="font-size:14px;">Selected items</h2></div>
@@ -1958,58 +2228,209 @@
         </div>
       </div>
 
+      <!-- Salary Slip PDF picker -->
+      <div id="salaryPdfOverlay" class="modalOverlay" role="dialog" aria-modal="true" aria-label="Download salary slip PDF">
+        <div class="modal" style="width:min(440px,100%)">
+          <div class="modalHeader">
+            <div>
+              <div class="modalTitle">वेतन पर्ची PDF</div>
+              <div class="muted" style="font-size:12px;margin-top:4px;">कर्मचारी और महीना चुनें, फिर Save as PDF</div>
+            </div>
+            <button type="button" class="secondary btn-sm" onclick="closeSalaryPdfModal()">बंद करें</button>
+          </div>
+          <div class="modalBody">
+            <label for="salaryPdfStaff" class="muted" style="font-size:12px;font-weight:700;">कर्मचारी</label>
+            <select id="salaryPdfStaff" aria-label="Select employee"></select>
+            <label for="salaryPdfMonth" class="muted" style="font-size:12px;font-weight:700;">महीना</label>
+            <input id="salaryPdfMonth" type="month" aria-label="Salary month" />
+          </div>
+          <div class="modalFooter">
+            <button type="button" class="secondary" onclick="closeSalaryPdfModal()">रद्द करें</button>
+            <button type="button" onclick="confirmSalaryPdfDownload()">PDF डाउनलोड</button>
+          </div>
+        </div>
+      </div>
+
       <div id="expenses-section" class="dashboard-section">
         <div class="card">
-          <div class="section-title"><h2>Expenses</h2></div>
-          <div class="grid-5">
-            <input id="billDate" type="date" />
-            <select id="billType">
-              <option value="rent">Rent</option>
-              <option value="utilities">Utilities</option>
-              <option value="misc">Misc</option>
-              <option value="staff_food">Staff meals / food</option>
-              <option value="kitchen">Kitchen supplies / misc</option>
-              <option value="shop_other">Shop / unexpected</option>
-            </select>
-            <input id="billAmount" type="number" placeholder="Amount" />
-            <select id="billStatus"><option value="unpaid">Unpaid</option><option value="paid">Paid</option></select>
-            <select id="billPaymentMethod">
-              <option value="cash">Cash</option>
-              <option value="online">Online</option>
-            </select>
+          <div class="section-title">
+            <div>
+              <h2>Daily Expenses</h2>
+              <div class="muted" id="expensesListPeriodLabel">Showing this month</div>
+            </div>
+            <div class="period-filter" id="expensesListPeriodFilter" role="tablist" aria-label="Expenses list period">
+              <button type="button" class="period-chip active" data-period="month" onclick="setListPeriod('expenses','month')">Month</button>
+              <button type="button" class="period-chip" data-period="m2" onclick="setListPeriod('expenses','m2')">2M</button>
+              <button type="button" class="period-chip" data-period="m3" onclick="setListPeriod('expenses','m3')">3M</button>
+              <button type="button" class="period-chip" data-period="m6" onclick="setListPeriod('expenses','m6')">6M</button>
+              <button type="button" class="period-chip" data-period="year" onclick="setListPeriod('expenses','year')">Year</button>
+            </div>
           </div>
-          <div class="grid-2" style="margin-top: 10px;">
-            <input id="billNote" placeholder="Note (optional)" />
+          <div class="purchase-form" style="margin-top:4px;">
+            <div class="sales-field">
+              <label for="billExpenseGroup">Type</label>
+              <select id="billExpenseGroup" onchange="onExpenseGroupChanged()">
+                <option value="kitchen" selected>Kitchen / grocery</option>
+                <option value="fixed">Fixed costs</option>
+              </select>
+            </div>
+            <div class="sales-field">
+              <label for="billType">Category</label>
+              <select id="billType"></select>
+            </div>
+            <div class="sales-field sales-field-action">
+              <label aria-hidden="true">&nbsp;</label>
+              <button type="button" class="secondary" onclick="addCustomExpenseCategory()">+ Add category</button>
+            </div>
+            <div class="sales-field">
+              <label for="billDate">Date</label>
+              <input id="billDate" type="date" />
+            </div>
+            <div class="sales-field">
+              <label for="billAmount">Amount</label>
+              <input id="billAmount" type="number" min="0" step="1" placeholder="0" />
+            </div>
+            <div class="sales-field">
+              <label for="billStatus">Status</label>
+              <select id="billStatus" onchange="onBillPaidStatusChanged()">
+                <option value="paid" selected>Paid</option>
+                <option value="unpaid">Unpaid</option>
+              </select>
+            </div>
+            <div class="sales-field" id="billPayMethodWrap">
+              <label for="billPaymentMethod">Payment</label>
+              <select id="billPaymentMethod">
+                <option value="cash" selected>Cash</option>
+                <option value="online">Online</option>
+              </select>
+            </div>
+            <div class="sales-field sales-field-wide">
+              <label for="billNote">Note</label>
+              <input id="billNote" placeholder="Optional note" />
+            </div>
+            <div class="sales-field sales-field-wide">
+              <label for="billAttachment">Bill photo / PDF</label>
+              <input id="billAttachment" type="file" accept="image/*,application/pdf" />
+            </div>
+            <div class="sales-field sales-field-action">
+              <label aria-hidden="true">&nbsp;</label>
+              <button type="button" onclick="addBill()">Save Expense</button>
+            </div>
           </div>
-          <button onclick="addBill()" style="margin-top: 10px;">Save Expense</button>
-          <div id="billsList" class="list"></div>
+          <div id="billsList" class="list" style="margin-top:14px;"></div>
+        </div>
+        <div class="card" style="margin-top:16px;">
+          <div class="section-title"><h2>Recurring expenses</h2></div>
+          <div class="purchase-form">
+            <div class="sales-field">
+              <label for="recTitle">Title</label>
+              <input id="recTitle" placeholder="Shop rent" />
+            </div>
+            <div class="sales-field">
+              <label for="recCategory">Category</label>
+              <select id="recCategory">
+                <option value="shop_rent">Shop rent</option>
+                <option value="maintenance">Maintenance</option>
+                <option value="limbu_marcha">Limbu marcha bill</option>
+                <option value="light_bill">Light bill</option>
+                <option value="water_bill">Water bill</option>
+                <option value="misc">Other</option>
+              </select>
+            </div>
+            <div class="sales-field">
+              <label for="recAmount">Amount</label>
+              <input id="recAmount" type="number" min="0" step="1" placeholder="0" />
+            </div>
+            <div class="sales-field">
+              <label for="recDay">Day of month</label>
+              <input id="recDay" type="number" min="1" max="28" value="1" />
+            </div>
+            <div class="sales-field">
+              <label for="recPaymentMethod">Payment</label>
+              <select id="recPaymentMethod">
+                <option value="cash">Cash</option>
+                <option value="online" selected>Online</option>
+              </select>
+            </div>
+            <div class="sales-field sales-field-action">
+              <label aria-hidden="true">&nbsp;</label>
+              <button type="button" onclick="addRecurringExpense()">Add recurring</button>
+            </div>
+          </div>
+          <div id="recurringExpensesList" class="list" style="margin-top:14px;"></div>
         </div>
 
-        <div class="card" style="margin-top: 14px;">
+        <div class="card" style="margin-top:16px;">
+          <div class="section-title" style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start;">
+            <div>
+              <h2>Item-wise spend analytics</h2>
+              <div class="muted" id="expenseAnalyticsNote">Where money goes by category</div>
+            </div>
+            <div class="period-filter" id="expenseAnalyticsPeriod" role="tablist" aria-label="Expense analytics period">
+              <button type="button" class="period-chip" data-period="week" onclick="setExpenseAnalyticsPeriod('week')">Weekly</button>
+              <button type="button" class="period-chip active" data-period="month" onclick="setExpenseAnalyticsPeriod('month')">Monthly</button>
+              <button type="button" class="period-chip" data-period="year" onclick="setExpenseAnalyticsPeriod('year')">Yearly</button>
+            </div>
+          </div>
+          <div class="expense-analytics-grid">
+            <div class="chart-wrap dpro-chart-md"><canvas id="expenseItemMixChart"></canvas></div>
+            <div class="chart-wrap dpro-chart-md"><canvas id="expenseItemTrendChart"></canvas></div>
+          </div>
+          <div id="expenseItemRankList" class="list" style="margin-top:14px;"></div>
+        </div>
+      </div>
+
+      <div id="documents-section" class="dashboard-section">
+        <div class="card">
           <div class="section-title">
-            <h2>Staff meals, kitchen &amp; shop</h2>
+            <div>
+              <h2>Documents vault</h2>
+              <div class="muted">FSSAI, stickers, licenses, photos &amp; PDFs — save with a clear name to find later</div>
+            </div>
           </div>
-          <div class="grid-5">
-            <input id="shopExpenseDate" type="date" />
-            <select id="shopExpenseType">
-              <option value="staff_food">Staff meals / food</option>
-              <option value="kitchen">Kitchen / supplies</option>
-              <option value="shop_other">Shop / unexpected</option>
-            </select>
-            <input id="shopExpenseAmount" type="number" min="0" step="1" placeholder="Amount" />
-            <select id="shopExpenseStatus">
-              <option value="unpaid">Unpaid</option>
-              <option value="paid">Paid</option>
-            </select>
-            <select id="shopExpensePayMethod">
-              <option value="cash">Cash</option>
-              <option value="online">Online</option>
+          <div class="purchase-form">
+            <div class="sales-field">
+              <label for="docName">Display name</label>
+              <input id="docName" placeholder="e.g. FSSAI license 2026" />
+            </div>
+            <div class="sales-field">
+              <label for="docCategory">Type</label>
+              <select id="docCategory">
+                <option value="fssai">FSSAI / license</option>
+                <option value="sticker">Sticker / label</option>
+                <option value="certificate">Certificate</option>
+                <option value="photo">Photo</option>
+                <option value="invoice">Invoice / bill scan</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div class="sales-field sales-field-wide">
+              <label for="docNotes">Notes</label>
+              <input id="docNotes" placeholder="Optional note" />
+            </div>
+            <div class="sales-field sales-field-wide">
+              <label for="docFile">File (PDF / image)</label>
+              <input id="docFile" type="file" accept="image/*,application/pdf" />
+            </div>
+            <div class="sales-field sales-field-action">
+              <label aria-hidden="true">&nbsp;</label>
+              <button type="button" onclick="uploadDocument()">Save document</button>
+            </div>
+          </div>
+          <div class="muted" style="margin-top:8px;font-size:12px;">Tip: keep files under ~650KB (compress large PDFs/photos). Images are auto-compressed.</div>
+          <div class="docs-toolbar" style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+            <input id="docSearch" placeholder="Search by name…" oninput="renderDocuments()" style="flex:1;min-width:180px;" />
+            <select id="docFilterCategory" onchange="renderDocuments()" aria-label="Filter documents">
+              <option value="">All types</option>
+              <option value="fssai">FSSAI / license</option>
+              <option value="sticker">Sticker / label</option>
+              <option value="certificate">Certificate</option>
+              <option value="photo">Photo</option>
+              <option value="invoice">Invoice / bill scan</option>
+              <option value="other">Other</option>
             </select>
           </div>
-          <div class="grid-2" style="margin-top: 10px;">
-            <input id="shopExpenseNote" placeholder="Note (optional)" />
-          </div>
-          <button type="button" class="secondary" onclick="addShopExpense()" style="margin-top: 10px;">Save shop / kitchen expense</button>
+          <div id="documentsList" class="docs-grid" style="margin-top:14px;"></div>
         </div>
       </div>
 
@@ -2059,7 +2480,7 @@
         </div>
       </div>
 
-      <div id="daily-closing-section" class="dashboard-section">
+      <div id="daily-closing-section" class="dashboard-section" hidden aria-hidden="true">
         <div class="card">
           <div class="section-title">
             <h2>Daily Closing</h2>
@@ -2169,21 +2590,51 @@
           <div class="section-title" style="margin-top:14px;"><h2>All Employees</h2></div>
           <div id="salaryOverviewList" class="table-like"></div>
 
-          <div class="section-title" style="margin-top:14px;"><h2>Add Staff Advance</h2></div>
+          <div class="kpi-grid" id="salaryMonthEndSummary" style="margin-top:16px;">
+            <div class="kpi-card span-4">
+              <div class="kpi-meta">
+                <div class="kpi-label">Total monthly salary</div>
+                <div class="kpi-value" id="salTotalEarned">Rs 0</div>
+              </div>
+            </div>
+            <div class="kpi-card span-4">
+              <div class="kpi-meta">
+                <div class="kpi-label">Total advances given</div>
+                <div class="kpi-value" id="salTotalAdvance">Rs 0</div>
+              </div>
+            </div>
+            <div class="kpi-card span-4 positive" id="salPayableCard">
+              <div class="kpi-meta">
+                <div class="kpi-label">To pay at month end</div>
+                <div class="kpi-value" id="salTotalPayable">Rs 0</div>
+              </div>
+            </div>
+          </div>
+          <p class="muted" id="salMonthEndHint" style="margin-top:8px;font-size:12px;">Full monthly salaries minus advances and unpaid leave — this is the cash you still need to pay this month.</p>
+
+          <div class="section-title" style="margin-top:14px;"><h2>Add Staff Advance / Pay Full Salary</h2></div>
           <div class="grid-5" style="margin-top: 10px;">
             <input id="advDate" type="date" />
-            <input id="advMonth" type="month" />
-            <select id="advStaff"></select>
+            <input id="advMonth" type="month" onchange="onAdvKindChanged()" />
+            <select id="advStaff" onchange="onAdvKindChanged()"></select>
+            <select id="advKind" onchange="onAdvKindChanged()">
+              <option value="advance" selected>Advance</option>
+              <option value="full_salary">Full Salary (close month)</option>
+            </select>
             <select id="advMethod">
               <option value="cash">Cash</option>
               <option value="online">Online</option>
             </select>
-            <input id="advAmount" type="number" placeholder="Advance amount" />
           </div>
-          <button class="secondary" onclick="addAdvance()" style="margin-top: 10px;">Add Staff Advance</button>
+          <div class="grid-2" style="margin-top:10px;max-width:420px;">
+            <input id="advAmount" type="number" placeholder="Advance amount" />
+            <button type="button" class="secondary" id="advSubmitBtn" onclick="addAdvance()">Add Staff Advance</button>
+          </div>
+          <p class="muted" style="margin-top:8px;font-size:12px;">Full Salary pays remaining (monthly − advances − leave) and closes the month. Excess advance auto-carries to next month until closed.</p>
           <div class="section-title" style="margin-top:14px;">
             <h2>Advances History</h2>
             <div style="display:flex;gap:10px;align-items:center;justify-content:flex-end;flex-wrap:wrap;">
+              <button type="button" class="secondary" onclick="exportStaffMonthPdf()">Download salary slip PDF</button>
               <select id="advancesFilterStaff" onchange="renderAdvances()">
                 <option value="">All staff</option>
               </select>
@@ -2271,21 +2722,23 @@
               <div class="card dark" style="padding:14px;"><div class="muted">Loss days</div><div style="font-weight:900;margin-top:6px;" id="anInsightLossDays">—</div></div>
             </div>
           </div>
+          <div class="card" style="margin-top:14px;">
+            <div class="section-title">
+              <h2>Reports</h2>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <button type="button" class="btn" onclick="exportReportExcel()">Download Excel (CSV)</button>
+                <button type="button" class="btn btn-secondary" onclick="exportReportPdf()">Download / Print PDF</button>
+              </div>
+            </div>
+          </div>
         </div>
         <div class="card">
           <div class="section-title"><h2>Staff Payable (Salary - Advances)</h2></div>
           <div id="staffPayableTable" class="table-like"></div>
         </div>
         <div class="card">
-          <div class="section-title"><h2>Inventory</h2></div>
-          <div class="grid-5">
-            <input id="invItem" placeholder="Item" />
-            <input id="invUnit" placeholder="Unit (kg, pcs...)" />
-            <input id="invQty" type="number" placeholder="Qty" />
-            <input id="invThreshold" type="number" placeholder="Low stock alert" />
-            <button onclick="addInventory()">Save Item</button>
-          </div>
-          <div id="inventoryList" class="list"></div>
+          <div class="section-title"><h2>Stock alerts</h2></div>
+          <div id="anStockAlertsList" class="list-stack"></div>
         </div>
         <div class="card" style="margin-top:14px;">
           <div class="section-title">
@@ -2305,6 +2758,93 @@
         </div>
       </div>
 
+      <!-- ===== PROFIT ANALYSIS SECTION ===== -->
+      <div id="profit-analysis-section" class="dashboard-section">
+        <div class="dash-hero" style="margin-bottom:16px;">
+          <div>
+            <div class="dash-title" style="font-size:1.35rem;">Profit Analysis</div>
+            <div class="muted">Total sales vs all costs — weekly, monthly &amp; daily average</div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            <button type="button" class="period-chip active" id="paPeriodWeek" onclick="setPAPeriod('week')">This Week</button>
+            <button type="button" class="period-chip" id="paPeriodMonth" onclick="setPAPeriod('month')">This Month</button>
+            <button type="button" class="period-chip" id="paPeriodCustom" onclick="setPAPeriod('custom')">Custom</button>
+          </div>
+        </div>
+
+        <!-- Custom date range (hidden by default) -->
+        <div id="paCustomRange" class="card" style="display:none;margin-bottom:16px;padding:14px;">
+          <div class="grid-2" style="gap:12px;max-width:420px;">
+            <div><label class="label">From</label><input type="date" id="paFrom" class="input" /></div>
+            <div><label class="label">To</label><input type="date" id="paTo" class="input" /></div>
+          </div>
+          <button type="button" class="btn" style="margin-top:10px;" onclick="renderProfitAnalysis()">Apply</button>
+        </div>
+
+        <!-- KPI cards row -->
+        <div class="grid-4" id="paKpiRow" style="margin-bottom:16px;gap:12px;">
+          <div class="card dark" style="text-align:center;padding:18px 12px;">
+            <div class="muted" style="font-size:12px;margin-bottom:4px;">Total Sales</div>
+            <div id="paTotalSales" style="font-size:1.5rem;font-weight:700;color:#16C784;">₹0</div>
+          </div>
+          <div class="card dark" style="text-align:center;padding:18px 12px;">
+            <div class="muted" style="font-size:12px;margin-bottom:4px;">Total Costs</div>
+            <div id="paTotalCosts" style="font-size:1.5rem;font-weight:700;color:#EF4444;">₹0</div>
+          </div>
+          <div class="card dark" style="text-align:center;padding:18px 12px;">
+            <div class="muted" style="font-size:12px;margin-bottom:4px;">Net Profit</div>
+            <div id="paNetProfit" style="font-size:1.5rem;font-weight:700;">₹0</div>
+          </div>
+          <div class="card dark" style="text-align:center;padding:18px 12px;">
+            <div class="muted" style="font-size:12px;margin-bottom:4px;">Profit Margin</div>
+            <div id="paProfitMargin" style="font-size:1.5rem;font-weight:700;">0%</div>
+          </div>
+        </div>
+
+        <!-- Daily average row -->
+        <div class="grid-3" style="margin-bottom:16px;gap:12px;">
+          <div class="card dark" style="text-align:center;padding:16px 12px;">
+            <div class="muted" style="font-size:12px;margin-bottom:4px;">Avg Daily Sales</div>
+            <div id="paAvgDailySales" style="font-size:1.2rem;font-weight:700;color:#E87A3A;">₹0</div>
+          </div>
+          <div class="card dark" style="text-align:center;padding:16px 12px;">
+            <div class="muted" style="font-size:12px;margin-bottom:4px;">Avg Daily Cost</div>
+            <div id="paAvgDailyCost" style="font-size:1.2rem;font-weight:700;color:#F59E0B;">₹0</div>
+          </div>
+          <div class="card dark" style="text-align:center;padding:16px 12px;">
+            <div class="muted" style="font-size:12px;margin-bottom:4px;">Avg Daily Profit</div>
+            <div id="paAvgDailyProfit" style="font-size:1.2rem;font-weight:700;">₹0</div>
+          </div>
+        </div>
+
+        <!-- Expense category breakdown -->
+        <div class="content-grid" style="grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+          <div class="card">
+            <div class="section-title"><h2>Cost Breakdown</h2></div>
+            <div id="paCostBreakdown" class="list-stack"></div>
+          </div>
+          <div class="card" style="display:flex;flex-direction:column;align-items:center;">
+            <div class="section-title" style="width:100%;"><h2>Cost Ratio</h2></div>
+            <div style="position:relative;width:100%;max-width:280px;height:240px;">
+              <canvas id="paPieChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pending bills table -->
+        <div class="card" style="margin-bottom:16px;">
+          <div class="section-title"><h2>Pending &amp; Upcoming Bills</h2></div>
+          <div id="paPendingBills" class="list-stack"></div>
+        </div>
+
+        <!-- Weekly breakdown table -->
+        <div class="card">
+          <div class="section-title"><h2>Weekly Breakdown</h2></div>
+          <div id="paWeeklyTable" style="overflow-x:auto;"></div>
+        </div>
+      </div>
+      <!-- ===== END PROFIT ANALYSIS ===== -->
+
       <div id="backup-section" class="dashboard-section">
         <div class="card">
           <div class="section-title"><h2>Backup</h2></div>
@@ -2315,6 +2855,124 @@
             </label>
             <button class="warn" onclick="resetAll()">Reset All Data</button>
           </div>
+        </div>
+      </div>
+
+      <div id="inventory-section" class="dashboard-section">
+        <div class="dash-hero" style="margin-bottom:16px;">
+          <div>
+            <div class="dash-title" style="font-size:1.35rem;">Inventory</div>
+            <div class="muted">Stock on hand, kitchen usage, lots &amp; expiry</div>
+          </div>
+        </div>
+        <div class="card" id="stockAlertsCard" style="margin-bottom:16px;border-color:rgba(239,68,68,.35);">
+          <div class="section-title"><h2>Alerts</h2></div>
+          <div id="stockAlertsList" class="list-stack"></div>
+        </div>
+        <div class="content-grid inv-layout">
+          <div class="card">
+            <div class="section-title"><h2>Add item</h2></div>
+            <div class="grid-2 inv-form">
+              <div>
+                <label class="label">Item</label>
+                <input id="invItem" class="input" placeholder="e.g. Paneer" />
+              </div>
+              <div>
+                <label class="label">Unit</label>
+                <input id="invUnit" class="input" placeholder="kg / litre / pcs" />
+              </div>
+              <div>
+                <label class="label">Opening qty</label>
+                <input id="invQty" class="input" type="number" min="0" step="0.01" placeholder="0" />
+              </div>
+              <div>
+                <label class="label">Low-stock alert</label>
+                <input id="invThreshold" class="input" type="number" min="0" step="0.01" placeholder="e.g. 2" />
+              </div>
+            </div>
+            <button type="button" class="btn" style="margin-top:14px;" onclick="addInventory()">Save item</button>
+          </div>
+          <div class="card">
+            <div class="section-title"><h2>Stock in / out / waste</h2></div>
+            <div class="grid-2 inv-form">
+              <div>
+                <label class="label">Item</label>
+                <select id="invMoveItem" class="input"></select>
+              </div>
+              <div>
+                <label class="label">Type</label>
+                <select id="invMoveType" class="input" onchange="onInvMoveTypeChanged()">
+                  <option value="in">Stock in</option>
+                  <option value="out">Daily kitchen usage</option>
+                  <option value="waste">Waste / spoilage</option>
+                </select>
+              </div>
+              <div>
+                <label class="label">Quantity</label>
+                <input id="invMoveQty" class="input" type="number" min="0.01" step="0.01" placeholder="0" />
+              </div>
+              <div>
+                <label class="label">Reason / note</label>
+                <input id="invMoveReason" class="input" placeholder="Purchase / daily kitchen / spoilage" />
+              </div>
+              <div id="invLotFields" class="sales-field-wide" style="display:none;grid-column:1/-1;">
+                <div class="grid-2 inv-form">
+                  <div>
+                    <label class="label">Supplier (optional)</label>
+                    <input id="invLotSupplier" class="input" placeholder="e.g. Dairy supplier" />
+                  </div>
+                  <div>
+                    <label class="label">Expiry date</label>
+                    <input id="invLotExpiry" class="input" type="date" />
+                  </div>
+                </div>
+              </div>
+            </div>
+            <button type="button" class="btn" style="margin-top:14px;" onclick="adjustInventoryStock()">Record movement</button>
+          </div>
+        </div>
+        <div class="card" style="margin-top:16px;">
+          <div class="section-title"><h2>Current stock</h2></div>
+          <div id="inventoryList" class="list-stack"></div>
+        </div>
+        <div class="card" style="margin-top:16px;">
+          <div class="section-title"><h2>Stock lots (FIFO / expiry)</h2></div>
+          <div id="stockLotsList" class="list-stack"></div>
+        </div>
+        <div class="card" style="margin-top:16px;">
+          <div class="section-title"><h2>Recent movements</h2></div>
+          <div id="inventoryMovementsList" class="list-stack"></div>
+        </div>
+      </div>
+
+      <div id="reminders-section" class="dashboard-section">
+        <div class="dash-hero" style="margin-bottom:16px;">
+          <div>
+            <div class="dash-title" style="font-size:1.35rem;">Reminders</div>
+            <div class="muted">Rent, bills, supplier dues — get notified before due date</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="section-title"><h2>New reminder</h2></div>
+          <div class="grid-3 rem-form">
+            <div>
+              <label class="label">Title</label>
+              <input id="remTitle" class="input" placeholder="e.g. Shop rent" />
+            </div>
+            <div>
+              <label class="label">Due date</label>
+              <input id="remDueDate" class="input" type="date" />
+            </div>
+            <div>
+              <label class="label">Notify before (days)</label>
+              <input id="remNotifyBeforeDays" class="input" type="number" min="0" step="1" value="5" />
+            </div>
+          </div>
+          <button type="button" class="btn" style="margin-top:14px;" onclick="addReminder()">Save reminder</button>
+        </div>
+        <div class="card" style="margin-top:16px;">
+          <div class="section-title"><h2>Upcoming</h2></div>
+          <div id="reminderList" class="list-stack"></div>
         </div>
       </div>
 
@@ -2358,6 +3016,10 @@
                     <option value="false">No</option>
                   </select>
                 </div>
+                <div style="flex: 1 1 100%;">
+                  <label class="label">Recipe stock deduct (item:qty per plate, comma-separated)</label>
+                  <input id="menuRecipe" class="input" placeholder="e.g. Paneer:0.15, Butter:0.02, Oil:0.01" />
+                </div>
                 <button class="btn" onclick="saveMenuItem()">Save Item</button>
                 <button class="btn btn-secondary" type="button" onclick="menuAutoFillHindiFromEnglish()">Fill Hindi</button>
                 <button class="btn btn-secondary" onclick="resetMenuForm()">Clear</button>
@@ -2393,121 +3055,180 @@
       </div>
 
       <div id="pos-section" class="dashboard-section">
-        <div class="pos-shell" style="position:relative;">
-          <div class="pos-topbar">
-            <div class="left">
-              <input id="posSearch" class="pos-search" placeholder="Search menu..." oninput="renderPosMenu()" />
-              <div class="pos-actionsbar">
-                <button class="pos-btn gray" onclick="toggleSidebar()"><span id="posSidebarBtnText">Hide Sidebar</span></button>
-                <button class="pos-btn gray" type="button" onclick="posShowHistory()">History</button>
-                <button class="pos-btn gray" type="button" onclick="clearAppCache()">Clear cache</button>
-              </div>
+        <div id="kgPosRoot" class="kg-pos-root">
+          <div class="kg-pos-top">
+            <div class="kg-pos-ordertypes" role="tablist" aria-label="Order type">
+              <button type="button" data-order-type="dinein">Dine-In</button>
+              <button type="button" data-order-type="takeaway" class="active">Takeaway</button>
+              <button type="button" data-order-type="delivery">Delivery</button>
+              <button type="button" data-order-type="swiggy">Swiggy</button>
+              <button type="button" data-order-type="zomato">Zomato</button>
+            </div>
+            <div class="kg-pos-meta">
+              <span id="kgPosClock">—</span>
+              <span>Cashier: <b id="kgPosCashier">—</b></span>
+              <span>Ticket: <b id="kgPosBillPreview">—</b></span>
+              <span class="kg-pos-sync ok" id="kgPosSync">Synced</span>
+              <button type="button" data-pos-action="settings">Printer / Settings</button>
+              <button type="button" onclick="toggleSidebar()"><span id="posSidebarBtnText">Sidebar</span></button>
+              <button type="button" onclick="posShowHistory()">History</button>
             </div>
           </div>
-
-          <div id="posCategoryChips" class="pos-chiprow"></div>
-
-          <div class="pos-grid">
-            <div class="pos-card">
-              <div id="posMenuGrid" class="pos-menu-grid"></div>
-            </div>
-
-            <div class="pos-card pos-right">
-              <div style="display:flex;justify-content:space-between;gap:10px;align-items:flex-start;">
+          <div class="kg-pos-tables" id="kgPosTables" style="display:none;"></div>
+          <div id="kgPosHeld" class="kg-pos-held" style="display:none;"></div>
+          <div class="kg-pos-body">
+            <aside class="kg-pos-cats" id="kgPosCats" aria-label="Categories"></aside>
+            <section class="kg-pos-center">
+              <input id="kgPosSearch" class="kg-pos-search" placeholder="Search menu (F2)…" autocomplete="off" />
+              <div id="kgPosMenuGrid" class="kg-pos-menu-grid"></div>
+              <!-- legacy ids kept for old hooks -->
+              <div id="posMenuGrid" hidden></div>
+              <div id="posCategoryChips" hidden></div>
+              <input id="posSearch" hidden />
+            </section>
+            <aside class="kg-pos-cart">
+              <div style="display:flex;justify-content:space-between;align-items:center;">
                 <div>
-                  <div style="font-weight:900;font-size:18px;">Current Order</div>
-                  <div class="pos-small" id="posCartCount">0 items</div>
+                  <div style="font-weight:900;font-size:18px;">Current bill</div>
+                  <div class="muted" id="kgPosCartCount">0 items</div>
+                  <div class="pos-small" id="posCartCount" hidden>0 items</div>
                 </div>
-                <button class="pos-btn gray" onclick="posClearCart()">Reset</button>
+                <button type="button" data-pos-action="clear">Reset</button>
               </div>
-
-              <div class="posTicketsBar" id="posTicketsBar" style="display:none;">
-                <div class="posTicketsTop">
-                  <div class="posTicketsTitle">Pending / Preparing</div>
-                  <div class="posTicketsCount"><span id="posTicketsCount">0</span> pending</div>
-                </div>
-                <div class="posTicketRow" id="posTicketsRow"></div>
-                <div class="posTicketActions" style="margin-top:10px;">
-                  <button class="posTicketBtn" type="button" onclick="posNewTicket()">New order</button>
-                  <button class="posTicketBtn" type="button" onclick="posClearTickets()">Clear tickets</button>
-                </div>
+              <div id="kgPosCartList" class="kg-pos-cart-list"></div>
+              <div id="posCartList" hidden></div>
+              <div class="kg-pos-totals">
+                <div><span>Subtotal</span><b id="kgPosSubtotal">₹0</b></div>
+                <div><span>Discount</span><b id="kgPosDiscount">₹0</b></div>
+                <div><span>Charges</span><b id="kgPosCharges">₹0</b></div>
+                <div><span>GST</span><b id="kgPosGst">₹0</b></div>
+                <div class="kg-pos-grand"><span>Total</span><b id="kgPosGrand">₹0</b></div>
+                <span id="posSubtotal" hidden></span><span id="posTotal" hidden></span>
               </div>
-
-              <div class="pos-today-total" id="posTodayTotalBox" title="Hover to see cash/online split">
-                <div class="label" id="posTodaySalesMeta">Today total sales</div>
-                <div class="value" id="posTodaySalesTotal">Rs 0</div>
-                <div class="pos-today-hover" id="posTodayHover">
-                  <div style="display:flex;justify-content:space-between;gap:10px;"><span>Cash</span><b id="posTodaySalesCash">Rs 0</b></div>
-                  <div style="display:flex;justify-content:space-between;gap:10px;margin-top:6px;"><span>Online</span><b id="posTodaySalesOnline">Rs 0</b></div>
-                </div>
+              <div class="kg-pos-actions">
+                <button type="button" data-pos-action="hold">Hold</button>
+                <button type="button" data-pos-action="discount">Discount</button>
+                <button type="button" data-pos-action="charges">Charges</button>
+                <button type="button" data-pos-action="kot">KOT (F4)</button>
+                <button type="button" data-pos-action="kotprint">KOT &amp; Print</button>
+                <button type="button" data-pos-action="bill">Bill (F6)</button>
+                <button type="button" data-pos-action="reprint-kot">Reprint KOT</button>
+                <button type="button" data-pos-action="reprint-bill">Reprint Bill</button>
+                <button type="button" class="primary" data-pos-action="settleprint">Settle &amp; Print (F8)</button>
               </div>
-
-              <div class="pos-section-label">Cart</div>
-              <div class="pos-cart-list" id="posCartList"></div>
-
-              <div style="margin-top: 10px;">
-                <input id="posOrderNote" class="pos-note" placeholder="Order note (optional)" />
-              </div>
-
-              <div class="pos-pay-row" style="grid-template-columns: 1fr;">
-                <select id="posPayMode" class="pos-note" onchange="renderPosPayment()" aria-label="Payment mode">
-                    <option value="cash">Cash</option>
-                    <option value="online">Online</option>
-                    <option value="split">Split</option>
-                  </select>
-              </div>
-
-              <div style="margin-top: 12px;">
-                <div class="pos-section-label" style="margin-top:0;">Quick add (custom)</div>
-                <div class="pos-pay-row" style="grid-template-columns: 1.3fr .7fr; margin-top: 0;">
-                  <input id="posCustomName" class="pos-note" placeholder="Item name" />
-                  <input id="posCustomPrice" class="pos-note" type="number" min="0" step="1" placeholder="Price" />
-                </div>
-                <div style="display:flex; gap: 10px; flex-wrap: wrap; margin-top: 10px;">
-                  <button class="pos-btn gray" type="button" onclick="posAddCustomItem()">Add to cart</button>
-                  <button class="pos-btn gray" type="button" onclick="posCustomFillPau()">+ Pau Extra</button>
-                </div>
-              </div>
-
-              <div id="posPaySplit" style="display:none; margin-top: 10px;">
-                <div class="pos-pay-row">
-                  <input id="posPayCash" class="pos-note" type="number" min="0" step="1" value="0" placeholder="Cash" oninput="renderPosPayment()" />
-                  <input id="posPayOnline" class="pos-note" type="number" min="0" step="1" value="0" placeholder="Online" oninput="renderPosPayment()" />
-                </div>
-                <div class="pos-small" id="posPayHint" style="margin-top: 8px;"></div>
-              </div>
-
-              <div class="pos-totals-box">
-                <div class="pos-total-line"><span>Subtotal</span><b id="posSubtotal">Rs 0</b></div>
-                <div class="pos-total-line" style="align-items:flex-start;">
-                  <span>Adjustment</span>
-                  <div style="display:flex; gap:8px; align-items:center;">
-                    <input id="posAdjust" class="pos-note" style="margin-top:0; width: 130px; padding: 8px 10px; font-size: 13px;" type="number" step="1" value="0" oninput="renderPosCart(); renderPosPayment();" />
-                  </div>
-                </div>
-                <div class="pos-total-big"><span>Total</span><b id="posTotal">Rs 0</b></div>
-              </div>
-
-              <div style="display:flex; gap: 10px; flex-wrap: wrap; margin-top: 14px; align-items:center;">
-                <button class="pos-btn gray" type="button" onclick="posPrintKOT()">Print KOT (Hindi)</button>
-                <button class="pos-btn gray" type="button" onclick="posPrintBill()">Print Bill</button>
-                <button class="pos-btn hold" type="button" onclick="posHoldOrder()">Hold</button>
-              </div>
-              <div style="display:flex; gap: 10px; flex-wrap: wrap; align-items:center; margin-top: 10px;">
-                <button class="pos-btn gray" type="button" id="thermalPrinterConnectBtn" onclick="thermalPrinterConnect()">Connect thermal printer</button>
-                <span class="pos-small" id="thermalPrinterStatus" style="flex:1; min-width: 200px;">Checking printer…</span>
-              </div>
-              <div style="margin-top: 12px;">
-                <button class="pos-btn green" type="button" style="width:100%; padding: 12px; font-size: 15px;" onclick="posGenerateBill()">Charge</button>
-              </div>
-            </div>
+              <!-- legacy hooks -->
+              <div id="posTicketsBar" hidden><div id="posTicketsRow"></div><span id="posTicketsCount">0</span></div>
+              <span id="posTodaySalesMeta" hidden></span><span id="posTodaySalesTotal" hidden></span>
+              <span id="posTodaySalesCash" hidden></span><span id="posTodaySalesOnline" hidden></span>
+              <span id="thermalPrinterStatus" hidden></span>
+              <button id="thermalPrinterConnectBtn" type="button" hidden></button>
+              <select id="posPayMode" hidden><option value="cash">Cash</option></select>
+              <input id="posOrderNote" hidden /><input id="posAdjust" hidden value="0" />
+              <div id="posPaySplit" hidden><input id="posPayCash" /><input id="posPayOnline" /><span id="posPayHint"></span></div>
+            </aside>
           </div>
         </div>
+      </div>
+
+
+  <div id="kgPosSettleOverlay" class="kg-pos-overlay" style="display:none;">
+    <div class="kg-pos-modal" role="dialog" aria-modal="true" aria-label="Settle payment">
+      <h3>Settle · <span id="kgPosSettleTotal">₹0</span></h3>
+      <label>Payment mode
+        <select id="kgPosSettleMode">
+          <option value="cash">Cash</option>
+          <option value="online">Online (UPI/Card)</option>
+          <option value="swiggy">Swiggy</option>
+          <option value="zomato">Zomato</option>
+          <option value="split">Split</option>
+        </select>
+      </label>
+      <div id="kgPosSettleCashBox">
+        <label>Amount received <input id="kgPosReceived" type="number" min="0" step="1" /></label>
+        <div class="kg-pos-quick">
+          <button type="button" data-quick-cash="exact">Exact</button>
+          <button type="button" data-quick-cash="100">₹100</button>
+          <button type="button" data-quick-cash="200">₹200</button>
+          <button type="button" data-quick-cash="500">₹500</button>
+        </div>
+        <div>Change due: <b id="kgPosChange">₹0</b></div>
+      </div>
+      <div id="kgPosSettleSplit" style="display:none;grid-template-columns:1fr 1fr;gap:8px;">
+        <input id="kgPosPayCash" type="number" placeholder="Cash" />
+        <input id="kgPosPayOnline" type="number" placeholder="Online" />
+        <input id="kgPosPaySwiggy" type="number" placeholder="Swiggy" />
+        <input id="kgPosPayZomato" type="number" placeholder="Zomato" />
+      </div>
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+        <button type="button" class="btn" id="kgPosSettleConfirm">Settle</button>
+        <button type="button" class="btn" id="kgPosSettlePrint">Settle &amp; Print</button>
+        <button type="button" class="btn btn-secondary" id="kgPosSettleCancel">Cancel</button>
       </div>
     </div>
   </div>
 
-  <div id="printArea"></div>
+  <div id="kgPosSettingsOverlay" class="kg-pos-overlay" style="display:none;">
+    <div class="kg-pos-modal" role="dialog" aria-modal="true">
+      <h3>Printer &amp; POS settings</h3>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+        <button type="button" id="kgPosConnectUsb">Connect USB printer</button>
+        <button type="button" id="kgPosConnectSerial">Connect Serial printer</button>
+        <button type="button" id="kgPosConnectBle">Connect Bluetooth</button>
+        <button type="button" id="kgPosUseSystemPrinter">Use system printer</button>
+        <button type="button" id="kgPosTestPrint">Test print</button>
+      </div>
+      <label>Paper width
+        <select id="kgPosPaperWidth"><option value="58">58 mm</option><option value="80" selected>80 mm</option></select>
+      </label>
+      <label>Baud rate
+        <select id="kgPosBaud">
+          <option value="9600" selected>9600</option>
+          <option value="19200">19200</option>
+          <option value="38400">38400</option>
+          <option value="115200">115200</option>
+        </select>
+      </label>
+      <label><input type="checkbox" id="kgPosAutoCut" checked /> Auto-cut</label>
+      <label><input type="checkbox" id="kgPosDrawer" /> Cash drawer kick</label>
+      <hr/>
+      <label><input type="checkbox" id="kgPosGstOn" checked /> GST enabled</label>
+      <label>GST % <input id="kgPosGstPct" type="number" value="5" min="0" step="0.5" /></label>
+      <label>Address <input id="kgPosAddress" /></label>
+      <label>GSTIN <input id="kgPosGstin" /></label>
+      <label>Phone <input id="kgPosPhone" /></label>
+      <label>UPI ID <input id="kgPosUpi" /></label>
+      <div style="display:flex;gap:8px;margin-top:12px;">
+        <button type="button" id="kgPosSaveSettings">Save</button>
+        <button type="button" id="kgPosSettingsClose">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="kgMarginOverlay" class="kg-pos-overlay" style="display:none;">
+    <div class="kg-pos-modal" style="width:min(720px,100%);" role="dialog" aria-modal="true">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <h3 style="margin:0;">Net margin breakdown</h3>
+        <button type="button" id="kgMarginClose">Close</button>
+      </div>
+      <div id="kgMarginBody"></div>
+    </div>
+  </div>
+
+  <div id="kgFixedCostsOverlay" class="kg-pos-overlay" style="display:none;">
+    <div class="kg-pos-modal" role="dialog" aria-modal="true">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <h3 style="margin:0;">Fixed costs (rent, light, etc.)</h3>
+        <button type="button" id="kgFixedCostsClose">Close</button>
+      </div>
+      <div id="kgFixedCostsList"></div>
+      <label>Name <input id="kgFixedCostName" placeholder="Rent / Electricity" /></label>
+      <label>Amount ₹/month <input id="kgFixedCostAmount" type="number" min="0" /></label>
+      <label><input type="checkbox" id="kgFixedCostRecurring" checked /> Recurring monthly</label>
+      <button type="button" id="kgFixedCostSave">Save fixed cost</button>
+    </div>
+  </div>
+
+<div id="printArea"></div>
 
   <div id="celebrateOverlay" class="celebrateOverlay" aria-hidden="true">
     <div class="celebrateCard">
@@ -2538,16 +3259,34 @@
 
   <!-- Firebase SDKs -->
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
     <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="js/theme.js?v=20260710g"></script>
     <script src="js/config.js"></script>
     <script src="js/balanceMath.js"></script>
-    <script src="js/firebase.js"></script>
-    <script src="js/api.js"></script>
+    <script src="js/firebase.js?v=20260820bt1"></script>
+    <script src="js/auth.js?v=20260811docs1"></script>
+    <script src="js/api.js?v=20260827m1"></script>
+    <script src="js/opsPhase2.js?v=20260810p2"></script>
     <script src="constants/kilogramMenuSeed.js"></script>
     <script src="js/thermalPrinter.js"></script>
-    <script src="js/app.js?v=20260710g"></script>
+    <script src="js/pos/money.js?v=20261116"></script>
+    <script src="js/pos/posState.js?v=20261116"></script>
+    <script src="js/pos/posMenu.js?v=20261116"></script>
+    <script src="js/pos/salesBridge.js?v=20261116"></script>
+    <script src="js/pos/posCheckout.js?v=20261116"></script>
+    <script src="js/printing/escpos.js?v=20261116"></script>
+    <script src="js/printing/rasterText.js?v=20261116"></script>
+    <script src="js/printing/transports/webSerial.js?v=20261116"></script>
+    <script src="js/printing/transports/webUsb.js?v=20261116"></script>
+    <script src="js/printing/transports/browserPrint.js?v=20261116"></script>
+    <script src="js/printing/transports/bluetooth.js?v=20261116"></script>
+    <script src="js/printing/printerManager.js?v=20261116"></script>
+    <script src="js/pos/posUI.js?v=20261116"></script>
+    <script src="js/finance/netMargin.js?v=20261116"></script>
+    <script src="js/dashboard/liveSales.js?v=20261116"></script>
+    <script src="js/app.js?v=20260902sal30"></script>
     <script>
       if (window.lucide && typeof lucide.createIcons === "function") lucide.createIcons();
     </script>

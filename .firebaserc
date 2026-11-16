@@ -1,7 +1,6 @@
 {
   "projects": {
-    "default": "kilogram-expance-trakker",
-    "npx firebase deploy --only firestore:rules": "kilogram-expance-trakker"
+    "default": "kilogram-expance-trakker"
   },
   "targets": {},
   "etags": {}
