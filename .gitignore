@@ -3,6 +3,8 @@ dist/
 build/
 .vite/
 coverage/
+.env
+.env.*
 !.env.example
 .DS_Store
 *.log
@@ -12,5 +14,4 @@ secrets/
 firepit-log.txt
 *.local
 .cursor/
-assets/image-*.png
-config.bat
+.vscode/
