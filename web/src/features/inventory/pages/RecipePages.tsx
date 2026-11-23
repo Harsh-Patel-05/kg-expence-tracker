@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Card } from "@/components/ui/Card";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { inr, num } from "@/lib/utils";
 import { useRestaurantCollection } from "@/features/pos/hooks/useRestaurantCollection";
@@ -7,35 +8,38 @@ import type { InventoryItemDoc, RecipeDoc, RecipeIngredient } from "../types";
 import { computeRecipeCost } from "../utils/costing";
 import { emptyIngredient, saveRecipe, softDeleteRecipe } from "../services/recipeService";
 import { COMMON_UNITS } from "../utils/units";
+import { EmptyState, PageHeader } from "@/components/ui/PageHeader";
+
+import { ContentLoading } from "@/components/ui/Loading";
 
 export function RecipesListPage() {
   const { data, loading } = useRestaurantCollection<RecipeDoc>({ path: "recipes" });
   const recipes = data.filter((r) => !r.isDeleted);
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <Link to="/inventory" className="text-xs font-semibold text-cyan-700">
-            ← Inventory
+    <div className="grid gap-4">
+      <PageHeader
+        back={<Link to="/inventory" className="text-xs font-semibold text-primary"> ← Inventory </Link>}
+        title="Recipes"
+        actions={
+          <>
+          <Link to="/inventory/recipes/new" className="kg-btn kg-btn-primary">
+            + New recipe
           </Link>
-          <h1 className="text-xl font-black">Recipes</h1>
-        </div>
-        <Link to="/inventory/recipes/new" className="rounded-xl bg-cyan-500 px-3 py-2 text-sm font-bold text-white">
-          + New recipe
-        </Link>
-      </div>
-      {loading ? <div className="h-24 animate-pulse rounded-2xl bg-slate-200/60" /> : null}
+          </>
+        }
+      />
+      {loading ? <ContentLoading variant="block" label="Loading" /> : null}
       <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
         {recipes.map((r) => {
           const cost = computeRecipeCost(r);
           return (
-            <Link key={r.id} to={`/inventory/recipes/${r.id}`} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm hover:border-cyan-300">
-              <div className="text-sm font-bold">{r.name}</div>
-              <div className="text-xs text-slate-500">
+            <Link key={r.id} to={`/inventory/recipes/${r.id}`} className="rounded-[var(--radius-xl)] border border-stroke-0 bg-card-0 p-4 shadow-panel hover:border-primary/50">
+              <div className="text-[14px] font-bold text-text-primary">{r.name}</div>
+              <div className="text-xs text-text-muted">
                 {r.category || "General"} · v{r.version || 1} · {r.ingredients?.length || 0} ingredients
               </div>
-              <div className="mt-2 text-sm">
+              <div className="mt-2 text-[13px]">
                 Cost/portion <strong>{inr(cost.costPerPortion)}</strong>
                 {r.sellingPrice ? ` · FC ${cost.foodCostPct.toFixed(1)}%` : ""}
               </div>
@@ -43,7 +47,7 @@ export function RecipesListPage() {
           );
         })}
       </div>
-      {!recipes.length && !loading ? <div className="rounded-2xl border border-dashed p-10 text-center text-sm text-slate-500">No recipes yet.</div> : null}
+      {!recipes.length && !loading ? <EmptyState title="No recipes yet." /> : null}
     </div>
   );
 }
@@ -140,39 +144,37 @@ export function RecipeBuilderPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <Link to="/inventory/recipes" className="text-xs font-semibold text-cyan-700">
-            ← Recipes
-          </Link>
-          <h1 className="text-xl font-black">{isNew ? "New recipe" : "Edit recipe"}</h1>
-        </div>
-        <div className="flex gap-2">
-          {!isNew ? (
-            <button
-              type="button"
-              className="rounded-xl border border-rose-200 px-3 py-2 text-sm text-rose-600"
-              onClick={() => void softDeleteRecipe(recipeId!).then(() => nav("/inventory/recipes"))}
-            >
-              Archive
+    <div className="grid gap-4">
+      <PageHeader
+        back={<Link to="/inventory/recipes" className="text-xs font-semibold text-primary">← Recipes</Link>}
+        title={isNew ? "New recipe" : "Edit recipe"}
+        actions={
+          <>
+            {!isNew ? (
+              <button
+                type="button"
+                className="kg-btn border border-danger/30 bg-danger-bg text-danger hover:brightness-95"
+                onClick={() => void softDeleteRecipe(recipeId!).then(() => nav("/inventory/recipes"))}
+              >
+                Archive
+              </button>
+            ) : null}
+            <button type="button" disabled={busy} className="kg-btn kg-btn-primary" onClick={() => void save()}>
+              {busy ? "Saving…" : "Save recipe"}
             </button>
-          ) : null}
-          <button type="button" disabled={busy} className="rounded-xl bg-slate-900 px-4 py-2 text-sm font-bold text-white" onClick={() => void save()}>
-            {busy ? "Saving…" : "Save recipe"}
-          </button>
-        </div>
-      </div>
-      {msg ? <div className="rounded-xl bg-cyan-50 px-3 py-2 text-sm text-cyan-900">{msg}</div> : null}
+          </>
+        }
+      />
+      {msg ? <div className="rounded-lg border border-primary/20 bg-primary-light px-3 py-2 text-[13px] text-primary">{msg}</div> : null}
 
       <div className="grid gap-4 lg:grid-cols-[minmax(0,1.2fr)_320px]">
-        <div className="space-y-3 rounded-2xl border bg-white p-4 shadow-sm">
-          <input className="w-full rounded-xl border px-3 py-2 text-sm font-semibold" placeholder="Recipe name *" value={name} onChange={(e) => setName(e.target.value)} />
+        <Card hover={false} padding="sm"><div className="space-y-3">
+          <input className="kg-input w-full font-semibold" placeholder="Recipe name *" value={name} onChange={(e) => setName(e.target.value)} />
           <div className="grid grid-cols-2 gap-2">
-            <input className="rounded-xl border px-3 py-2 text-sm" placeholder="Category" value={category} onChange={(e) => setCategory(e.target.value)} />
-            <input className="rounded-xl border px-3 py-2 text-sm" type="number" placeholder="Servings" value={servingSize} onChange={(e) => setServingSize(e.target.value)} />
+            <input className="kg-input !w-auto" placeholder="Category" value={category} onChange={(e) => setCategory(e.target.value)} />
+            <input className="kg-input !w-auto" type="number" placeholder="Servings" value={servingSize} onChange={(e) => setServingSize(e.target.value)} />
           </div>
-          <select className="w-full rounded-xl border px-3 py-2 text-sm" value={menuItemId} onChange={(e) => setMenuItemId(e.target.value)}>
+          <select className="kg-input w-full" value={menuItemId} onChange={(e) => setMenuItemId(e.target.value)}>
             <option value="">Link menu item (optional — syncs POS recipe)</option>
             {menuItems.map((m) => (
               <option key={m.id} value={m.id}>
@@ -181,11 +183,11 @@ export function RecipeBuilderPage() {
             ))}
           </select>
 
-          <div className="text-xs font-bold uppercase text-slate-500">Ingredients</div>
+          <div className="text-xs font-bold uppercase text-text-muted">Ingredients</div>
           {ingredients.map((ing, idx) => (
             <div key={ing.id} className="grid grid-cols-[1.2fr_0.7fr_0.5fr_0.5fr_0.5fr_auto] gap-1">
               <select
-                className="rounded-lg border px-2 py-1.5 text-xs"
+                className="kg-input !w-auto"
                 value={ing.inventoryId || ""}
                 onChange={(e) => {
                   const inv = inventory.find((x) => x.id === e.target.value);
@@ -212,20 +214,20 @@ export function RecipeBuilderPage() {
                 ))}
               </select>
               <input
-                className="rounded-lg border px-2 py-1.5 text-xs"
+                className="kg-input !w-auto"
                 placeholder="Name"
                 value={ing.item}
                 onChange={(e) => setIngredients((rows) => rows.map((r, i) => (i === idx ? { ...r, item: e.target.value } : r)))}
               />
               <input
-                className="rounded-lg border px-2 py-1.5 text-xs"
+                className="kg-input !w-auto"
                 type="number"
                 placeholder="Qty"
                 value={ing.qty}
                 onChange={(e) => setIngredients((rows) => rows.map((r, i) => (i === idx ? { ...r, qty: num(e.target.value) } : r)))}
               />
               <select
-                className="rounded-lg border px-2 py-1.5 text-xs"
+                className="kg-input !w-auto"
                 value={ing.unit}
                 onChange={(e) => setIngredients((rows) => rows.map((r, i) => (i === idx ? { ...r, unit: e.target.value } : r)))}
               >
@@ -236,26 +238,26 @@ export function RecipeBuilderPage() {
                 ))}
               </select>
               <input
-                className="rounded-lg border px-2 py-1.5 text-xs"
+                className="kg-input !w-auto"
                 type="number"
                 placeholder="Loss%"
                 value={ing.prepLossPct || 0}
                 onChange={(e) => setIngredients((rows) => rows.map((r, i) => (i === idx ? { ...r, prepLossPct: num(e.target.value) } : r)))}
               />
-              <button type="button" className="text-xs text-rose-600" onClick={() => setIngredients((rows) => rows.filter((_, i) => i !== idx))}>
+              <button type="button" className="text-xs text-danger" onClick={() => setIngredients((rows) => rows.filter((_, i) => i !== idx))}>
                 ✕
               </button>
             </div>
           ))}
-          <button type="button" className="rounded-xl border px-3 py-2 text-xs font-semibold" onClick={() => setIngredients((r) => [...r, emptyIngredient()])}>
+          <button type="button" className="kg-btn kg-btn-secondary" onClick={() => setIngredients((r) => [...r, emptyIngredient()])}>
             + Ingredient
           </button>
 
-          <textarea className="w-full rounded-xl border px-3 py-2 text-sm" rows={4} placeholder="Instructions" value={instructions} onChange={(e) => setInstructions(e.target.value)} />
-        </div>
+          <textarea className="kg-input w-full" rows={4} placeholder="Instructions" value={instructions} onChange={(e) => setInstructions(e.target.value)} />
+        </div></Card>
 
-        <aside className="space-y-3 rounded-2xl border bg-white p-4 shadow-sm h-fit">
-          <div className="text-sm font-bold">Costing</div>
+        <Card hover={false} padding="sm" className="h-fit"><aside className="space-y-3">
+          <div className="text-[14px] font-bold text-text-primary">Costing</div>
           <Field label="Selling price / portion" value={sellingPrice} onChange={setSellingPrice} />
           <Field label="Packaging" value={packagingCost} onChange={setPackagingCost} />
           <Field label="Gas / utilities" value={gasCost} onChange={setGasCost} />
@@ -263,7 +265,7 @@ export function RecipeBuilderPage() {
           <Field label="Overhead" value={overheadCost} onChange={setOverheadCost} />
           <Field label="Raw weight" value={rawWeight} onChange={setRawWeight} />
           <Field label="Cooked weight" value={cookedWeight} onChange={setCookedWeight} />
-          <div className="space-y-1 border-t pt-3 text-sm">
+          <div className="space-y-1 border-t pt-3 text-[13px]">
             <Row label="Ingredient cost" value={inr(cost.ingredientCost)} />
             <Row label="Production cost" value={inr(cost.totalProductionCost)} />
             <Row label="Cost / portion" value={inr(cost.costPerPortion)} />
@@ -272,7 +274,7 @@ export function RecipeBuilderPage() {
             <Row label="Yield %" value={`${cost.yieldPct.toFixed(1)}%`} />
             <Row label="Profit / portion" value={inr(cost.profit)} />
           </div>
-        </aside>
+        </aside></Card>
       </div>
     </div>
   );
@@ -281,8 +283,8 @@ export function RecipeBuilderPage() {
 function Field({ label, value, onChange }: { label: string; value: string; onChange: (v: string) => void }) {
   return (
     <label className="block text-xs">
-      <span className="text-slate-500">{label}</span>
-      <input className="mt-1 w-full rounded-lg border px-2 py-1.5 text-sm" type="number" value={value} onChange={(e) => onChange(e.target.value)} />
+      <span className="text-text-muted">{label}</span>
+      <input className="kg-input mt-1 w-full" type="number" value={value} onChange={(e) => onChange(e.target.value)} />
     </label>
   );
 }
@@ -290,7 +292,7 @@ function Field({ label, value, onChange }: { label: string; value: string; onCha
 function Row({ label, value }: { label: string; value: string }) {
   return (
     <div className="flex justify-between gap-2">
-      <span className="text-slate-500">{label}</span>
+      <span className="text-text-muted">{label}</span>
       <strong>{value}</strong>
     </div>
   );

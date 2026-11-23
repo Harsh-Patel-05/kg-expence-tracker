@@ -1,13 +1,12 @@
-import { useEffect, useMemo, useState } from "react";
+import { startTransition, useEffect, useMemo, useState } from "react";
 import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
-import { AnimatePresence, motion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   AlarmClock,
   BarChart3,
   Bell,
   CalendarDays,
   CheckSquare,
-  ChevronLeft,
   ClipboardList,
   Command,
   CreditCard,
@@ -15,9 +14,9 @@ import {
   Home,
   IndianRupee,
   LineChart,
+  LogOut,
   Menu,
   MonitorSmartphone,
-  Moon,
   Package,
   Plus,
   Receipt,
@@ -32,6 +31,7 @@ import { NotificationBell } from "@/features/notifications/components/Notificati
 import { RouteErrorBoundary } from "@/components/ui/RouteErrorBoundary";
 import { usePosAuth } from "@/features/pos/auth/PosAuthProvider";
 import { BRAND } from "@/lib/brand";
+import { LoadingLabel } from "@/components/ui/Loading";
 
 type NavItem = { to: string; label: string; icon: typeof Home };
 type NavGroup = { id: string; label: string; items: NavItem[] };
@@ -39,12 +39,12 @@ type NavGroup = { id: string; label: string; items: NavItem[] };
 const groups: NavGroup[] = [
   {
     id: "dash",
-    label: "Dashboard",
+    label: "Overview",
     items: [{ to: "/", label: "Dashboard", icon: Home }]
   },
   {
     id: "ops",
-    label: "Restaurant Operations",
+    label: "Operations",
     items: [
       { to: "/pos", label: "POS", icon: ShoppingBag },
       { to: "/orders", label: "Orders", icon: ClipboardList },
@@ -54,7 +54,7 @@ const groups: NavGroup[] = [
   },
   {
     id: "supply",
-    label: "Inventory & Purchase",
+    label: "Supply chain",
     items: [
       { to: "/inventory", label: "Inventory", icon: Package },
       { to: "/suppliers", label: "Suppliers", icon: Receipt },
@@ -63,7 +63,7 @@ const groups: NavGroup[] = [
   },
   {
     id: "people",
-    label: "People & Work",
+    label: "People",
     items: [
       { to: "/hr", label: "Employees", icon: Users },
       { to: "/tasks", label: "Tasks", icon: CheckSquare },
@@ -74,7 +74,7 @@ const groups: NavGroup[] = [
   },
   {
     id: "intel",
-    label: "Reports & AI",
+    label: "Insights",
     items: [
       { to: "/analytics", label: "Analytics", icon: LineChart },
       { to: "/reports", label: "Reports", icon: BarChart3 },
@@ -86,18 +86,18 @@ const groups: NavGroup[] = [
 const flatNav = groups.flatMap((g) => g.items);
 
 function titleFor(pathname: string) {
-  return (
-    flatNav.find((n) => n.to === pathname)?.label ||
-    (pathname.startsWith("/notifications")
-      ? "Notifications"
-      : pathname.startsWith("/forecast")
-        ? "AI Forecast"
-        : pathname.startsWith("/hr")
-          ? "Employees"
-          : pathname.startsWith("/inventory")
-            ? "Inventory"
-            : "Dashboard")
-  );
+  const exact = flatNav.find((n) => n.to === pathname)?.label;
+  if (exact) return exact;
+  if (pathname.startsWith("/notifications")) return "Notifications";
+  if (pathname.startsWith("/forecast")) return "AI Forecast";
+  if (pathname.startsWith("/orders")) return "Orders";
+  if (pathname.startsWith("/hr")) return "Employees";
+  if (pathname.startsWith("/inventory")) return "Inventory";
+  if (pathname.startsWith("/suppliers")) return "Suppliers";
+  if (pathname.startsWith("/expenses")) return "Expenses";
+  if (pathname.startsWith("/analytics")) return "Analytics";
+  if (pathname.startsWith("/reports")) return "Reports";
+  return "Dashboard";
 }
 
 function useClock() {
@@ -114,6 +114,7 @@ function useClock() {
 
 function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void }) {
   const navigate = useNavigate();
+  const reduceMotion = useReducedMotion();
   const [q, setQ] = useState("");
   const results = useMemo(() => {
     const query = q.trim().toLowerCase();
@@ -137,46 +138,57 @@ function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void 
   return (
     <AnimatePresence>
       {open ? (
-        <motion.div className="fixed inset-0 z-[80] flex items-start justify-center px-4 pt-[14vh]" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-          <button type="button" className="absolute inset-0 bg-[#111827]/40 backdrop-blur-sm" aria-label="Close" onClick={onClose} />
+        <motion.div
+          className="fixed inset-0 z-[80] flex items-start justify-center px-4 pt-[12vh]"
+          role="dialog"
+          aria-modal="true"
+          aria-label="Command palette"
+          initial={{ opacity: 0 }}
+          animate={{ opacity: 1 }}
+          exit={{ opacity: 0 }}
+          transition={{ duration: reduceMotion ? 0 : 0.15 }}
+        >
+          <button type="button" className="absolute inset-0 bg-[color:var(--rp-overlay)]" aria-label="Close command palette" onClick={onClose} />
           <motion.div
-            initial={{ opacity: 0, scale: 0.97, y: 8 }}
-            animate={{ opacity: 1, scale: 1, y: 0 }}
-            exit={{ opacity: 0, scale: 0.98, y: 6 }}
-            className="relative w-full max-w-xl overflow-hidden rounded-[20px] border border-[#E9EDF5] bg-white shadow-[0_24px_80px_rgba(17,24,39,0.18)]"
+            initial={reduceMotion ? false : { opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={reduceMotion ? undefined : { opacity: 0, y: 6 }}
+            className="relative w-full max-w-lg overflow-hidden rounded-xl border border-stroke-0 bg-card-0 shadow-float"
           >
-            <div className="flex items-center gap-3 border-b border-[#E9EDF5] px-4 py-3.5">
-              <Search size={18} className="text-[#6D5EF7]" />
+            <div className="flex items-center gap-3 border-b border-stroke-0 px-4 py-3">
+              <Search size={16} className="text-text-muted" aria-hidden />
               <input
                 autoFocus
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
-                placeholder="Search modules…"
-                className="w-full border-0 bg-transparent text-[15px] font-medium text-[#111827] outline-none placeholder:text-[#6B7280]"
+                placeholder="Jump to a module…"
+                aria-label="Search modules"
+                className="w-full border-0 bg-transparent text-[14px] font-medium text-text-primary outline-none placeholder:text-text-muted"
               />
-              <kbd className="rounded-lg bg-[#F5F7FB] px-2 py-1 text-[11px] font-semibold text-[#6B7280]">ESC</kbd>
+              <kbd className="rounded-md border border-stroke-0 bg-bg-1 px-1.5 py-0.5 text-[10px] font-semibold text-text-muted">ESC</kbd>
             </div>
-            <div className="max-h-80 overflow-auto p-2">
+            <div className="max-h-80 overflow-auto p-1.5">
               {results.map((n) => {
                 const Icon = n.icon;
                 return (
                   <button
                     key={n.to}
                     type="button"
-                    className="flex w-full items-center gap-3 rounded-xl px-3 py-2.5 text-left hover:bg-[#F5F7FB]"
+                    className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left hover:bg-bg-1"
                     onClick={() => {
                       onClose();
-                      navigate(n.to);
+                      startTransition(() => navigate(n.to));
                     }}
                   >
-                    <span className="grid h-9 w-9 place-items-center rounded-xl bg-[#F5F7FB] text-[#6D5EF7]">
-                      <Icon size={16} />
+                    <span className="grid h-8 w-8 place-items-center rounded-lg bg-bg-1 text-text-secondary">
+                      <Icon size={15} strokeWidth={2} />
                     </span>
-                    <span className="text-[15px] font-semibold text-[#111827]">{n.label}</span>
+                    <span className="text-[13px] font-semibold text-text-primary">{n.label}</span>
+                    <span className="ml-auto text-[11px] text-text-muted">{n.to}</span>
                   </button>
                 );
               })}
-              {!results.length ? <div className="px-3 py-8 text-center text-sm text-[#6B7280]">No matches</div> : null}
+              {!results.length ? <div className="px-3 py-8 text-center text-sm text-text-muted">No matches</div> : null}
             </div>
           </motion.div>
         </motion.div>
@@ -185,16 +197,14 @@ function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void 
   );
 }
 
-function SidebarNav({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?: () => void }) {
+function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
   const loc = useLocation();
   return (
-    <div className="space-y-5">
+    <nav className="space-y-4" aria-label="Main">
       {groups.map((g) => (
         <div key={g.id}>
-          {!collapsed ? (
-            <div className="mb-2 px-3 text-[11px] font-semibold uppercase tracking-[0.12em] text-[#9CA3AF]">{g.label}</div>
-          ) : null}
-          <div className="grid gap-1">
+          <div className="mb-1.5 px-3 text-[10px] font-bold uppercase tracking-[0.14em] text-text-muted/80">{g.label}</div>
+          <div className="grid gap-0.5">
             {g.items.map((n) => {
               const Icon = n.icon;
               const active = n.to === "/" ? loc.pathname === "/" : loc.pathname === n.to || loc.pathname.startsWith(n.to + "/");
@@ -202,37 +212,38 @@ function SidebarNav({ collapsed, onNavigate }: { collapsed: boolean; onNavigate?
                 <Link
                   key={n.to}
                   to={n.to}
-                  title={n.label}
+                  aria-current={active ? "page" : undefined}
                   onClick={() => onNavigate?.()}
                   className={clsx(
-                    "flex items-center gap-3 rounded-xl px-3 py-2.5 text-[15px] font-medium transition duration-200",
+                    "flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium no-underline transition",
                     active
-                      ? "bg-[#6D5EF7] text-white shadow-[0_8px_20px_rgba(109,94,247,0.28)]"
-                      : "text-[#6B7280] hover:bg-[#F3F0FF] hover:text-[#6D5EF7]"
+                      ? "bg-primary text-white shadow-[var(--shadow-neonCyan)]"
+                      : "text-text-secondary hover:bg-bg-1 hover:text-text-primary"
                   )}
                 >
-                  <Icon size={18} strokeWidth={1.75} className={active ? "text-white" : "text-current"} />
-                  {!collapsed ? <span className="truncate">{n.label}</span> : null}
+                  <Icon size={17} strokeWidth={2} className={active ? "text-white" : "text-text-muted"} aria-hidden />
+                  <span className="truncate">{n.label}</span>
                 </Link>
               );
             })}
           </div>
         </div>
       ))}
-    </div>
+    </nav>
   );
 }
 
 export function AppShell() {
   const loc = useLocation();
   const navigate = useNavigate();
-  const { role, isAdmin, restaurantName, appName, loading: authLoading } = usePosAuth();
+  const { restaurantName, appName, loading: authLoading, logout } = usePosAuth();
   const [mobileOpen, setMobileOpen] = useState(false);
-  const [collapsed, setCollapsed] = useState(false);
   const [cmdOpen, setCmdOpen] = useState(false);
+  const [loggingOut, setLoggingOut] = useState(false);
+  const reduceMotion = useReducedMotion();
   const clock = useClock();
   const title = titleFor(loc.pathname);
-  const sidebarW = collapsed ? "w-[88px]" : "w-[280px]";
+  const isPos = loc.pathname === "/pos";
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -246,142 +257,168 @@ export function AppShell() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-[#F5F7FB]">
+    <div className="flex h-dvh overflow-hidden bg-bg-0">
       {authLoading ? (
-        <div className="fixed inset-x-0 top-0 z-[60] h-0.5 overflow-hidden bg-[#E9EDF5]">
-          <div className="h-full w-1/3 animate-pulse bg-[#6D5EF7]" />
+        <div className="fixed inset-x-0 top-0 z-[60] h-1 overflow-hidden bg-stroke-0" role="progressbar" aria-label="Loading">
+          <div className="h-full w-1/3 kg-shimmer bg-primary" />
         </div>
       ) : null}
 
-      <div className="mx-auto flex max-w-[1500px] gap-5 p-4 md:p-5">
-        <aside className={clsx("sticky top-5 hidden max-h-[calc(100vh-2.5rem)] shrink-0 md:block", sidebarW)}>
-          <div className="flex h-full max-h-[calc(100vh-2.5rem)] flex-col overflow-hidden rounded-[20px] border border-[#E9EDF5] bg-white shadow-[0_8px_30px_rgba(0,0,0,0.05)]">
-            <div className="border-b border-[#E9EDF5] p-5">
-              <div className="flex items-center gap-3">
-                <div className="grid h-10 w-10 place-items-center rounded-xl bg-[#6D5EF7] text-sm font-bold text-white">
-                  {BRAND.restaurantShort}
-                </div>
-                {!collapsed ? (
-                  <div className="min-w-0">
-                    <div className="truncate text-[15px] font-bold text-[#111827]">{appName}</div>
-                    <div className="truncate text-[13px] text-[#6B7280]">{restaurantName}</div>
+      {/* Desktop sidebar — always open, fixed width, full labels */}
+      <aside className="hidden h-full w-[260px] shrink-0 flex-col border-r border-stroke-0 bg-card-0 md:flex">
+        <div className="flex items-center gap-3 border-b border-stroke-0 px-4 py-4">
+          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary text-[13px] font-bold text-white shadow-[var(--shadow-neonCyan)]" aria-hidden>
+            {BRAND.restaurantShort}
+          </div>
+          <div className="min-w-0">
+            <div className="truncate text-[14px] font-bold text-text-primary">{appName}</div>
+            <div className="truncate text-[12px] text-text-muted">{restaurantName}</div>
+          </div>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-3 py-4 kg-hide-scrollbar">
+          <SidebarNav />
+        </div>
+
+        <div className="border-t border-stroke-0 p-3">
+          <button
+            type="button"
+            disabled={loggingOut}
+            onClick={() => {
+              setLoggingOut(true);
+              void logout().finally(() => setLoggingOut(false));
+            }}
+            className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13px] font-medium text-text-secondary transition hover:bg-danger-bg hover:text-danger"
+            title="Sign out"
+            aria-label="Sign out"
+          >
+            {loggingOut ? (
+              <LoadingLabel>Signing out…</LoadingLabel>
+            ) : (
+              <>
+                <LogOut size={16} aria-hidden />
+                <span>Sign out</span>
+              </>
+            )}
+          </button>
+        </div>
+      </aside>
+
+      {/* Mobile drawer */}
+      <AnimatePresence>
+        {mobileOpen ? (
+          <motion.div
+            className="fixed inset-0 z-50 md:hidden"
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            transition={{ duration: reduceMotion ? 0 : 0.15 }}
+          >
+            <button type="button" className="absolute inset-0 bg-[color:var(--rp-overlay)]" aria-label="Close menu" onClick={() => setMobileOpen(false)} />
+            <motion.div
+              initial={reduceMotion ? false : { x: -300 }}
+              animate={{ x: 0 }}
+              exit={reduceMotion ? undefined : { x: -300 }}
+              className="absolute left-0 top-0 flex h-full w-[280px] flex-col border-r border-stroke-0 bg-card-0 shadow-float"
+              role="dialog"
+              aria-modal="true"
+              aria-label="Navigation"
+            >
+              <div className="flex items-center justify-between gap-2 border-b border-stroke-0 px-4 py-3">
+                <div className="flex min-w-0 items-center gap-2.5">
+                  <div className="grid h-9 w-9 place-items-center rounded-xl bg-primary text-[12px] font-bold text-white" aria-hidden>
+                    {BRAND.restaurantShort}
                   </div>
-                ) : null}
-                <button
-                  type="button"
-                  className="ml-auto grid h-8 w-8 place-items-center rounded-lg text-[#6B7280] hover:bg-[#F5F7FB]"
-                  onClick={() => setCollapsed((c) => !c)}
-                  aria-label="Collapse sidebar"
-                >
-                  <ChevronLeft size={16} className={clsx("transition", collapsed && "rotate-180")} />
+                  <div className="truncate text-[14px] font-bold text-text-primary">{appName}</div>
+                </div>
+                <button type="button" className="grid h-9 w-9 place-items-center rounded-full hover:bg-bg-1" aria-label="Close navigation" onClick={() => setMobileOpen(false)}>
+                  <X size={18} aria-hidden />
                 </button>
               </div>
-              {!collapsed ? (
-                <div className="mt-4 rounded-xl bg-[#F5F7FB] px-3 py-2.5">
-                  <div className="text-[11px] font-semibold uppercase tracking-wide text-[#9CA3AF]">Signed in as</div>
-                  <div className="text-[14px] font-semibold capitalize text-[#6D5EF7]">
-                    {isAdmin ? `${role} · full access` : role}
-                  </div>
-                </div>
-              ) : null}
-            </div>
-            <div className="flex-1 overflow-y-auto p-3">
-              <SidebarNav collapsed={collapsed} />
-            </div>
-          </div>
-        </aside>
-
-        <AnimatePresence>
-          {mobileOpen ? (
-            <motion.div className="fixed inset-0 z-50 md:hidden" initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}>
-              <button type="button" className="absolute inset-0 bg-[#111827]/40" aria-label="Close" onClick={() => setMobileOpen(false)} />
-              <motion.div
-                initial={{ x: -300 }}
-                animate={{ x: 0 }}
-                exit={{ x: -300 }}
-                className="absolute left-0 top-0 h-full w-[280px] overflow-y-auto bg-white p-4 shadow-xl"
-              >
-                <div className="mb-4 flex items-center justify-between">
-                  <div className="font-bold text-[#111827]">{appName}</div>
-                  <button type="button" className="rounded-lg p-2 hover:bg-[#F5F7FB]" onClick={() => setMobileOpen(false)}>
-                    <X size={16} />
-                  </button>
-                </div>
-                <SidebarNav collapsed={false} onNavigate={() => setMobileOpen(false)} />
-              </motion.div>
+              <div className="flex-1 overflow-y-auto px-3 py-4 kg-hide-scrollbar">
+                <SidebarNav onNavigate={() => setMobileOpen(false)} />
+              </div>
+              <div className="border-t border-stroke-0 p-3">
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13px] font-medium text-text-secondary hover:bg-danger-bg hover:text-danger"
+                  onClick={() => {
+                    setMobileOpen(false);
+                    void logout();
+                  }}
+                >
+                  <LogOut size={16} aria-hidden />
+                  Sign out
+                </button>
+              </div>
             </motion.div>
-          ) : null}
-        </AnimatePresence>
+          </motion.div>
+        ) : null}
+      </AnimatePresence>
 
-        <main className="min-w-0 flex-1">
-          <header className="mb-5 flex flex-wrap items-center gap-3 rounded-[20px] border border-[#E9EDF5] bg-white px-4 py-3 shadow-[0_8px_30px_rgba(0,0,0,0.05)]">
+      {/* Main column */}
+      <div className="flex min-h-0 min-w-0 flex-1 flex-col">
+        <header className="z-40 flex shrink-0 flex-wrap items-center gap-3 border-b border-stroke-0 bg-card-0 px-3 py-3 md:px-5">
+          <button
+            type="button"
+            className="grid h-10 w-10 place-items-center rounded-xl bg-primary text-white md:hidden"
+            onClick={() => setMobileOpen(true)}
+            aria-label="Open navigation"
+          >
+            <Menu size={18} aria-hidden />
+          </button>
+
+          <div className="min-w-0">
+            <div className="text-[11px] font-medium text-text-muted">{restaurantName}</div>
+            <h1 className="truncate text-[18px] font-bold tracking-tight text-text-primary md:text-[20px]">{title}</h1>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setCmdOpen(true)}
+            className="ml-auto flex min-w-[140px] max-w-md flex-1 items-center gap-2 rounded-xl border border-stroke-0 bg-bg-1 px-3 py-2.5 text-left text-[13px] text-text-muted hover:border-stroke-1"
+            aria-label="Open search"
+          >
+            <Search size={15} className="text-text-muted" aria-hidden />
+            <span className="flex-1 truncate">Search…</span>
+            <span className="hidden items-center gap-0.5 rounded border border-stroke-0 bg-card-0 px-1.5 py-0.5 text-[10px] font-semibold text-text-muted sm:inline-flex">
+              <Command size={9} aria-hidden />K
+            </span>
+          </button>
+
+          <div className="flex items-center gap-1.5">
+            <div className="hidden rounded-xl border border-stroke-0 bg-bg-1 px-2.5 py-2 text-[11px] font-semibold text-text-muted lg:block">
+              {clock.date} · {clock.time}
+            </div>
             <button
               type="button"
-              className="grid h-10 w-10 place-items-center rounded-xl bg-[#6D5EF7] text-white md:hidden"
-              onClick={() => setMobileOpen(true)}
+              className="grid h-10 w-10 place-items-center rounded-xl border border-stroke-0 text-text-muted hover:bg-bg-1"
+              aria-label="Tasks"
+              onClick={() => navigate("/tasks")}
             >
-              <Menu size={18} />
+              <CheckSquare size={16} aria-hidden />
             </button>
-
-            <div className="min-w-0">
-              <div className="text-[12px] font-medium text-[#6B7280]">{restaurantName}</div>
-              <div className="truncate text-[22px] font-bold tracking-tight text-[#111827] md:text-[28px]">{title}</div>
-            </div>
-
             <button
               type="button"
-              onClick={() => setCmdOpen(true)}
-              className="ml-auto flex min-w-[160px] max-w-md flex-1 items-center gap-2 rounded-xl border border-[#E9EDF5] bg-[#F5F7FB] px-3 py-2.5 text-left text-[14px] text-[#6B7280] hover:border-[#6D5EF7]/40"
+              className="grid h-10 w-10 place-items-center rounded-xl border border-stroke-0 text-text-muted hover:bg-bg-1"
+              aria-label="Reminders"
+              onClick={() => navigate("/reminders")}
             >
-              <Search size={16} className="text-[#6D5EF7]" />
-              <span className="flex-1 truncate">Search…</span>
-              <span className="hidden items-center gap-1 rounded-md bg-white px-1.5 py-0.5 text-[10px] font-semibold text-[#6B7280] sm:inline-flex">
-                <Command size={10} />K
-              </span>
+              <Bell size={16} aria-hidden />
             </button>
+            <NotificationBell />
+            <button
+              type="button"
+              onClick={() => navigate("/sales")}
+              className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-2.5 text-[12px] font-semibold text-white shadow-[var(--shadow-neonCyan)] hover:bg-primary-hover"
+            >
+              <Plus size={14} aria-hidden />
+              <span className="hidden sm:inline">Quick Add</span>
+            </button>
+          </div>
+        </header>
 
-            <div className="flex items-center gap-2">
-              <div className="hidden rounded-xl bg-[#F5F7FB] px-3 py-2 text-[12px] font-semibold text-[#6B7280] lg:block">
-                {clock.date} · {clock.time}
-              </div>
-              <button
-                type="button"
-                className="grid h-10 w-10 place-items-center rounded-xl border border-[#E9EDF5] text-[#6B7280] hover:bg-[#F5F7FB]"
-                title="Tasks"
-                onClick={() => navigate("/tasks")}
-              >
-                <CheckSquare size={16} />
-              </button>
-              <button
-                type="button"
-                className="grid h-10 w-10 place-items-center rounded-xl border border-[#E9EDF5] text-[#6B7280] hover:bg-[#F5F7FB]"
-                title="Reminders"
-                onClick={() => navigate("/reminders")}
-              >
-                <Bell size={16} />
-              </button>
-              <NotificationBell />
-              <button
-                type="button"
-                className="grid h-10 w-10 place-items-center rounded-xl border border-[#E9EDF5] text-[#6B7280] hover:bg-[#F5F7FB]"
-                title="Theme"
-              >
-                <Moon size={16} />
-              </button>
-              <button
-                type="button"
-                onClick={() => navigate("/sales")}
-                className="inline-flex items-center gap-1.5 rounded-xl bg-[#6D5EF7] px-3.5 py-2.5 text-[14px] font-semibold text-white shadow-[0_8px_20px_rgba(109,94,247,0.28)] hover:bg-[#7B6EF6]"
-              >
-                <Plus size={16} />
-                <span className="hidden sm:inline">Quick Add</span>
-              </button>
-              <div className="grid h-10 w-10 place-items-center rounded-full bg-[#111827] text-[12px] font-bold text-white">
-                {BRAND.restaurantShort}
-              </div>
-            </div>
-          </header>
-
+        <main className={clsx("min-h-0 min-w-0 flex-1", isPos ? "overflow-hidden p-3 md:p-4" : "overflow-y-auto p-4 md:p-6")}>
           <RouteErrorBoundary key={loc.pathname} label={loc.pathname}>
             <Outlet />
           </RouteErrorBoundary>

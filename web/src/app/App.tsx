@@ -4,8 +4,9 @@ import { AppShell } from "@/components/layout/AppShell";
 import { DashboardPage } from "@/pages/DashboardPage";
 import { SalesPage } from "@/pages/SalesPage";
 import { AnalyticsPage } from "@/pages/AnalyticsPage";
+import { LoginPage } from "@/pages/LoginPage";
 import { PosPage } from "@/features/pos/pages/PosPage";
-import { PosAuthProvider } from "@/features/pos/auth/PosAuthProvider";
+import { PosAuthProvider, usePosAuth } from "@/features/pos/auth/PosAuthProvider";
 import { OrdersDashboardPage } from "@/features/orders/pages/OrdersDashboardPage";
 import { OrderBoardPage } from "@/features/orders/pages/OrderBoardPage";
 import { OrderDetailPage } from "@/features/orders/pages/OrderDetailPage";
@@ -36,77 +37,80 @@ import { AnalyticsDashboardPage } from "@/features/analytics/pages/AnalyticsDash
 import { CalendarPage } from "@/features/calendar/pages/CalendarPage";
 import { DocumentsPage } from "@/features/documents/pages/DocumentsPage";
 import { NotificationCenterPage } from "@/features/notifications/pages/NotificationCenterPage";
+import { ContentLoading, FullPageLoading } from "@/components/ui/Loading";
 
 const ForecastDashboardPage = lazy(() =>
   import("@/features/forecast/pages/ForecastDashboardPage").then((m) => ({ default: m.ForecastDashboardPage }))
 );
 
-function ForecastFallback() {
+function AuthedApp() {
+  const { user, loading } = usePosAuth();
+
+  if (loading) {
+    return <FullPageLoading label="Signing you in…" />;
+  }
+
+  if (!user) {
+    return <LoginPage />;
+  }
+
   return (
-    <div className="space-y-4">
-      <div className="h-28 animate-pulse rounded-3xl bg-gradient-to-r from-indigo-200 via-violet-200 to-fuchsia-200" />
-      <div className="grid gap-3 sm:grid-cols-3">
-        <div className="h-24 animate-pulse rounded-2xl bg-indigo-100" />
-        <div className="h-24 animate-pulse rounded-2xl bg-violet-100" />
-        <div className="h-24 animate-pulse rounded-2xl bg-fuchsia-100" />
-      </div>
-      <div className="h-64 animate-pulse rounded-2xl bg-slate-100" />
-    </div>
+    <Routes>
+      <Route element={<AppShell />}>
+        <Route index element={<DashboardPage />} />
+        <Route path="/pos" element={<PosPage />} />
+        <Route path="/kds" element={<KdsPage />} />
+        <Route path="/orders" element={<OrdersDashboardPage />} />
+        <Route path="/orders/board" element={<OrderBoardPage />} />
+        <Route path="/orders/:orderId" element={<OrderDetailPage />} />
+        <Route path="/inventory" element={<InventoryDashboardPage />} />
+        <Route path="/inventory/items" element={<InventoryItemsPage />} />
+        <Route path="/inventory/purchases" element={<InventoryPurchasesPage />} />
+        <Route path="/inventory/ops" element={<InventoryOpsPage />} />
+        <Route path="/inventory/recipes" element={<RecipesListPage />} />
+        <Route path="/inventory/recipes/:recipeId" element={<RecipeBuilderPage />} />
+        <Route path="/inventory/production" element={<ProductionPage />} />
+        <Route path="/sales" element={<SalesPage />} />
+        <Route path="/hr" element={<HrDashboardPage />} />
+        <Route path="/hr/employees" element={<EmployeesPage />} />
+        <Route path="/hr/attendance" element={<AttendancePage />} />
+        <Route path="/hr/leave" element={<LeavePage />} />
+        <Route path="/hr/payroll" element={<PayrollPage />} />
+        <Route path="/hr/shifts" element={<ShiftsPage />} />
+        <Route path="/staff" element={<Navigate to="/hr" replace />} />
+        <Route path="/tasks" element={<TasksBoardPage />} />
+        <Route path="/calendar" element={<CalendarPage />} />
+        <Route path="/documents" element={<DocumentsPage />} />
+        <Route path="/suppliers" element={<SuppliersDashboardPage />} />
+        <Route path="/suppliers/list" element={<SuppliersListPage />} />
+        <Route path="/suppliers/payments" element={<SupplierPaymentsPage />} />
+        <Route path="/expenses" element={<ExpensesDashboardPage />} />
+        <Route path="/expenses/list" element={<ExpensesListPage />} />
+        <Route path="/expenses/recurring" element={<RecurringExpensesPage />} />
+        <Route path="/expenses/approvals" element={<ExpenseApprovalsPage />} />
+        <Route path="/analytics" element={<AnalyticsDashboardPage />} />
+        <Route
+          path="/forecast"
+          element={
+            <Suspense fallback={<ContentLoading variant="dashboard" label="Loading forecast" />}>
+              <ForecastDashboardPage />
+            </Suspense>
+          }
+        />
+        <Route path="/reports" element={<ReportsHubPage />} />
+        <Route path="/notifications" element={<NotificationCenterPage />} />
+        <Route path="/reminders" element={<RemindersHubPage />} />
+        <Route path="/analytics/legacy" element={<AnalyticsPage />} />
+      </Route>
+      <Route path="*" element={<Navigate to="/" replace />} />
+    </Routes>
   );
 }
 
 export default function App() {
   return (
     <PosAuthProvider>
-      <Routes>
-        <Route path="/pos" element={<PosPage />} />
-        <Route path="/kds" element={<KdsPage />} />
-        <Route element={<AppShell />}>
-          <Route index element={<DashboardPage />} />
-          <Route path="/orders" element={<OrdersDashboardPage />} />
-          <Route path="/orders/board" element={<OrderBoardPage />} />
-          <Route path="/orders/:orderId" element={<OrderDetailPage />} />
-          <Route path="/inventory" element={<InventoryDashboardPage />} />
-          <Route path="/inventory/items" element={<InventoryItemsPage />} />
-          <Route path="/inventory/purchases" element={<InventoryPurchasesPage />} />
-          <Route path="/inventory/ops" element={<InventoryOpsPage />} />
-          <Route path="/inventory/recipes" element={<RecipesListPage />} />
-          <Route path="/inventory/recipes/:recipeId" element={<RecipeBuilderPage />} />
-          <Route path="/inventory/production" element={<ProductionPage />} />
-          <Route path="/sales" element={<SalesPage />} />
-          <Route path="/hr" element={<HrDashboardPage />} />
-          <Route path="/hr/employees" element={<EmployeesPage />} />
-          <Route path="/hr/attendance" element={<AttendancePage />} />
-          <Route path="/hr/leave" element={<LeavePage />} />
-          <Route path="/hr/payroll" element={<PayrollPage />} />
-          <Route path="/hr/shifts" element={<ShiftsPage />} />
-          <Route path="/staff" element={<Navigate to="/hr" replace />} />
-          <Route path="/tasks" element={<TasksBoardPage />} />
-          <Route path="/calendar" element={<CalendarPage />} />
-          <Route path="/documents" element={<DocumentsPage />} />
-          <Route path="/suppliers" element={<SuppliersDashboardPage />} />
-          <Route path="/suppliers/list" element={<SuppliersListPage />} />
-          <Route path="/suppliers/payments" element={<SupplierPaymentsPage />} />
-          <Route path="/expenses" element={<ExpensesDashboardPage />} />
-          <Route path="/expenses/list" element={<ExpensesListPage />} />
-          <Route path="/expenses/recurring" element={<RecurringExpensesPage />} />
-          <Route path="/expenses/approvals" element={<ExpenseApprovalsPage />} />
-          <Route path="/analytics" element={<AnalyticsDashboardPage />} />
-          <Route
-            path="/forecast"
-            element={
-              <Suspense fallback={<ForecastFallback />}>
-                <ForecastDashboardPage />
-              </Suspense>
-            }
-          />
-          <Route path="/reports" element={<ReportsHubPage />} />
-          <Route path="/notifications" element={<NotificationCenterPage />} />
-          <Route path="/reminders" element={<RemindersHubPage />} />
-          <Route path="/analytics/legacy" element={<AnalyticsPage />} />
-        </Route>
-        <Route path="*" element={<Navigate to="/" replace />} />
-      </Routes>
+      <AuthedApp />
     </PosAuthProvider>
   );
 }

@@ -3,6 +3,9 @@ import { useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { db } from "@/lib/firebase";
 import { isoDate, num } from "@/lib/utils";
+import { Button } from "@/components/ui/Button";
+import { Input, Select } from "@/components/ui/Input";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 const OWNER_USER_ID = "owner";
 
@@ -40,44 +43,45 @@ export function ExpensesPage() {
 
   return (
     <div className="grid gap-4">
-      <Card>
+      <PageHeader eyebrow="Operations" title="Expenses" description="Log rent, utilities, and misc costs against cash or bank." />
+      <Card hover={false}>
         <div className="mb-3">
-          <div className="text-sm font-semibold">Add expense</div>
-          <div className="text-xs text-white/55">Rent, utilities, misc. Choose Cash/Bank to affect balances correctly.</div>
+          <div className="text-[14px] font-bold text-text-primary">Add expense</div>
+          <div className="text-[12px] text-text-muted">Rent, utilities, misc. Choose Cash/Bank to affect balances correctly.</div>
         </div>
         <div className="grid gap-3 md:grid-cols-4">
-          <label className="grid gap-1 text-xs text-white/60">
+          <label className="grid gap-1 text-[12px] font-semibold text-text-muted">
             Date
-            <input className="rounded-xl border border-stroke-0 bg-white/5 px-3 py-2 text-sm text-white" value={date} onChange={(e) => setDate(e.target.value)} type="date" />
+            <Input value={date} onChange={(e) => setDate(e.target.value)} type="date" />
           </label>
-          <label className="grid gap-1 text-xs text-white/60">
+          <label className="grid gap-1 text-[12px] font-semibold text-text-muted">
             Category
-            <select className="rounded-xl border border-stroke-0 bg-white/5 px-3 py-2 text-sm text-white" value={category} onChange={(e) => setCategory(e.target.value as any)}>
+            <Select value={category} onChange={(e) => setCategory(e.target.value as any)}>
               <option value="rent">Rent</option>
               <option value="utilities">Utilities</option>
               <option value="misc">Misc</option>
               <option value="other">Other</option>
-            </select>
+            </Select>
           </label>
-          <label className="grid gap-1 text-xs text-white/60">
+          <label className="grid gap-1 text-[12px] font-semibold text-text-muted">
             Paid from
-            <select className="rounded-xl border border-stroke-0 bg-white/5 px-3 py-2 text-sm text-white" value={paidFrom} onChange={(e) => setPaidFrom(e.target.value as any)}>
+            <Select value={paidFrom} onChange={(e) => setPaidFrom(e.target.value as any)}>
               <option value="cash">Cash</option>
               <option value="bank">Bank</option>
-            </select>
+            </Select>
           </label>
-          <label className="grid gap-1 text-xs text-white/60">
+          <label className="grid gap-1 text-[12px] font-semibold text-text-muted">
             Amount (₹)
-            <input className="rounded-xl border border-stroke-0 bg-white/5 px-3 py-2 text-sm text-white" value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" placeholder="e.g. 2500" />
+            <Input value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" placeholder="e.g. 2500" />
           </label>
         </div>
         <div className="mt-3 grid gap-2">
-          <input className="rounded-xl border border-stroke-0 bg-white/5 px-3 py-2 text-sm text-white" value={note} onChange={(e) => setNote(e.target.value)} placeholder="Note (optional)" />
+          <Input value={note} onChange={(e) => setNote(e.target.value)} placeholder="Note (optional)" />
           <div className="flex items-center gap-3">
-            <button disabled={saving} onClick={save} className="rounded-xl bg-indigo-500 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-400 disabled:opacity-50">
+            <Button disabled={saving} onClick={save}>
               {saving ? "Saving…" : "Save expense"}
-            </button>
-            {msg ? <div className="text-sm text-white/70">{msg}</div> : null}
+            </Button>
+            {msg ? <div className="text-[13px] text-text-secondary">{msg}</div> : null}
           </div>
         </div>
       </Card>

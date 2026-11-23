@@ -17,6 +17,9 @@ import { useRestaurantCollection } from "@/features/pos/hooks/useRestaurantColle
 import { canAssignChef, canAssignDriver } from "@/features/pos/utils/permissions";
 import { transferTable } from "@/features/pos/services/orderOps";
 import { printGstReceipt } from "@/features/pos/utils/printReceipt";
+import { Card as UiCard } from "@/components/ui/Card";
+import { EmptyState, PageHeader, SectionTitle } from "@/components/ui/PageHeader";
+import { PageLoading } from "@/components/ui/Loading";
 
 type StaffDoc = { name?: string; active?: boolean };
 type DriverDoc = { name: string; phone?: string; active?: boolean };
@@ -34,6 +37,8 @@ export function OrderDetailPage() {
 
   useEffect(() => {
     if (!orderId) return;
+    setOrder(null);
+    setError(null);
     return onSnapshot(
       doc(db, "orders", orderId),
       (snap) => {
@@ -45,7 +50,10 @@ export function OrderDetailPage() {
         setOrder({ id: snap.id, ...(snap.data() as OrderDoc) });
         setError(null);
       },
-      (e) => setError(e.message)
+      (e) => {
+        setError(e.message);
+        setOrder(null);
+      }
     );
   }, [orderId]);
 
@@ -67,67 +75,78 @@ export function OrderDetailPage() {
     }
   }
 
-  if (error) return <div className="p-4 text-rose-600">{error}</div>;
-  if (!order) return <div className="p-4 text-slate-500">Loading order…</div>;
+  if (error) {
+    return (
+      <div className="grid gap-4">
+        <PageHeader
+          back={<Link to="/orders/board" className="text-xs font-semibold text-primary">← Board</Link>}
+          title="Order"
+          description="Could not load this order."
+        />
+        <EmptyState title={error} description="Go back to the board and pick another order." action={<Link to="/orders/board" className="kg-btn kg-btn-primary">Back to board</Link>} />
+      </div>
+    );
+  }
+  if (!order) return <PageLoading label="Loading order…" />;
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <Link to="/orders/board" className="text-xs font-semibold text-cyan-700">
-            ← Board
-          </Link>
-          <h1 className="text-2xl font-black text-slate-900">{order.invoiceNo || order.id.slice(0, 10)}</h1>
-          <div className="text-sm text-slate-600">
+    <div className="grid gap-4">
+      <PageHeader
+        back={<Link to="/orders/board" className="text-xs font-semibold text-primary">← Board</Link>}
+        title={order.invoiceNo || order.id.slice(0, 10)}
+        description={
+          <>
             {ORDER_TYPE_LABELS[order.orderType] || order.orderType} · <span className="capitalize">{order.status}</span>
             {order.platformOrderId ? ` · Platform #${order.platformOrderId}` : ""}
-          </div>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <button
-            type="button"
-            disabled={busy}
-            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold"
-            onClick={() => void run(() => printKotForOrder(order.id, "reprint"), "KOT printed")}
-          >
-            Reprint KOT
-          </button>
-          <button
-            type="button"
-            disabled={busy}
-            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold"
-            onClick={() => {
-              printGstReceipt(order);
-              setMsg("Receipt opened");
-            }}
-          >
-            Print invoice
-          </button>
-          <button
-            type="button"
-            disabled={busy}
-            className="rounded-xl bg-cyan-500 px-3 py-2 text-sm font-semibold text-white"
-            onClick={() => void run(() => confirmOrderToKitchen(order.id, role), "Sent to kitchen")}
-          >
-            Confirm → Kitchen
-          </button>
-        </div>
-      </div>
+          </>
+        }
+        actions={
+          <>
+            <button
+              type="button"
+              disabled={busy}
+              className="kg-btn kg-btn-secondary"
+              onClick={() => void run(() => printKotForOrder(order.id, "reprint"), "KOT printed")}
+            >
+              Reprint KOT
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              className="kg-btn kg-btn-secondary"
+              onClick={() => {
+                printGstReceipt(order);
+                setMsg("Receipt opened");
+              }}
+            >
+              Print invoice
+            </button>
+            <button
+              type="button"
+              disabled={busy}
+              className="kg-btn kg-btn-primary"
+              onClick={() => void run(() => confirmOrderToKitchen(order.id, role), "Sent to kitchen")}
+            >
+              Confirm → Kitchen
+            </button>
+          </>
+        }
+      />
 
-      {msg ? <div className="rounded-xl bg-cyan-50 px-3 py-2 text-sm text-cyan-900">{msg}</div> : null}
+      {msg ? <div className="rounded-lg border border-primary/20 bg-primary-light px-3 py-2 text-[13px] text-primary">{msg}</div> : null}
 
       <div className="grid gap-4 lg:grid-cols-[1.2fr_0.8fr]">
         <section className="space-y-4">
-          <Card title="Items">
+          <Section title="Items">
             <div className="space-y-2">
               {(order.items || []).map((l) => (
-                <div key={l.lineId} className="flex justify-between gap-3 rounded-xl bg-slate-50 px-3 py-2 text-sm">
+                <div key={l.lineId} className="flex justify-between gap-3 rounded-lg border border-stroke-0 bg-bg-1/60 px-3 py-2.5 text-[13px]">
                   <div>
                     <div className="font-semibold">
                       {l.name} × {l.qty}
                     </div>
                     {(l.note || l.kitchenNote || l.specialInstructions) && (
-                      <div className="text-xs text-slate-500">
+                      <div className="text-xs text-text-muted">
                         {l.kitchenNote || l.note || l.specialInstructions}
                       </div>
                     )}
@@ -136,26 +155,26 @@ export function OrderDetailPage() {
                 </div>
               ))}
             </div>
-          </Card>
+          </Section>
 
-          <Card title="Status timeline">
-            <ol className="relative space-y-3 border-l border-slate-200 pl-4">
+          <Section title="Status timeline">
+            <ol className="relative space-y-3 border-l border-stroke-0 pl-4">
               {timeline.map((t, i) => (
                 <li key={`${t.status}-${i}`} className="relative">
-                  <span className="absolute -left-[21px] top-1 h-2.5 w-2.5 rounded-full bg-cyan-500" />
-                  <div className="text-sm font-semibold capitalize">{String(t.status).replace(/_/g, " ")}</div>
-                  <div className="text-xs text-slate-500">
+                  <span className="absolute -left-[21px] top-1 h-2.5 w-2.5 rounded-full bg-primary" />
+                  <div className="text-[13px] font-semibold capitalize">{String(t.status).replace(/_/g, " ")}</div>
+                  <div className="text-xs text-text-muted">
                     {t.at ? new Date(t.at).toLocaleString("en-IN") : "—"}
                     {t.note ? ` · ${t.note}` : ""}
                   </div>
                 </li>
               ))}
             </ol>
-          </Card>
+          </Section>
         </section>
 
         <aside className="space-y-4">
-          <Card title="Customer & table">
+          <Section title="Customer & table">
             <Row label="Customer" value={order.customerName || "—"} />
             <Row label="Phone" value={order.customerPhone || "—"} />
             <Row label="Table" value={order.tableName || "—"} />
@@ -166,9 +185,9 @@ export function OrderDetailPage() {
             {order.deliveryAddress ? <Row label="Address" value={order.deliveryAddress} /> : null}
             {order.tokenNumber ? <Row label="Token" value={order.tokenNumber} /> : null}
             {order.scheduledFor ? <Row label="Scheduled" value={new Date(order.scheduledFor).toLocaleString("en-IN")} /> : null}
-          </Card>
+          </Section>
 
-          <Card title="Payment">
+          <Section title="Payment">
             <Row label="Subtotal" value={inr(order.subtotal)} />
             <Row label="Tax" value={inr(order.taxAmount)} />
             <Row label="Total" value={inr(order.total)} />
@@ -181,16 +200,16 @@ export function OrderDetailPage() {
                 <Row label="Expected payout" value={inr(order.expectedPayout || 0)} />
               </>
             ) : null}
-          </Card>
+          </Section>
 
-          <Card title="Actions">
+          <Section title="Actions">
             <div className="flex flex-wrap gap-2">
               {(["accepted", "preparing", "ready", "served", "completed", "cancelled"] as OrderStatus[]).map((s) => (
                 <button
                   key={s}
                   type="button"
                   disabled={busy}
-                  className="rounded-lg border border-slate-200 px-2.5 py-1.5 text-xs font-semibold capitalize"
+                  className="kg-btn kg-btn-secondary capitalize disabled:opacity-50"
                   onClick={() =>
                     void run(async () => {
                       const note = s === "cancelled" ? prompt("Cancel reason") || "" : undefined;
@@ -206,9 +225,9 @@ export function OrderDetailPage() {
 
             {canAssignChef(role) ? (
               <div className="mt-3">
-                <div className="mb-1 text-xs font-semibold text-slate-500">Assign chef</div>
+                <div className="mb-1 text-xs font-semibold text-text-muted">Assign chef</div>
                 <select
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                  className="kg-input w-full"
                   defaultValue=""
                   onChange={(e) => {
                     const name = e.target.value;
@@ -232,9 +251,9 @@ export function OrderDetailPage() {
 
             {canAssignDriver(role) ? (
               <div className="mt-3">
-                <div className="mb-1 text-xs font-semibold text-slate-500">Assign driver</div>
+                <div className="mb-1 text-xs font-semibold text-text-muted">Assign driver</div>
                 <select
-                  className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                  className="kg-input w-full"
                   defaultValue=""
                   onChange={(e) => {
                     const id = e.target.value;
@@ -254,9 +273,9 @@ export function OrderDetailPage() {
             ) : null}
 
             <div className="mt-3">
-              <div className="mb-1 text-xs font-semibold text-slate-500">Transfer table</div>
+              <div className="mb-1 text-xs font-semibold text-text-muted">Transfer table</div>
               <select
-                className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                className="kg-input w-full"
                 defaultValue=""
                 onChange={(e) => {
                   const id = e.target.value;
@@ -276,27 +295,27 @@ export function OrderDetailPage() {
                 ))}
               </select>
             </div>
-          </Card>
+          </Section>
         </aside>
       </div>
     </div>
   );
 }
 
-function Card({ title, children }: { title: string; children: React.ReactNode }) {
+function Section({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="mb-3 text-sm font-bold">{title}</div>
+    <UiCard padding="sm" hover={false}>
+      <SectionTitle title={title} />
       {children}
-    </div>
+    </UiCard>
   );
 }
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between gap-3 border-b border-slate-50 py-1.5 text-sm last:border-0">
-      <span className="text-slate-500">{label}</span>
-      <span className="text-right font-semibold text-slate-900">{value}</span>
+    <div className="flex justify-between gap-3 border-b border-stroke-0 py-1.5 text-[13px] last:border-0">
+      <span className="text-text-muted">{label}</span>
+      <span className="text-right font-semibold text-text-primary">{value}</span>
     </div>
   );
 }

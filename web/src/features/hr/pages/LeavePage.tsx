@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Inbox } from "lucide-react";
 import { Link } from "react-router-dom";
 import { isoDate } from "@/lib/utils";
 import { useRestaurantCollection } from "@/features/pos/hooks/useRestaurantCollection";
@@ -6,6 +7,9 @@ import { usePosAuth } from "@/features/pos/auth/PosAuthProvider";
 import type { EmployeeDoc, LeaveRequestDoc, LeaveType } from "../types";
 import { createLeaveRequest, decideLeave } from "../services/payrollService";
 import { canApproveLeave, canEditEmployees } from "../utils/permissions";
+import { EmptyState, PageHeader, SectionTitle } from "@/components/ui/PageHeader";
+import { Card } from "@/components/ui/Card";
+import { ContentLoading } from "@/components/ui/Loading";
 
 const LEAVE_TYPES: LeaveType[] = ["casual", "sick", "paid", "unpaid", "emergency", "maternity", "paternity", "custom"];
 
@@ -55,38 +59,36 @@ export function LeavePage() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <Link to="/hr" className="text-xs font-semibold text-cyan-700">
-            ← HR
-          </Link>
-          <h1 className="text-2xl font-black text-slate-900">Leave management</h1>
-        </div>
-        <div className="flex gap-1 rounded-xl border border-slate-200 bg-white p-1 text-sm">
-          {(["pending", "approved", "rejected", "all"] as const).map((f) => (
-            <button
-              key={f}
-              onClick={() => setFilter(f)}
-              className={`rounded-lg px-3 py-1.5 capitalize ${filter === f ? "bg-slate-900 text-white" : "text-slate-600"}`}
-            >
-              {f}
-            </button>
-          ))}
-        </div>
-      </div>
+    <div className="grid gap-4">
+      <PageHeader
+        back={<Link to="/hr" className="text-xs font-semibold text-primary"> ← HR </Link>}
+        title="Leave management"
+        actions={
+          <div className="flex flex-wrap gap-2">
+            {(["pending", "approved", "rejected", "all"] as const).map((f) => (
+              <button
+                key={f}
+                onClick={() => setFilter(f)}
+                className={`kg-btn capitalize ${filter === f ? "kg-btn-primary" : "kg-btn-secondary"}`}
+              >
+                {f}
+              </button>
+            ))}
+          </div>
+        }
+      />
 
-      {msg ? <div className="rounded-xl bg-cyan-50 px-3 py-2 text-sm text-cyan-900">{msg}</div> : null}
-      {error ? <div className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div> : null}
+      {msg ? <div className="rounded-lg border border-primary/20 bg-primary-light px-3 py-2 text-[13px] text-primary">{msg}</div> : null}
+      {error ? <div className="rounded-lg border border-red-200 bg-danger-bg px-3 py-2 text-[13px] text-danger">{error}</div> : null}
 
       <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="mb-3 text-sm font-bold">New leave request</div>
+        <Card padding="sm" hover={false}>
+          <SectionTitle title="New leave request" />
           <div className="grid gap-2">
-            <label className="grid gap-1 text-xs font-semibold text-slate-600">
+            <label className="grid gap-1 text-[12px] font-semibold text-text-muted">
               Employee
               <select
-                className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                className="kg-input !w-auto"
                 value={form.staffId}
                 onChange={(e) => {
                   const s = staff.find((x) => x.id === e.target.value);
@@ -103,10 +105,10 @@ export function LeavePage() {
                   ))}
               </select>
             </label>
-            <label className="grid gap-1 text-xs font-semibold text-slate-600">
+            <label className="grid gap-1 text-[12px] font-semibold text-text-muted">
               Type
               <select
-                className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                className="kg-input !w-auto"
                 value={form.leaveType}
                 onChange={(e) => setForm((f) => ({ ...f, leaveType: e.target.value as LeaveType }))}
               >
@@ -117,32 +119,32 @@ export function LeavePage() {
                 ))}
               </select>
             </label>
-            <label className="grid gap-1 text-xs font-semibold text-slate-600">
+            <label className="grid gap-1 text-[12px] font-semibold text-text-muted">
               From
-              <input type="date" className="rounded-xl border border-slate-200 px-3 py-2 text-sm" value={form.fromDate} onChange={(e) => setForm((f) => ({ ...f, fromDate: e.target.value }))} />
+              <input type="date" className="kg-input !w-auto" value={form.fromDate} onChange={(e) => setForm((f) => ({ ...f, fromDate: e.target.value }))} />
             </label>
-            <label className="grid gap-1 text-xs font-semibold text-slate-600">
+            <label className="grid gap-1 text-[12px] font-semibold text-text-muted">
               To
-              <input type="date" className="rounded-xl border border-slate-200 px-3 py-2 text-sm" value={form.toDate} onChange={(e) => setForm((f) => ({ ...f, toDate: e.target.value }))} />
+              <input type="date" className="kg-input !w-auto" value={form.toDate} onChange={(e) => setForm((f) => ({ ...f, toDate: e.target.value }))} />
             </label>
-            <label className="grid gap-1 text-xs font-semibold text-slate-600">
+            <label className="grid gap-1 text-[12px] font-semibold text-text-muted">
               Reason
-              <textarea className="rounded-xl border border-slate-200 px-3 py-2 text-sm" rows={3} value={form.reason} onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))} />
+              <textarea className="kg-input !w-auto" rows={3} value={form.reason} onChange={(e) => setForm((f) => ({ ...f, reason: e.target.value }))} />
             </label>
             <button
               disabled={!canRequest || busy || !form.name}
               onClick={submit}
-              className="rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+              className="kg-btn kg-btn-primary disabled:opacity-50"
             >
               Submit request
             </button>
           </div>
-        </div>
+        </Card>
 
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          {loading ? <div className="h-32 animate-pulse bg-slate-100" /> : null}
-          <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+        <Card hover={false} className="!p-0">
+          {loading ? <ContentLoading variant="block" label="Loading leave" /> : null}
+          <table className="w-full text-left text-[13px]">
+            <thead className="bg-bg-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-text-muted">
               <tr>
                 <th className="px-3 py-2">Employee</th>
                 <th className="px-3 py-2">Dates</th>
@@ -153,10 +155,10 @@ export function LeavePage() {
             </thead>
             <tbody>
               {rows.map((l) => (
-                <tr key={l.id} className="border-t border-slate-100">
+                <tr key={l.id} className="border-t border-stroke-0">
                   <td className="px-3 py-2">
                     <div className="font-semibold">{l.name}</div>
-                    <div className="text-xs text-slate-500">{l.reason || "—"}</div>
+                    <div className="text-xs text-text-muted">{l.reason || "—"}</div>
                   </td>
                   <td className="px-3 py-2 text-xs">
                     {l.fromDate} → {l.toDate}
@@ -164,13 +166,13 @@ export function LeavePage() {
                   </td>
                   <td className="px-3 py-2 capitalize">{l.leaveType}</td>
                   <td className="px-3 py-2">
-                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase">{l.approvalStatus}</span>
+                    <span className="rounded-md bg-bg-1 px-2 py-0.5 text-[10px] font-bold uppercase">{l.approvalStatus}</span>
                   </td>
                   <td className="px-3 py-2 text-right">
                     {canApprove && l.approvalStatus === "pending" ? (
                       <div className="flex justify-end gap-2">
                         <button
-                          className="text-xs font-semibold text-emerald-700"
+                          className="text-xs font-semibold text-success"
                           onClick={async () => {
                             await decideLeave(l.id, "approved");
                             setMsg("Leave approved");
@@ -179,7 +181,7 @@ export function LeavePage() {
                           Approve
                         </button>
                         <button
-                          className="text-xs font-semibold text-rose-600"
+                          className="text-xs font-semibold text-danger"
                           onClick={async () => {
                             await decideLeave(l.id, "rejected");
                             setMsg("Leave rejected");
@@ -194,8 +196,8 @@ export function LeavePage() {
               ))}
             </tbody>
           </table>
-          {!rows.length && !loading ? <div className="py-10 text-center text-sm text-slate-500">No leave requests.</div> : null}
-        </div>
+          {!rows.length && !loading ? <EmptyState className="m-3" icon={<Inbox size={18} />} title="No leave requests." /> : null}
+        </Card>
       </div>
     </div>
   );

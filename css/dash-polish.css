@@ -31,7 +31,7 @@
   height: 44px !important;
   object-fit: cover;
   border-radius: 14px;
-  box-shadow: 0 8px 20px rgba(79, 70, 229, 0.18);
+  box-shadow: 0 8px 20px rgba(232, 122, 58, 0.18);
   flex-shrink: 0;
 }
 
@@ -117,7 +117,7 @@ body.sidebar-collapsed .sidebar-brand {
 }
 
 .kpi-insight {
-  background: linear-gradient(145deg, rgba(99, 102, 241, 0.1), rgba(139, 92, 246, 0.1)) !important;
+  background: linear-gradient(145deg, rgba(232, 122, 58, 0.1), rgba(160, 74, 53, 0.1)) !important;
 }
 
 .dash-charts-row {
@@ -131,14 +131,14 @@ body.sidebar-collapsed .sidebar-brand {
   margin: 0;
   box-shadow:
     0 30px 60px rgba(0, 0, 0, 0.1),
-    0 10px 24px rgba(79, 70, 229, 0.08) !important;
+    0 10px 24px rgba(232, 122, 58, 0.08) !important;
 }
 
 [data-theme="dark"] .dash-trend-card,
 [data-theme="dark"] .dash-online-card {
   box-shadow:
     0 30px 60px rgba(0, 0, 0, 0.35),
-    0 10px 24px rgba(99, 102, 241, 0.12) !important;
+    0 10px 24px rgba(232, 122, 58, 0.12) !important;
 }
 
 .dash-trend-chart {

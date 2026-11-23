@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Inbox } from "lucide-react";
 import { Link } from "react-router-dom";
 import { inr, isoDate, num } from "@/lib/utils";
 import { useRestaurantCollection } from "@/features/pos/hooks/useRestaurantCollection";
@@ -8,6 +9,10 @@ import type { SupplierDoc, SupplierPaymentDoc } from "../types";
 import { buildSupplierLedger } from "../utils/ledger";
 import { canPaySuppliers } from "../utils/permissions";
 import { recordSupplierPayment, syncSupplierOutstanding } from "../services/supplierService";
+import { EmptyState, PageHeader } from "@/components/ui/PageHeader";
+import { Card } from "@/components/ui/Card";
+
+import { ContentLoading } from "@/components/ui/Loading";
 
 export function SupplierPaymentsPage() {
   const { role } = usePosAuth();
@@ -34,20 +39,18 @@ export function SupplierPaymentsPage() {
   );
 
   return (
-    <div className="space-y-4">
-      <div>
-        <Link to="/suppliers" className="text-xs font-semibold text-cyan-700">
-          ← Suppliers
-        </Link>
-        <h1 className="text-2xl font-black text-slate-900">Supplier payments</h1>
-      </div>
-      {msg ? <div className="rounded-xl bg-cyan-50 px-3 py-2 text-sm text-cyan-900">{msg}</div> : null}
+    <div className="grid gap-4">
+      <PageHeader
+        back={<Link to="/suppliers" className="text-xs font-semibold text-primary"> ← Suppliers </Link>}
+        title="Supplier payments"
+      />
+      {msg ? <div className="rounded-lg border border-primary/20 bg-primary-light px-3 py-2 text-[13px] text-primary">{msg}</div> : null}
 
       <div className="grid gap-4 lg:grid-cols-[320px_1fr]">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="mb-2 text-sm font-bold">Record payment</div>
+        <Card padding="sm" hover={false}>
+          <div className="mb-2 text-[14px] font-bold text-text-primary">Record payment</div>
           <select
-            className="mb-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+            className="kg-input mb-2 w-full"
             value={form.supplierId}
             onChange={(e) => {
               const s = suppliers.find((x) => x.id === e.target.value);
@@ -63,19 +66,19 @@ export function SupplierPaymentsPage() {
                 </option>
               ))}
           </select>
-          <input type="number" className="mb-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Amount" value={form.amount} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))} />
-          <input type="date" className="mb-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" value={form.date} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))} />
-          <select className="mb-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" value={form.method} onChange={(e) => setForm((f) => ({ ...f, method: e.target.value as any }))}>
+          <input type="number" className="kg-input mb-2 w-full" placeholder="Amount" value={form.amount} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))} />
+          <input type="date" className="kg-input mb-2 w-full" value={form.date} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))} />
+          <select className="kg-input mb-2 w-full" value={form.method} onChange={(e) => setForm((f) => ({ ...f, method: e.target.value as any }))}>
             <option value="cash">Cash</option>
             <option value="online">Online</option>
             <option value="upi">UPI</option>
             <option value="bank">Bank</option>
           </select>
-          <input className="mb-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Reference #" value={form.referenceNumber} onChange={(e) => setForm((f) => ({ ...f, referenceNumber: e.target.value }))} />
-          <textarea className="mb-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" rows={2} placeholder="Note" value={form.note} onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))} />
+          <input className="kg-input mb-2 w-full" placeholder="Reference #" value={form.referenceNumber} onChange={(e) => setForm((f) => ({ ...f, referenceNumber: e.target.value }))} />
+          <textarea className="kg-input mb-2 w-full" rows={2} placeholder="Note" value={form.note} onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))} />
           <button
             disabled={!canPay || !form.seller}
-            className="w-full rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+            className="w-full kg-btn kg-btn-primary disabled:opacity-50"
             onClick={async () => {
               await recordSupplierPayment({
                 seller: form.seller,
@@ -94,13 +97,13 @@ export function SupplierPaymentsPage() {
           >
             Save payment
           </button>
-        </div>
+        </Card>
 
         <div className="space-y-3">
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="border-b border-slate-100 px-3 py-2 text-sm font-bold">AP snapshot</div>
-            <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+          <Card hover={false} className="!p-0">
+            <div className="border-b border-stroke-0 px-3 py-2 text-[13px] font-bold">AP snapshot</div>
+            <table className="w-full text-left text-[13px]">
+              <thead className="bg-bg-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-text-muted">
                 <tr>
                   <th className="px-3 py-2">Supplier</th>
                   <th className="px-3 py-2">Purchases</th>
@@ -113,7 +116,7 @@ export function SupplierPaymentsPage() {
                   .filter((l) => l.outstanding > 0 || l.purchases > 0)
                   .slice(0, 20)
                   .map((l) => (
-                    <tr key={l.supplierId} className="border-t border-slate-100">
+                    <tr key={l.supplierId} className="border-t border-stroke-0">
                       <td className="px-3 py-2 font-semibold">{l.name}</td>
                       <td className="px-3 py-2">{inr(l.purchases)}</td>
                       <td className="px-3 py-2">{inr(l.payments)}</td>
@@ -122,13 +125,13 @@ export function SupplierPaymentsPage() {
                   ))}
               </tbody>
             </table>
-          </div>
+          </Card>
 
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <div className="border-b border-slate-100 px-3 py-2 text-sm font-bold">Payment history</div>
-            {loading ? <div className="h-24 animate-pulse bg-slate-100" /> : null}
-            <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+          <Card hover={false} className="!p-0">
+            <div className="border-b border-stroke-0 px-3 py-2 text-[13px] font-bold">Payment history</div>
+            {loading ? <ContentLoading variant="block" label="Loading" /> : null}
+            <table className="w-full text-left text-[13px]">
+              <thead className="bg-bg-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-text-muted">
                 <tr>
                   <th className="px-3 py-2">Date</th>
                   <th className="px-3 py-2">Supplier</th>
@@ -138,7 +141,7 @@ export function SupplierPaymentsPage() {
               </thead>
               <tbody>
                 {recent.map((p) => (
-                  <tr key={p.id} className="border-t border-slate-100">
+                  <tr key={p.id} className="border-t border-stroke-0">
                     <td className="px-3 py-2">{p.date}</td>
                     <td className="px-3 py-2 font-semibold">{p.seller}</td>
                     <td className="px-3 py-2 uppercase text-xs">{p.method}</td>
@@ -147,8 +150,8 @@ export function SupplierPaymentsPage() {
                 ))}
               </tbody>
             </table>
-            {!recent.length && !loading ? <div className="py-10 text-center text-sm text-slate-500">No payments yet.</div> : null}
-          </div>
+            {!recent.length && !loading ? <EmptyState className="m-3" icon={<Inbox size={18} />} title="No payments yet." /> : null}
+          </Card>
         </div>
       </div>
     </div>

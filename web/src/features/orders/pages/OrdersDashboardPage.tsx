@@ -1,31 +1,36 @@
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
-import { ChefHat, ClipboardList, MonitorSmartphone } from "lucide-react";
+import { ChefHat, ClipboardList, MonitorSmartphone, Inbox } from "lucide-react";
 import { inr } from "@/lib/utils";
 import { useLiveOrders } from "../hooks/useLiveOrders";
 import { usePosAuth } from "@/features/pos/auth/PosAuthProvider";
 import { canAccessOrders } from "@/features/pos/utils/permissions";
+import { EmptyState, PageHeader, SectionTitle } from "@/components/ui/PageHeader";
+import { Card } from "@/components/ui/Card";
+import { KpiCard } from "@/components/ui/KpiCard";
+
+import { ContentLoading, PageLoading } from "@/components/ui/Loading";
 
 function Stat({ label, value, tone }: { label: string; value: string | number; tone?: string }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      className={`rounded-2xl border border-slate-200 bg-white p-4 shadow-sm ${tone || ""}`}
-    >
-      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</div>
-      <div className="mt-1 text-2xl font-black text-slate-900">{value}</div>
-    </motion.div>
-  );
+  const toneClass =
+    tone === "bg-warning-bg"
+      ? "border-warning/40 bg-warning-bg/40"
+      : tone === "bg-success-bg"
+        ? "border-success/40 bg-success-bg/40"
+        : tone === "bg-danger-bg"
+          ? "border-danger/40 bg-danger-bg/40"
+          : tone === "bg-primary-light"
+            ? "border-primary/40 bg-primary-light/60"
+            : undefined;
+  return <KpiCard title={label} value={String(value)} className={toneClass} />;
 }
 
 export function OrdersDashboardPage() {
   const { role, loading: authLoading } = usePosAuth();
   const { stats, loading, error, allOrders } = useLiveOrders();
 
-  if (authLoading) return <div className="p-6 text-slate-500">Loading…</div>;
+  if (authLoading) return <PageLoading label="Loading orders…" />;
   if (!canAccessOrders(role)) {
-    return <div className="p-6">Orders access denied for role: {role}</div>;
+    return <EmptyState title="Orders access denied" description={`Your role (${role}) cannot open orders.`} />;
   }
 
   const recent = [...allOrders]
@@ -33,37 +38,37 @@ export function OrdersDashboardPage() {
     .slice(0, 8);
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Order management</div>
-          <h1 className="text-2xl font-black tracking-tight text-slate-900">Live operations</h1>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Link to="/orders/board" className="inline-flex items-center gap-2 rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white">
+    <div className="grid gap-4">
+      <PageHeader
+        eyebrow="Order management"
+        title="Live operations"
+        actions={
+          <>
+          <Link to="/orders/board" className="kg-btn kg-btn-primary">
             <ClipboardList size={16} /> Live board
           </Link>
-          <Link to="/kds" className="inline-flex items-center gap-2 rounded-xl bg-cyan-500 px-3 py-2 text-sm font-semibold text-white">
+          <Link to="/kds" className="kg-btn kg-btn-secondary">
             <MonitorSmartphone size={16} /> Kitchen display
           </Link>
-          <Link to="/pos" className="inline-flex items-center gap-2 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold">
+          <Link to="/pos" className="kg-btn kg-btn-secondary">
             <ChefHat size={16} /> POS
           </Link>
-        </div>
-      </div>
+          </>
+        }
+      />
 
-      {loading ? <div className="h-24 animate-pulse rounded-2xl bg-slate-200/70" /> : null}
-      {error ? <div className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{error}</div> : null}
+      {loading ? <ContentLoading variant="block" label="Loading" /> : null}
+      {error ? <div className="rounded-lg border border-red-200 bg-danger-bg px-3 py-2 text-[13px] text-danger">{error}</div> : null}
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4 xl:grid-cols-5">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Stat label="Live orders" value={stats.live} />
-        <Stat label="Preparing" value={stats.preparing} tone="bg-amber-50/50" />
-        <Stat label="Ready" value={stats.ready} tone="bg-emerald-50/50" />
+        <Stat label="Preparing" value={stats.preparing} tone="bg-warning-bg" />
+        <Stat label="Ready" value={stats.ready} tone="bg-success-bg" />
         <Stat label="Served" value={stats.served} />
         <Stat label="Completed" value={stats.completed} />
-        <Stat label="Cancelled" value={stats.cancelled} tone="bg-rose-50/40" />
+        <Stat label="Cancelled" value={stats.cancelled} tone="bg-danger-bg" />
         <Stat label="Refunded" value={stats.refunded} />
-        <Stat label="Delayed" value={stats.delayed} tone="bg-orange-50/60" />
+        <Stat label="Delayed" value={stats.delayed} tone="bg-primary-light" />
         <Stat label="Priority" value={stats.priority} />
         <Stat label="Scheduled upcoming" value={stats.scheduled} />
         <Stat label="Pending payments" value={stats.pendingPay} />
@@ -73,26 +78,26 @@ export function OrdersDashboardPage() {
         <Stat label="Avg delivery (min)" value={stats.avgDelivery.toFixed(1)} />
       </div>
 
-      <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-        <div className="mb-3 text-sm font-bold">Recent orders</div>
-        <div className="divide-y divide-slate-100">
+      <Card padding="sm" hover={false}>
+        <SectionTitle title="Recent orders" />
+        <div className="divide-y divide-stroke-0">
           {recent.map((o) => (
-            <Link key={o.id} to={`/orders/${o.id}`} className="flex items-center justify-between gap-3 py-3 hover:bg-slate-50">
+            <Link key={o.id} to={`/orders/${o.id}`} className="flex items-center justify-between gap-3 px-1 py-3 hover:bg-bg-1">
               <div className="min-w-0">
-                <div className="truncate text-sm font-semibold">
+                <div className="truncate text-[13px] font-semibold">
                   {o.invoiceNo || o.id.slice(0, 8)} · {o.customerName || o.tableName || "—"}
                 </div>
-                <div className="text-xs capitalize text-slate-500">
+                <div className="text-xs capitalize text-text-muted">
                   {o.orderType.replace(/_/g, " ")} · {o.status}
                   {o.delayed ? " · delayed" : ""}
                 </div>
               </div>
-              <div className="text-sm font-bold">{inr(o.total)}</div>
+              <div className="text-[14px] font-bold text-text-primary">{inr(o.total)}</div>
             </Link>
           ))}
-          {!recent.length ? <div className="py-6 text-center text-sm text-slate-500">No orders yet — create from POS.</div> : null}
+          {!recent.length ? <EmptyState className="m-3" icon={<Inbox size={18} />} title="No orders yet — create from POS." /> : null}
         </div>
-      </div>
+      </Card>
     </div>
   );
 }

@@ -1,4 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
+import { Inbox } from "lucide-react";
 import { Link } from "react-router-dom";
 import { motion } from "framer-motion";
 import {
@@ -30,8 +31,12 @@ import { resolveDatePreset } from "../utils/datePresets";
 import { buildAnalytics, slowMovingItems } from "../utils/analyticsEngine";
 import { writeDashboardMetrics } from "../services/snapshotService";
 import { runInventoryAlertScan } from "@/features/notifications/services/notificationEngine";
+import { EmptyState, PageHeader, SectionTitle } from "@/components/ui/PageHeader";
+import { Card } from "@/components/ui/Card";
 
-const COLORS = ["#0f172a", "#06b6d4", "#64748b", "#f59e0b", "#10b981", "#ef4444", "#8b5cf6"];
+import { ContentLoading } from "@/components/ui/Loading";
+
+const COLORS = ["#9A3F24", "#E56B2C", "#6B7280", "#F2A65A", "#059669", "#DC2626", "#CF5A1F"];
 
 const PRESETS: Array<{ id: DatePreset; label: string }> = [
   { id: "today", label: "Today" },
@@ -95,28 +100,27 @@ export function AnalyticsDashboardPage() {
   const slow = useMemo(() => slowMovingItems(inventory), [inventory]);
 
   if (!canAccess) {
-    return <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">No access to analytics</div>;
+    return <EmptyState title="No access to analytics" description="Your role cannot open this module." />;
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Business intelligence</div>
-          <h1 className="text-2xl font-black tracking-tight text-slate-900">Analytics</h1>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Link to="/forecast" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold">
+    <div className="grid gap-4">
+      <PageHeader
+        eyebrow="Business intelligence"
+        title="Analytics"
+        actions={
+          <>
+          <Link to="/forecast" className="kg-btn kg-btn-secondary">
             AI Forecast
           </Link>
-          <Link to="/reports" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold">
+          <Link to="/reports" className="kg-btn kg-btn-secondary">
             Reports
           </Link>
-          <Link to="/notifications" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold">
+          <Link to="/notifications" className="kg-btn kg-btn-secondary">
             Notifications
           </Link>
           <button
-            className="rounded-xl bg-cyan-500 px-3 py-2 text-sm font-semibold text-white"
+            className="kg-btn kg-btn-primary"
             onClick={async () => {
               await writeDashboardMetrics(bundle, preset === "year" ? "year" : preset === "thisMonth" || preset === "lastMonth" ? "month" : "day");
               setMsg("Dashboard snapshot saved");
@@ -124,28 +128,29 @@ export function AnalyticsDashboardPage() {
           >
             Save snapshot
           </button>
-        </div>
-      </div>
+          </>
+        }
+      />
 
-      {msg ? <div className="rounded-xl bg-cyan-50 px-3 py-2 text-sm text-cyan-900">{msg}</div> : null}
+      {msg ? <div className="rounded-lg border border-primary/20 bg-primary-light px-3 py-2 text-[13px] text-primary">{msg}</div> : null}
 
-      <div className="flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+      <Card hover={false} className="!p-3"><div className="flex flex-wrap gap-2">
         {PRESETS.map((p) => (
           <button
             key={p.id}
             onClick={() => setPreset(p.id)}
-            className={`rounded-lg px-3 py-1.5 text-sm font-semibold ${preset === p.id ? "bg-slate-900 text-white" : "bg-slate-50 text-slate-600"}`}
+            className={`kg-btn ${preset === p.id ? "kg-btn-primary" : "kg-btn-secondary"}`}
           >
             {p.label}
           </button>
         ))}
         {preset === "custom" ? (
           <>
-            <input type="date" className="rounded-xl border border-slate-200 px-3 py-1.5 text-sm" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)} />
-            <input type="date" className="rounded-xl border border-slate-200 px-3 py-1.5 text-sm" value={customTo} onChange={(e) => setCustomTo(e.target.value)} />
+            <input type="date" className="kg-input !w-auto" value={customFrom} onChange={(e) => setCustomFrom(e.target.value)} />
+            <input type="date" className="kg-input !w-auto" value={customTo} onChange={(e) => setCustomTo(e.target.value)} />
           </>
         ) : null}
-        <select className="ml-auto rounded-xl border border-slate-200 px-3 py-1.5 text-sm" value={supplier} onChange={(e) => setSupplier(e.target.value)}>
+        <select className="kg-input ml-auto !w-auto" value={supplier} onChange={(e) => setSupplier(e.target.value)}>
           <option value="all">All suppliers</option>
           {suppliers.map((s) => (
             <option key={s.id} value={s.name || ""}>
@@ -153,14 +158,14 @@ export function AnalyticsDashboardPage() {
             </option>
           ))}
         </select>
-        <div className="text-xs font-semibold text-slate-500 self-center">
+        <div className="text-xs font-semibold text-text-muted self-center">
           {range.label}: {range.from} → {range.to}
         </div>
-      </div>
+      </div></Card>
 
-      {loading ? <div className="h-28 animate-pulse rounded-2xl bg-slate-200/70" /> : null}
+      {loading ? <ContentLoading variant="block" label="Loading" /> : null}
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-5">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {bundle.kpis.map((k) => (
           <KpiCard
             key={k.id}
@@ -190,15 +195,15 @@ export function AnalyticsDashboardPage() {
             >
               <defs>
                 <linearGradient id="salesFill" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#06b6d4" stopOpacity={0.35} />
-                  <stop offset="100%" stopColor="#06b6d4" stopOpacity={0} />
+                  <stop offset="0%" stopColor="#E56B2C" stopOpacity={0.35} />
+                  <stop offset="100%" stopColor="#E56B2C" stopOpacity={0} />
                 </linearGradient>
               </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#E6E8EE" />
               <XAxis dataKey="date" tick={{ fontSize: 10 }} />
               <YAxis tick={{ fontSize: 10 }} />
               <Tooltip formatter={(v: any) => inr(num(v))} />
-              <Area type="monotone" dataKey="value" stroke="#06b6d4" fill="url(#salesFill)" strokeWidth={2} />
+              <Area type="monotone" dataKey="value" stroke="#E56B2C" fill="url(#salesFill)" strokeWidth={2} />
             </AreaChart>
           </ResponsiveContainer>
         </ChartCard>
@@ -212,13 +217,13 @@ export function AnalyticsDashboardPage() {
                 if (p) setDrill({ title: p.name, rows: [{ mode: p.name, amount: p.value }] });
               }}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#E6E8EE" />
               <XAxis dataKey="name" />
               <YAxis tick={{ fontSize: 10 }} />
               <Tooltip formatter={(v: any) => inr(num(v))} />
               <Bar dataKey="value" radius={[8, 8, 0, 0]}>
-                <Cell fill="#0f172a" />
-                <Cell fill="#06b6d4" />
+                <Cell fill="#9A3F24" />
+                <Cell fill="#E56B2C" />
               </Bar>
             </BarChart>
           </ResponsiveContainer>
@@ -257,24 +262,24 @@ export function AnalyticsDashboardPage() {
                 { name: "Net", value: bundle.profit.net }
               ]}
             >
-              <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+              <CartesianGrid strokeDasharray="3 3" stroke="#E6E8EE" />
               <XAxis dataKey="name" tick={{ fontSize: 11 }} />
               <YAxis tick={{ fontSize: 10 }} />
               <Tooltip formatter={(v: any) => inr(num(v))} />
-              <Line type="monotone" dataKey="value" stroke="#0f172a" strokeWidth={2} />
+              <Line type="monotone" dataKey="value" stroke="#9A3F24" strokeWidth={2} />
             </LineChart>
           </ResponsiveContainer>
         </ChartCard>
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="mb-3 text-sm font-bold">Top revenue items</div>
+        <Card padding="sm" hover={false}>
+          <SectionTitle title="Top revenue items" />
           {bundle.itemAnalytics.slice(0, 10).map((i) => (
             <button
               key={i.item}
               type="button"
-              className="flex w-full items-center justify-between border-t border-slate-100 py-2 text-left text-sm hover:bg-slate-50"
+              className="flex w-full items-center justify-between border-t border-stroke-0 py-2 text-left text-[13px] hover:bg-bg-1"
               onClick={() => setDrill({ title: i.item, rows: [{ item: i.item, qty: i.qty, revenue: i.revenue }] })}
             >
               <span className="font-semibold">{i.item}</span>
@@ -283,25 +288,25 @@ export function AnalyticsDashboardPage() {
               </span>
             </button>
           ))}
-          {!bundle.itemAnalytics.length ? <div className="py-8 text-center text-sm text-slate-500">No item data in range.</div> : null}
-        </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="mb-3 text-sm font-bold">Slow / high stock · wastage {inr(waste.cost)}</div>
+          {!bundle.itemAnalytics.length ? <EmptyState className="m-3" icon={<Inbox size={18} />} title="No item data in range." /> : null}
+        </Card>
+        <Card padding="sm" hover={false}>
+          <SectionTitle title={`Slow / high stock · wastage ${inr(waste.cost)}`} />
           {slow.slice(0, 10).map((i) => (
-            <div key={i.item} className="flex justify-between border-t border-slate-100 py-2 text-sm">
+            <div key={i.item} className="flex justify-between border-t border-stroke-0 py-2 text-[13px]">
               <span>{i.item}</span>
               <span className="font-semibold">
                 {i.qty} · {inr(i.value)}
               </span>
             </div>
           ))}
-        </div>
+        </Card>
       </div>
 
       <div className="flex flex-wrap gap-2">
         <button
           disabled={!canExport}
-          className="rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white disabled:opacity-40"
+          className="kg-btn kg-btn-primary disabled:opacity-40"
           onClick={() =>
             downloadText(
               `analytics-kpis-${range.from}.csv`,
@@ -316,7 +321,7 @@ export function AnalyticsDashboardPage() {
         </button>
         <button
           disabled={!canExport}
-          className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold disabled:opacity-40"
+          className="kg-btn kg-btn-secondary disabled:opacity-40"
           onClick={() =>
             printReport(
               "Analytics Snapshot",
@@ -329,16 +334,16 @@ export function AnalyticsDashboardPage() {
       </div>
 
       {drill ? (
-        <div className="fixed inset-0 z-50 flex items-end justify-center bg-slate-900/40 p-4 sm:items-center" onClick={() => setDrill(null)}>
-          <div className="max-h-[80vh] w-full max-w-lg overflow-auto rounded-2xl bg-white p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+        <div className="fixed inset-0 z-50 flex items-end justify-center bg-text-primary/40 p-4 sm:items-center" onClick={() => setDrill(null)}>
+          <div className="max-h-[80vh] w-full max-w-lg overflow-auto rounded-[var(--radius-xl)] bg-card-0 p-4 shadow-float" onClick={(e) => e.stopPropagation()}>
             <div className="mb-3 flex items-center justify-between">
-              <div className="text-sm font-bold">{drill.title}</div>
-              <button className="text-xs font-semibold text-slate-500" onClick={() => setDrill(null)}>
+              <div className="text-[14px] font-bold text-text-primary">{drill.title}</div>
+              <button className="text-xs font-semibold text-text-muted" onClick={() => setDrill(null)}>
                 Close
               </button>
             </div>
-            <table className="w-full text-left text-sm">
-              <thead className="text-xs uppercase text-slate-500">
+            <table className="w-full text-left text-[13px]">
+              <thead className="text-[11px] font-semibold uppercase tracking-[0.06em] text-text-muted">
                 <tr>
                   {Object.keys(drill.rows[0] || {}).map((k) => (
                     <th key={k} className="px-2 py-1">
@@ -349,7 +354,7 @@ export function AnalyticsDashboardPage() {
               </thead>
               <tbody>
                 {drill.rows.map((r, i) => (
-                  <tr key={i} className="border-t border-slate-100">
+                  <tr key={i} className="border-t border-stroke-0">
                     {Object.values(r).map((v, j) => (
                       <td key={j} className="px-2 py-1">
                         {typeof v === "number" && v > 100 ? inr(v) : String(v)}
@@ -388,16 +393,16 @@ function KpiCard({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       whileHover={{ y: -2 }}
-      className="rounded-2xl border border-slate-200 bg-white/90 p-4 text-left shadow-sm backdrop-blur"
+      className="rounded-[var(--radius-xl)] border border-stroke-0 bg-card-0 p-4 text-left text-text-primary shadow-panel hover:border-stroke-1"
     >
-      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</div>
-      <div className="mt-1 text-2xl font-black text-slate-900">{value}</div>
-      <div className={`mt-1 text-xs font-bold ${up ? "text-emerald-600" : "text-rose-600"}`}>
+      <div className="text-[11px] font-semibold uppercase tracking-[0.06em] text-text-muted">{label}</div>
+      <div className="mt-1.5 text-[22px] font-bold tracking-tight text-text-primary tabular-nums">{value}</div>
+      <div className={`mt-1 text-xs font-bold ${up ? "text-success" : "text-danger"}`}>
         {up ? "▲" : "▼"} {Math.abs(change).toFixed(1)}% vs prior
       </div>
       <div className="mt-3 flex h-8 items-end gap-0.5">
         {spark.slice(-16).map((v, i) => (
-          <div key={i} className="flex-1 rounded-sm bg-cyan-400/70" style={{ height: `${Math.max(8, (v / max) * 100)}%` }} />
+          <div key={i} className="flex-1 rounded-sm bg-primary/70" style={{ height: `${Math.max(8, (v / max) * 100)}%` }} />
         ))}
       </div>
     </motion.button>
@@ -406,16 +411,16 @@ function KpiCard({
 
 function ChartCard({ title, children, onExport }: { title: string; children: React.ReactNode; onExport?: () => void }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="mb-2 flex items-center justify-between">
-        <div className="text-sm font-bold">{title}</div>
+    <Card padding="sm" hover={false}>
+      <div className="mb-3 flex items-center justify-between">
+        <div className="text-[14px] font-bold text-text-primary">{title}</div>
         {onExport ? (
-          <button className="text-xs font-semibold text-cyan-700" onClick={onExport}>
+          <button className="text-xs font-semibold text-primary" onClick={onExport}>
             Export
           </button>
         ) : null}
       </div>
       {children}
-    </div>
+    </Card>
   );
 }

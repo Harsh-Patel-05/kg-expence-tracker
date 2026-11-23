@@ -8,6 +8,9 @@ import { updateOrderStatus } from "../services/orderEngine";
 import { usePosAuth } from "@/features/pos/auth/PosAuthProvider";
 import type { OrderStatus } from "@/features/pos/types";
 import { clsx } from "clsx";
+import { PageHeader } from "@/components/ui/PageHeader";
+
+import { ContentLoading } from "@/components/ui/Loading";
 
 export function OrderBoardPage() {
   const { role } = usePosAuth();
@@ -41,26 +44,24 @@ export function OrderBoardPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-end justify-between gap-3">
-        <div>
-          <Link to="/orders" className="text-xs font-semibold text-cyan-700">
-            ← Orders
-          </Link>
-          <h1 className="text-xl font-black text-slate-900">Live order board</h1>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <div className="relative">
-            <Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-slate-400" />
+    <div className="grid gap-4">
+      <PageHeader
+        back={<Link to="/orders" className="text-xs font-semibold text-primary"> ← Orders </Link>}
+        title="Live order board"
+        actions={
+          <>
+          <div className="relative min-w-[200px] max-w-sm flex-1">
+            <Search size={14} className="pointer-events-none absolute left-2.5 top-1/2 -translate-y-1/2 text-text-muted" aria-hidden />
             <input
-              className="rounded-xl border border-slate-200 bg-white py-2 pl-8 pr-3 text-sm"
+              className="kg-input !pl-8 pr-3"
               placeholder="Order / customer / table / platform ID"
               value={filters.search}
               onChange={(e) => setFilters({ ...filters, search: e.target.value })}
+              aria-label="Search orders"
             />
           </div>
           <select
-            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+            className="kg-input !w-auto"
             value={filters.orderType}
             onChange={(e) => setFilters({ ...filters, orderType: e.target.value })}
           >
@@ -72,7 +73,7 @@ export function OrderBoardPage() {
             ))}
           </select>
           <select
-            className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm"
+            className="kg-input !w-auto"
             value={filters.payment}
             onChange={(e) => setFilters({ ...filters, payment: e.target.value })}
           >
@@ -80,26 +81,27 @@ export function OrderBoardPage() {
             <option value="paid">Paid</option>
             <option value="unpaid">Unpaid</option>
           </select>
-        </div>
-      </div>
+          </>
+        }
+      />
 
-      {msg ? <div className="rounded-xl bg-cyan-50 px-3 py-2 text-sm text-cyan-900">{msg}</div> : null}
-      {error ? <div className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div> : null}
-      {loading ? <div className="h-40 animate-pulse rounded-2xl bg-slate-200/60" /> : null}
+      {msg ? <div className="rounded-lg border border-primary/20 bg-primary-light px-3 py-2 text-[13px] text-primary">{msg}</div> : null}
+      {error ? <div className="rounded-lg border border-red-200 bg-danger-bg px-3 py-2 text-[13px] text-danger">{error}</div> : null}
+      {loading ? <ContentLoading variant="table" label="Loading" /> : null}
 
       <div className="flex gap-3 overflow-x-auto pb-4">
         {BOARD_COLUMNS.map((col) => (
           <div
             key={col.id}
-            className="min-w-[260px] flex-1 rounded-2xl border border-slate-200 bg-slate-50/80 p-2"
+            className="min-w-[260px] flex-1 rounded-[var(--radius-xl)] border border-stroke-0 bg-bg-1 p-2"
             onDragOver={(e) => e.preventDefault()}
             onDrop={() => {
               if (dragId) void moveTo(dragId, col.id);
             }}
           >
             <div className="mb-2 flex items-center justify-between px-1">
-              <div className="text-xs font-bold uppercase tracking-wide text-slate-600">{col.label}</div>
-              <div className="rounded-full bg-white px-2 py-0.5 text-[11px] font-bold text-slate-500">
+              <div className="text-xs font-bold uppercase tracking-wide text-text-secondary">{col.label}</div>
+              <div className="rounded-md bg-card-0 px-2 py-0.5 text-[11px] font-bold text-text-muted">
                 {(columns[col.id] || []).length}
               </div>
             </div>
@@ -110,29 +112,29 @@ export function OrderBoardPage() {
                   draggable={!busy}
                   onDragStart={() => setDragId(o.id)}
                   className={clsx(
-                    "cursor-grab rounded-xl border bg-white p-3 shadow-sm active:cursor-grabbing",
-                    o.delayed ? "border-orange-300 ring-1 ring-orange-200" : "border-slate-200",
-                    o.priority === "vip" || o.priority === "express" ? "border-l-4 border-l-cyan-500" : ""
+                    "cursor-grab rounded-lg border bg-card-0 p-3 shadow-panel active:cursor-grabbing",
+                    o.delayed ? "border-primary/40 ring-1 ring-primary/30" : "border-stroke-0",
+                    o.priority === "vip" || o.priority === "express" ? "border-l-4 border-l-primary" : ""
                   )}
                 >
                   <div className="flex items-start justify-between gap-2">
-                    <Link to={`/orders/${o.id}`} className="text-sm font-bold text-slate-900 hover:underline">
+                    <Link to={`/orders/${o.id}`} className="text-[13px] font-bold text-text-primary hover:underline">
                       {o.invoiceNo || o.id.slice(0, 7)}
                     </Link>
-                    <span className="text-[10px] font-bold uppercase text-slate-500">{o.ageMin}m</span>
+                    <span className="text-[10px] font-bold uppercase text-text-muted">{o.ageMin}m</span>
                   </div>
-                  <div className="mt-1 text-xs text-slate-600">
+                  <div className="mt-1 text-xs text-text-secondary">
                     {ORDER_TYPE_LABELS[o.orderType] || o.orderType}
                     {o.platformOrderId ? ` · #${o.platformOrderId}` : ""}
                   </div>
-                  <div className="mt-1 truncate text-xs font-semibold text-slate-800">
+                  <div className="mt-1 truncate text-xs font-semibold text-text-primary">
                     {o.tableName || o.customerName || "Walk-in"}
                   </div>
                   <div className="mt-2 flex items-center justify-between text-xs">
                     <span>{o.itemCount} items</span>
                     <span className="font-bold">{inr(o.total)}</span>
                   </div>
-                  {o.chefName ? <div className="mt-1 text-[11px] text-slate-500">Chef: {o.chefName}</div> : null}
+                  {o.chefName ? <div className="mt-1 text-[11px] text-text-muted">Chef: {o.chefName}</div> : null}
                 </article>
               ))}
             </div>

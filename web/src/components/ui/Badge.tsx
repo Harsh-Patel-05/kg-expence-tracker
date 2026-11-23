@@ -2,16 +2,16 @@ import { clsx } from "clsx";
 import type { PropsWithChildren } from "react";
 
 const tones = {
-  teal: "bg-teal-50 text-teal-700 ring-teal-200",
-  cyan: "bg-cyan-50 text-cyan-700 ring-cyan-200",
-  green: "bg-emerald-50 text-emerald-700 ring-emerald-200",
-  gold: "bg-amber-50 text-amber-800 ring-amber-200",
-  orange: "bg-orange-50 text-orange-700 ring-orange-200",
-  coral: "bg-orange-50 text-orange-800 ring-orange-200",
-  purple: "bg-violet-50 text-violet-700 ring-violet-200",
-  rose: "bg-rose-50 text-rose-700 ring-rose-200",
-  danger: "bg-red-50 text-red-700 ring-red-200",
-  slate: "bg-slate-100 text-slate-700 ring-slate-200"
+  teal: "bg-primary-light text-primary ring-stroke-0",
+  cyan: "bg-primary-light text-primary ring-stroke-0",
+  green: "bg-success-bg text-success ring-stroke-0",
+  gold: "bg-warning-bg text-warning ring-stroke-0",
+  orange: "bg-warning-bg text-primary ring-stroke-0",
+  coral: "bg-danger-bg text-danger ring-stroke-0",
+  purple: "bg-primary-light text-accent ring-stroke-0",
+  rose: "bg-danger-bg text-danger ring-stroke-0",
+  danger: "bg-danger-bg text-danger ring-stroke-0",
+  slate: "bg-bg-1 text-text-secondary ring-stroke-0"
 } as const;
 
 export function Badge({

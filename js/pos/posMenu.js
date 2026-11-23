@@ -439,11 +439,17 @@
       slice.length +
       ":" +
       slice.map((g) => (g.key || g.id || "") + ":" + (g.minPrice || g.price || 0)).join(",");
-    if (container.dataset.kgMenuFp === fp && container.querySelectorAll(".kg-tile").length === slice.length) {
+    // DOM elements expose dataset; tests/stubs may not — guard before fingerprint skip
+    const ds = container.dataset;
+    const tileCount =
+      typeof container.querySelectorAll === "function" ? container.querySelectorAll(".kg-tile").length : -1;
+    if (ds && ds.kgMenuFp === fp && tileCount === slice.length) {
       return;
     }
-    container.dataset.kgMenuFp = fp;
-    container.classList.add("kg-tile-grid");
+    if (ds) ds.kgMenuFp = fp;
+    if (container.classList && typeof container.classList.add === "function") {
+      container.classList.add("kg-tile-grid");
+    }
     container.innerHTML = next;
   }
 

@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Inbox } from "lucide-react";
 import { Link } from "react-router-dom";
 import { isoDate } from "@/lib/utils";
 import { useRestaurantCollection } from "@/features/pos/hooks/useRestaurantCollection";
@@ -13,6 +14,9 @@ import {
   softDeleteCalendarEvent,
   upsertCalendarEvent
 } from "../services/calendarService";
+import { EmptyState, PageHeader } from "@/components/ui/PageHeader";
+import { Card } from "@/components/ui/Card";
+import { KpiCard } from "@/components/ui/KpiCard";
 
 type View = "month" | "week" | "day" | "agenda" | "year";
 
@@ -152,43 +156,43 @@ export function CalendarPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Scheduling</div>
-          <h1 className="text-2xl font-black tracking-tight text-slate-900">Calendar</h1>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Link to="/documents" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold">
+    <div className="grid gap-4">
+      <PageHeader
+        eyebrow="Scheduling"
+        title="Calendar"
+        actions={
+          <>
+          <Link to="/documents" className="kg-btn kg-btn-secondary">
             Documents
           </Link>
-          <Link to="/reminders" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold">
+          <Link to="/reminders" className="kg-btn kg-btn-secondary">
             Reminders
           </Link>
-          <Link to="/tasks" className="rounded-xl bg-cyan-500 px-3 py-2 text-sm font-semibold text-white">
+          <Link to="/tasks" className="kg-btn kg-btn-primary">
             Tasks
           </Link>
-        </div>
-      </div>
+          </>
+        }
+      />
 
-      {msg ? <div className="rounded-xl bg-cyan-50 px-3 py-2 text-sm text-cyan-900">{msg}</div> : null}
+      {msg ? <div className="rounded-lg border border-primary/20 bg-primary-light px-3 py-2 text-[13px] text-primary">{msg}</div> : null}
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Stat label="Today" value={todayItems.length} />
         <Stat label="Upcoming" value={upcoming.length} />
         <Stat label="Birthdays today" value={birthdays.length} />
         <Stat label="Open tasks on calendar" value={filtered.filter((i) => i.source === "task").length} />
       </div>
 
-      <div className="flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
+      <Card hover={false} className="!p-3"><div className="flex flex-wrap gap-2">
         {(["month", "week", "day", "agenda", "year"] as View[]).map((v) => (
-          <button key={v} onClick={() => setView(v)} className={`rounded-lg px-3 py-1.5 text-sm capitalize ${view === v ? "bg-slate-900 text-white" : "text-slate-600"}`}>
+          <button key={v} onClick={() => setView(v)} className={`kg-btn capitalize ${view === v ? "kg-btn-primary" : "kg-btn-secondary"}`}>
             {v}
           </button>
         ))}
-        <input type="month" className="rounded-xl border border-slate-200 px-3 py-1.5 text-sm" value={cursor} onChange={(e) => setCursor(e.target.value)} />
-        <input className="min-w-[160px] flex-1 rounded-xl border border-slate-200 px-3 py-1.5 text-sm" placeholder="Search…" value={q} onChange={(e) => setQ(e.target.value)} />
-        <select className="rounded-xl border border-slate-200 px-3 py-1.5 text-sm" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
+        <input type="month" className="kg-input !w-auto" value={cursor} onChange={(e) => setCursor(e.target.value)} />
+        <input className="kg-input min-w-[160px] flex-1 !w-auto" placeholder="Search…" value={q} onChange={(e) => setQ(e.target.value)} />
+        <select className="kg-input !w-auto" value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
           <option value="all">All types</option>
           {Object.keys(EVENT_COLORS).map((t) => (
             <option key={t} value={t}>
@@ -196,61 +200,61 @@ export function CalendarPage() {
             </option>
           ))}
         </select>
-      </div>
+      </div></Card>
 
       <div className="grid gap-4 xl:grid-cols-[300px_1fr_280px]">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="mb-2 text-sm font-bold">Create event</div>
-          <input className="mb-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Title" value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} />
-          <input type="date" className="mb-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" value={form.date} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))} />
+        <Card padding="sm" hover={false}>
+          <div className="mb-2 text-[14px] font-bold text-text-primary">Create event</div>
+          <input className="kg-input mb-2 w-full" placeholder="Title" value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} />
+          <input type="date" className="kg-input mb-2 w-full" value={form.date} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))} />
           <label className="mb-2 flex items-center gap-2 text-xs font-semibold">
             <input type="checkbox" checked={form.allDay} onChange={(e) => setForm((f) => ({ ...f, allDay: e.target.checked }))} />
             All day
           </label>
           {!form.allDay ? (
             <div className="mb-2 flex gap-2">
-              <input type="time" className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" value={form.startTime} onChange={(e) => setForm((f) => ({ ...f, startTime: e.target.value }))} />
-              <input type="time" className="w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" value={form.endTime} onChange={(e) => setForm((f) => ({ ...f, endTime: e.target.value }))} />
+              <input type="time" className="kg-input w-full" value={form.startTime} onChange={(e) => setForm((f) => ({ ...f, startTime: e.target.value }))} />
+              <input type="time" className="kg-input w-full" value={form.endTime} onChange={(e) => setForm((f) => ({ ...f, endTime: e.target.value }))} />
             </div>
           ) : null}
-          <select className="mb-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" value={form.eventType} onChange={(e) => setForm((f) => ({ ...f, eventType: e.target.value as CalendarEventType }))}>
+          <select className="kg-input mb-2 w-full" value={form.eventType} onChange={(e) => setForm((f) => ({ ...f, eventType: e.target.value as CalendarEventType }))}>
             {TYPES.map((t) => (
               <option key={t} value={t}>
                 {t}
               </option>
             ))}
           </select>
-          <select className="mb-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" value={form.recurrence} onChange={(e) => setForm((f) => ({ ...f, recurrence: e.target.value as RecurrenceFreq }))}>
+          <select className="kg-input mb-2 w-full" value={form.recurrence} onChange={(e) => setForm((f) => ({ ...f, recurrence: e.target.value as RecurrenceFreq }))}>
             <option value="once">One time</option>
             <option value="daily">Daily</option>
             <option value="weekly">Weekly</option>
             <option value="monthly">Monthly</option>
             <option value="yearly">Yearly</option>
           </select>
-          <textarea className="mb-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" rows={2} value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} placeholder="Notes" />
-          <button disabled={!form.title.trim()} onClick={createEvent} className="w-full rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">
+          <textarea className="kg-input mb-2 w-full" rows={2} value={form.notes} onChange={(e) => setForm((f) => ({ ...f, notes: e.target.value }))} placeholder="Notes" />
+          <button disabled={!form.title.trim()} onClick={createEvent} className="w-full kg-btn kg-btn-primary disabled:opacity-50">
             Save event
           </button>
-          <div className="mt-3 text-[10px] text-slate-500">Drag calendar events onto another day to reschedule. Integrated reminders/tasks/leave/orders are read-only.</div>
-        </div>
+          <div className="mt-3 text-[10px] text-text-muted">Drag calendar events onto another day to reschedule. Integrated reminders/tasks/leave/orders are read-only.</div>
+        </Card>
 
         <div className="min-w-0 space-y-3">
           {view === "month" || view === "year" ? (
-            <div className="grid grid-cols-7 gap-1 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
+            <div className="grid grid-cols-7 gap-1 rounded-[var(--radius-xl)] border border-stroke-0 bg-card-0 p-2 shadow-panel">
               {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
-                <div key={d} className="px-1 py-1 text-center text-[10px] font-bold uppercase text-slate-400">
+                <div key={d} className="px-1 py-1 text-center text-[10px] font-bold uppercase text-text-muted">
                   {d}
                 </div>
               ))}
               {cells.map((c, i) => (
                 <div
                   key={i}
-                  className={`min-h-[88px] rounded-lg border border-slate-100 p-1 ${c.date === today ? "bg-cyan-50" : "bg-slate-50/40"} ${c.date === selectedDate ? "ring-2 ring-cyan-400" : ""}`}
+                  className={`min-h-[88px] rounded-lg border border-stroke-0 p-1 ${c.date === today ? "bg-primary-light" : "bg-bg-1"} ${c.date === selectedDate ? "ring-2 ring-primary" : ""}`}
                   onClick={() => c.date && setSelectedDate(c.date)}
                   onDragOver={(e) => e.preventDefault()}
                   onDrop={() => c.date && onDropDate(c.date)}
                 >
-                  {c.date ? <div className="text-[10px] font-bold text-slate-600">{Number(c.date.slice(-2))}</div> : null}
+                  {c.date ? <div className="text-[10px] font-bold text-text-secondary">{Number(c.date.slice(-2))}</div> : null}
                   {(byDate.get(c.date || "") || []).slice(0, 3).map((ev) => (
                     <div
                       key={ev.id}
@@ -263,7 +267,7 @@ export function CalendarPage() {
                       {ev.title}
                     </div>
                   ))}
-                  {(byDate.get(c.date || "") || []).length > 3 ? <div className="text-[9px] text-slate-400">+{(byDate.get(c.date || "") || []).length - 3}</div> : null}
+                  {(byDate.get(c.date || "") || []).length > 3 ? <div className="text-[9px] text-text-muted">+{(byDate.get(c.date || "") || []).length - 3}</div> : null}
                 </div>
               ))}
             </div>
@@ -272,7 +276,7 @@ export function CalendarPage() {
           {view === "week" ? (
             <div className="grid grid-cols-7 gap-2">
               {weekDates.map((d) => (
-                <div key={d} className="min-h-[220px] rounded-2xl border border-slate-200 bg-white p-2 shadow-sm" onDragOver={(e) => e.preventDefault()} onDrop={() => onDropDate(d)}>
+                <div key={d} className="min-h-[220px] rounded-[var(--radius-xl)] border border-stroke-0 bg-card-0 p-2 shadow-panel" onDragOver={(e) => e.preventDefault()} onDrop={() => onDropDate(d)}>
                   <div className="mb-2 text-xs font-bold">{d}</div>
                   {(byDate.get(d) || []).map((ev) => (
                     <EventChip key={ev.id} ev={ev} onDrag={() => setDragId(ev.id)} />
@@ -283,51 +287,51 @@ export function CalendarPage() {
           ) : null}
 
           {view === "day" || view === "agenda" ? (
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+            <Card padding="sm" hover={false}>
               <div className="mb-3 flex items-center gap-2">
-                <input type="date" className="rounded-xl border border-slate-200 px-3 py-2 text-sm" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
-                <div className="text-sm font-bold">{view === "agenda" ? "Agenda" : "Day timeline"}</div>
+                <input type="date" className="kg-input !w-auto" value={selectedDate} onChange={(e) => setSelectedDate(e.target.value)} />
+                <div className="text-[14px] font-bold text-text-primary">{view === "agenda" ? "Agenda" : "Day timeline"}</div>
               </div>
               {(view === "day" ? byDate.get(selectedDate) || [] : upcoming).map((ev) => (
-                <div key={ev.id} className="mb-2 flex items-start justify-between gap-2 rounded-xl border border-slate-100 bg-slate-50 px-3 py-2">
+                <div key={ev.id} className="mb-2 flex items-start justify-between gap-2 rounded-lg border border-stroke-0 bg-bg-1 px-3 py-2">
                   <div>
-                    <div className="text-sm font-semibold">{ev.title}</div>
-                    <div className="text-xs text-slate-500">
+                    <div className="text-[14px] font-bold text-text-primary">{ev.title}</div>
+                    <div className="text-xs text-text-muted">
                       {ev.date} {ev.startTime || ""} · {ev.eventType} · {ev.source}
                     </div>
                   </div>
                   {ev.source === "calendar" ? (
                     <div className="flex gap-2">
-                      <button className="text-xs font-semibold text-cyan-700" onClick={async () => { await duplicateCalendarEvent(ev.id); setMsg("Duplicated"); }}>
+                      <button className="text-xs font-semibold text-primary" onClick={async () => { await duplicateCalendarEvent(ev.id); setMsg("Duplicated"); }}>
                         Dup
                       </button>
-                      <button className="text-xs font-semibold text-amber-700" onClick={async () => { await archiveCalendarEvent(ev.id); setMsg("Archived"); }}>
+                      <button className="text-xs font-semibold text-warning" onClick={async () => { await archiveCalendarEvent(ev.id); setMsg("Archived"); }}>
                         Archive
                       </button>
-                      <button className="text-xs font-semibold text-rose-600" onClick={async () => { await softDeleteCalendarEvent(ev.id); setMsg("Deleted"); }}>
+                      <button className="text-xs font-semibold text-danger" onClick={async () => { await softDeleteCalendarEvent(ev.id); setMsg("Deleted"); }}>
                         Del
                       </button>
                     </div>
                   ) : null}
                 </div>
               ))}
-              {!(view === "day" ? byDate.get(selectedDate) || [] : upcoming).length ? <div className="py-10 text-center text-sm text-slate-500">No events.</div> : null}
-            </div>
+              {!(view === "day" ? byDate.get(selectedDate) || [] : upcoming).length ? <EmptyState className="m-3" icon={<Inbox size={18} />} title="No events." /> : null}
+            </Card>
           ) : null}
         </div>
 
         <div className="space-y-3">
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="mb-2 text-sm font-bold">Today</div>
+          <Card padding="sm" hover={false}>
+            <div className="mb-2 text-[14px] font-bold text-text-primary">Today</div>
             {todayItems.slice(0, 8).map((i) => (
               <div key={i.id} className="mb-1 truncate text-xs font-semibold" style={{ color: i.color }}>
                 {i.title}
               </div>
             ))}
-            {!todayItems.length ? <div className="text-xs text-slate-500">Nothing scheduled.</div> : null}
-          </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="mb-2 text-sm font-bold">Legend</div>
+            {!todayItems.length ? <div className="text-xs text-text-muted">Nothing scheduled.</div> : null}
+          </Card>
+          <Card padding="sm" hover={false}>
+            <div className="mb-2 text-[14px] font-bold text-text-primary">Legend</div>
             <div className="grid grid-cols-2 gap-1">
               {Object.entries(EVENT_COLORS).slice(0, 10).map(([k, c]) => (
                 <div key={k} className="flex items-center gap-1 text-[10px]">
@@ -336,7 +340,7 @@ export function CalendarPage() {
                 </div>
               ))}
             </div>
-          </div>
+          </Card>
         </div>
       </div>
     </div>
@@ -344,12 +348,7 @@ export function CalendarPage() {
 }
 
 function Stat({ label, value }: { label: string; value: number }) {
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-      <div className="text-xs uppercase text-slate-500">{label}</div>
-      <div className="text-xl font-black">{value}</div>
-    </div>
-  );
+  return <KpiCard title={label} value={String(value)} />;
 }
 
 function EventChip({ ev, onDrag }: { ev: UnifiedCalendarItem; onDrag: () => void }) {

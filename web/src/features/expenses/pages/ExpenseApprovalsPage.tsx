@@ -6,6 +6,9 @@ import { usePosAuth } from "@/features/pos/auth/PosAuthProvider";
 import type { ExpenseDoc } from "@/features/tasks/types";
 import { decideExpenseApproval } from "../services/expenseService";
 import { canApproveExpense } from "../utils/permissions";
+import { EmptyState, PageHeader } from "@/components/ui/PageHeader";
+
+import { ContentLoading } from "@/components/ui/Loading";
 
 export function ExpenseApprovalsPage() {
   const { role, user } = usePosAuth();
@@ -20,34 +23,32 @@ export function ExpenseApprovalsPage() {
   );
 
   return (
-    <div className="space-y-4">
-      <div>
-        <Link to="/expenses" className="text-xs font-semibold text-cyan-700">
-          ← Expenses
-        </Link>
-        <h1 className="text-2xl font-black text-slate-900">Expense approvals</h1>
-      </div>
-      {msg ? <div className="rounded-xl bg-cyan-50 px-3 py-2 text-sm text-cyan-900">{msg}</div> : null}
-      {!canApprove ? <div className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900">You can view approvals but only managers/owners can decide.</div> : null}
+    <div className="grid gap-4">
+      <PageHeader
+        back={<Link to="/expenses" className="text-xs font-semibold text-primary"> ← Expenses </Link>}
+        title="Expense approvals"
+      />
+      {msg ? <div className="rounded-lg border border-primary/20 bg-primary-light px-3 py-2 text-[13px] text-primary">{msg}</div> : null}
+      {!canApprove ? <div className="rounded-lg border border-warning/20 bg-warning-bg px-3 py-2 text-[13px] text-warning">You can view approvals but only managers/owners can decide.</div> : null}
 
-      {loading ? <div className="h-32 animate-pulse rounded-2xl bg-slate-200/70" /> : null}
+      {loading ? <ContentLoading variant="block" label="Loading" /> : null}
 
       <div className="space-y-2">
         {pending.map((e) => (
-          <div key={e.id} className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+          <div key={e.id} className="rounded-[var(--radius-xl)] border border-stroke-0 bg-card-0 p-4 shadow-panel">
             <div className="flex flex-wrap items-start justify-between gap-3">
               <div>
-                <div className="font-bold capitalize text-slate-900">
+                <div className="font-bold capitalize text-text-primary">
                   {e.category.replace(/_/g, " ")} · {inr(e.amount)}
                 </div>
-                <div className="text-xs text-slate-500">
+                <div className="text-xs text-text-muted">
                   {e.expenseNumber} · {e.date} · {e.vendorName || "No vendor"} · {e.invoiceNumber || "No invoice"}
                 </div>
-                {e.note ? <div className="mt-1 text-sm text-slate-600">{e.note}</div> : null}
+                {e.note ? <div className="mt-1 text-[13px] text-text-secondary">{e.note}</div> : null}
               </div>
               <div className="flex min-w-[220px] flex-col gap-2">
                 <input
-                  className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                  className="kg-input !w-auto"
                   placeholder="Manager comment"
                   value={comment[e.id] || ""}
                   onChange={(ev) => setComment((c) => ({ ...c, [e.id]: ev.target.value }))}
@@ -55,7 +56,7 @@ export function ExpenseApprovalsPage() {
                 <div className="flex gap-2">
                   <button
                     disabled={!canApprove}
-                    className="flex-1 rounded-xl bg-emerald-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-40"
+                    className="kg-btn flex-1 bg-success text-white hover:brightness-95 disabled:opacity-40"
                     onClick={async () => {
                       await decideExpenseApproval(e.id, "approved", comment[e.id], user?.uid);
                       setMsg("Approved");
@@ -65,7 +66,7 @@ export function ExpenseApprovalsPage() {
                   </button>
                   <button
                     disabled={!canApprove}
-                    className="flex-1 rounded-xl bg-rose-600 px-3 py-2 text-sm font-semibold text-white disabled:opacity-40"
+                    className="kg-btn flex-1 bg-danger text-white hover:brightness-95 disabled:opacity-40"
                     onClick={async () => {
                       await decideExpenseApproval(e.id, "rejected", comment[e.id], user?.uid);
                       setMsg("Rejected");
@@ -78,7 +79,7 @@ export function ExpenseApprovalsPage() {
             </div>
           </div>
         ))}
-        {!pending.length && !loading ? <div className="rounded-2xl border border-dashed border-slate-200 py-12 text-center text-sm text-slate-500">No pending approvals.</div> : null}
+        {!pending.length && !loading ? <EmptyState title="No pending approvals." /> : null}
       </div>
     </div>
   );

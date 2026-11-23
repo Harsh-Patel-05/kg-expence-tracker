@@ -14,6 +14,10 @@ import {
   softDeleteNotification,
   upsertNotificationPreferences
 } from "../services/notificationEngine";
+import { EmptyState, PageHeader, SectionTitle } from "@/components/ui/PageHeader";
+import { Card } from "@/components/ui/Card";
+
+import { ContentLoading } from "@/components/ui/Loading";
 
 const KINDS: NotificationKind[] = [
   "new_order",
@@ -66,15 +70,14 @@ export function NotificationCenterPage() {
   const unreadIds = data.filter((n) => (n.readStatus || (n.read ? "read" : "unread")) === "unread").map((n) => n.id);
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Inbox</div>
-          <h1 className="text-2xl font-black text-slate-900">Notification center</h1>
-        </div>
-        <div className="flex flex-wrap gap-2">
+    <div className="grid gap-4">
+      <PageHeader
+        eyebrow="Inbox"
+        title="Notification center"
+        actions={
+          <>
           <button
-            className="rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white"
+            className="kg-btn kg-btn-primary"
             onClick={async () => {
               await markAllNotificationsRead(unreadIds);
               setMsg("All marked read");
@@ -82,26 +85,27 @@ export function NotificationCenterPage() {
           >
             Mark all read ({unreadIds.length})
           </button>
-          <Link to="/analytics" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold">
+          <Link to="/analytics" className="kg-btn kg-btn-secondary">
             Analytics
           </Link>
-        </div>
-      </div>
+          </>
+        }
+      />
 
-      {msg ? <div className="rounded-xl bg-cyan-50 px-3 py-2 text-sm text-cyan-900">{msg}</div> : null}
-      {error ? <div className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div> : null}
+      {msg ? <div className="rounded-lg border border-primary/20 bg-primary-light px-3 py-2 text-[13px] text-primary">{msg}</div> : null}
+      {error ? <div className="rounded-lg border border-red-200 bg-danger-bg px-3 py-2 text-[13px] text-danger">{error}</div> : null}
 
       <div className="grid gap-4 lg:grid-cols-[1fr_280px]">
         <div className="space-y-3">
           <div className="flex flex-wrap gap-2">
-            <input className="min-w-[180px] flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm" placeholder="Search notifications…" value={q} onChange={(e) => setQ(e.target.value)} />
-            <select className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm" value={status} onChange={(e) => setStatus(e.target.value as any)}>
+            <input className="kg-input min-w-[180px] flex-1 !w-auto" placeholder="Search notifications…" value={q} onChange={(e) => setQ(e.target.value)} />
+            <select className="kg-input !w-auto" value={status} onChange={(e) => setStatus(e.target.value as any)}>
               <option value="unread">Unread</option>
               <option value="read">Read</option>
               <option value="archived">Archived</option>
               <option value="all">All</option>
             </select>
-            <select className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm" value={priority} onChange={(e) => setPriority(e.target.value)}>
+            <select className="kg-input !w-auto" value={priority} onChange={(e) => setPriority(e.target.value)}>
               <option value="all">All priorities</option>
               {(["critical", "high", "medium", "low"] as NotificationPriority[]).map((p) => (
                 <option key={p} value={p}>
@@ -109,7 +113,7 @@ export function NotificationCenterPage() {
                 </option>
               ))}
             </select>
-            <select className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm" value={kind} onChange={(e) => setKind(e.target.value)}>
+            <select className="kg-input !w-auto" value={kind} onChange={(e) => setKind(e.target.value)}>
               <option value="all">All types</option>
               {KINDS.map((k) => (
                 <option key={k} value={k}>
@@ -119,37 +123,37 @@ export function NotificationCenterPage() {
             </select>
           </div>
 
-          {loading ? <div className="h-40 animate-pulse rounded-2xl bg-slate-200/70" /> : null}
+          {loading ? <ContentLoading variant="table" label="Loading" /> : null}
 
           <div className="space-y-2">
             {rows.map((n) => {
               const rs = n.readStatus || (n.read ? "read" : "unread");
               return (
-                <div key={n.id} className={`rounded-2xl border p-4 shadow-sm ${rs === "unread" ? "border-cyan-200 bg-cyan-50/40" : "border-slate-200 bg-white"}`}>
+                <div key={n.id} className={`rounded-[var(--radius-xl)] border p-4 shadow-panel ${rs === "unread" ? "border-primary/30 bg-primary-light" : "border-stroke-0 bg-card-0"}`}>
                   <div className="flex flex-wrap items-start justify-between gap-3">
                     <div className="min-w-0">
                       <div className="flex flex-wrap items-center gap-2">
-                        <div className="font-bold text-slate-900">{n.title}</div>
-                        {n.pinned ? <span className="rounded-full bg-amber-100 px-2 text-[10px] font-bold uppercase text-amber-800">pinned</span> : null}
-                        <span className="rounded-full bg-slate-100 px-2 text-[10px] font-bold uppercase">{n.priority || "medium"}</span>
-                        <span className="rounded-full bg-slate-100 px-2 text-[10px] font-bold uppercase">{n.kind}</span>
+                        <div className="font-bold text-text-primary">{n.title}</div>
+                        {n.pinned ? <span className="rounded-md bg-warning-bg px-2 text-[10px] font-bold uppercase text-warning">pinned</span> : null}
+                        <span className="rounded-md bg-bg-1 px-2 text-[10px] font-bold uppercase">{n.priority || "medium"}</span>
+                        <span className="rounded-md bg-bg-1 px-2 text-[10px] font-bold uppercase">{n.kind}</span>
                       </div>
-                      <div className="mt-1 text-sm text-slate-600">{n.body}</div>
+                      <div className="mt-1 text-[13px] text-text-secondary">{n.body}</div>
                     </div>
                     <div className="flex flex-wrap gap-2">
                       {n.link ? (
-                        <Link to={n.link} className="text-xs font-semibold text-cyan-700">
+                        <Link to={n.link} className="text-xs font-semibold text-primary">
                           Open
                         </Link>
                       ) : null}
-                      <button className="text-xs font-semibold text-emerald-700" onClick={() => markNotificationRead(n.id, rs !== "read")}>
+                      <button className="text-xs font-semibold text-success" onClick={() => markNotificationRead(n.id, rs !== "read")}>
                         {rs === "read" ? "Unread" : "Read"}
                       </button>
-                      <button className="text-xs font-semibold text-amber-700" onClick={() => pinNotification(n.id, !n.pinned)}>
+                      <button className="text-xs font-semibold text-warning" onClick={() => pinNotification(n.id, !n.pinned)}>
                         {n.pinned ? "Unpin" : "Pin"}
                       </button>
                       <button
-                        className="text-xs font-semibold text-slate-600"
+                        className="text-xs font-semibold text-text-secondary"
                         onClick={async () => {
                           const until = new Date();
                           until.setHours(until.getHours() + 4);
@@ -159,10 +163,10 @@ export function NotificationCenterPage() {
                       >
                         Snooze
                       </button>
-                      <button className="text-xs font-semibold text-slate-600" onClick={() => archiveNotification(n.id)}>
+                      <button className="text-xs font-semibold text-text-secondary" onClick={() => archiveNotification(n.id)}>
                         Archive
                       </button>
-                      <button className="text-xs font-semibold text-rose-600" onClick={() => softDeleteNotification(n.id)}>
+                      <button className="text-xs font-semibold text-danger" onClick={() => softDeleteNotification(n.id)}>
                         Delete
                       </button>
                     </div>
@@ -170,13 +174,13 @@ export function NotificationCenterPage() {
                 </div>
               );
             })}
-            {!rows.length && !loading ? <div className="rounded-2xl border border-dashed border-slate-200 py-12 text-center text-sm text-slate-500">No notifications.</div> : null}
+            {!rows.length && !loading ? <EmptyState title="No notifications." /> : null}
           </div>
         </div>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="mb-3 text-sm font-bold">Preferences</div>
-          <label className="mb-2 flex items-center gap-2 text-sm">
+        <Card padding="sm" hover={false}>
+          <SectionTitle title="Preferences" />
+          <label className="mb-2 flex items-center gap-2 text-[13px]">
             <input
               type="checkbox"
               checked={myPrefs?.soundEnabled !== false}
@@ -195,7 +199,7 @@ export function NotificationCenterPage() {
             />
             Sound
           </label>
-          <label className="mb-2 flex items-center gap-2 text-sm">
+          <label className="mb-2 flex items-center gap-2 text-[13px]">
             <input
               type="checkbox"
               checked={myPrefs?.desktopEnabled !== false}
@@ -211,7 +215,7 @@ export function NotificationCenterPage() {
             />
             Desktop
           </label>
-          <label className="mb-2 flex items-center gap-2 text-sm">
+          <label className="mb-2 flex items-center gap-2 text-[13px]">
             <input
               type="checkbox"
               checked={myPrefs?.mobileEnabled !== false}
@@ -227,12 +231,12 @@ export function NotificationCenterPage() {
             />
             Mobile
           </label>
-          <div className="mt-3 text-xs text-slate-500">
+          <div className="mt-3 text-xs text-text-muted">
             Quiet hours: {myPrefs?.quietHoursStart || "22:00"} – {myPrefs?.quietHoursEnd || "07:00"}
           </div>
-          <div className="mt-4 text-xs text-slate-500">Channels architecture-ready: Email · WhatsApp · SMS</div>
-          <div className="mt-4 rounded-xl bg-slate-50 p-3 text-xs text-slate-600">Today: {isoDate()} · Unread {unreadIds.length}</div>
-        </div>
+          <div className="mt-4 text-xs text-text-muted">Channels architecture-ready: Email · WhatsApp · SMS</div>
+          <div className="mt-4 rounded-lg bg-bg-1 p-3 text-xs text-text-secondary">Today: {isoDate()} · Unread {unreadIds.length}</div>
+        </Card>
       </div>
     </div>
   );

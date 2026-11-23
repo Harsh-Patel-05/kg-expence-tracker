@@ -12,6 +12,11 @@ import {
   upsertReminder
 } from "../services/taskReminderService";
 import { canAccessReminders } from "@/features/hr/utils/permissions";
+import { EmptyState, PageHeader } from "@/components/ui/PageHeader";
+import { Card } from "@/components/ui/Card";
+import { KpiCard } from "@/components/ui/KpiCard";
+
+import { ContentLoading } from "@/components/ui/Loading";
 
 const CATEGORIES: ReminderCategory[] = [
   "vendor_payment",
@@ -118,79 +123,62 @@ export function RemindersHubPage() {
   }
 
   if (!canAccess) {
-    return <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">No access</div>;
+    return <EmptyState title="No access" description="Your role cannot open reminders." />;
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <Link to="/tasks" className="text-xs font-semibold text-cyan-700">
-            Tasks board →
-          </Link>
-          <h1 className="text-2xl font-black text-slate-900">Reminders & schedule</h1>
-        </div>
-        <div className="flex gap-1 rounded-xl border border-slate-200 bg-white p-1 text-sm">
-          {(["list", "calendar", "agenda"] as const).map((v) => (
-            <button key={v} onClick={() => setView(v)} className={`rounded-lg px-3 py-1.5 capitalize ${view === v ? "bg-slate-900 text-white" : "text-slate-600"}`}>
-              {v}
-            </button>
-          ))}
-        </div>
-      </div>
+    <div className="grid gap-4">
+      <PageHeader
+        back={<Link to="/tasks" className="text-xs font-semibold text-primary"> Tasks board → </Link>}
+        title="Reminders & schedule"
+        actions={
+          <div className="flex flex-wrap gap-2">
+            {(["list", "calendar", "agenda"] as const).map((v) => (
+              <button key={v} onClick={() => setView(v)} className={`kg-btn capitalize ${view === v ? "kg-btn-primary" : "kg-btn-secondary"}`}>
+                {v}
+              </button>
+            ))}
+          </div>
+        }
+      />
 
-      {msg ? <div className="rounded-xl border border-[#E9EDF5] bg-[#F5F7FB] px-4 py-3 text-[14px] text-[#111827]">{msg}</div> : null}
+      {msg ? <div className="rounded-lg border border-primary/20 bg-primary-light px-3 py-2 text-[13px] text-primary">{msg}</div> : null}
       {error && !loading ? (
-        <div className="rounded-xl border border-[#FECACA] bg-[#FEF2F2] px-4 py-3 text-[14px] text-[#B91C1C]">
+        <div className="rounded-lg border border-red-200 bg-danger-bg px-3 py-2 text-[13px] text-danger">
           {error.includes("permission")
             ? "Connecting to Firebase… If this stays, enable Anonymous Authentication in Firebase Console → Authentication → Sign-in method."
             : error}
         </div>
       ) : null}
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-        <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-          <div className="text-xs uppercase text-slate-500">Open</div>
-          <div className="text-xl font-black">{stats.open}</div>
-        </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-          <div className="text-xs uppercase text-slate-500">Due today</div>
-          <div className="text-xl font-black">{stats.dueToday}</div>
-        </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-          <div className="text-xs uppercase text-slate-500">Overdue</div>
-          <div className="text-xl font-black">{stats.overdue}</div>
-        </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-          <div className="text-xs uppercase text-slate-500">Done</div>
-          <div className="text-xl font-black">{stats.done}</div>
-        </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-          <div className="text-xs uppercase text-slate-500">Completion</div>
-          <div className="text-xl font-black">{stats.completion}%</div>
-        </div>
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
+        <KpiCard title="Open" value={String(stats.open)} />
+        <KpiCard title="Due today" value={String(stats.dueToday)} />
+        <KpiCard title="Overdue" value={String(stats.overdue)} tone={stats.overdue > 0 ? "bad" : "neutral"} />
+        <KpiCard title="Done" value={String(stats.done)} tone="good" />
+        <KpiCard title="Completion" value={`${stats.completion}%`} />
       </div>
 
       <div className="grid gap-4 lg:grid-cols-[300px_1fr]">
         <div className="space-y-3">
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="mb-2 text-sm font-bold">Quick add</div>
-            <input className="mb-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Title" value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} />
-            <input type="date" className="mb-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" value={form.dueDate} onChange={(e) => setForm((f) => ({ ...f, dueDate: e.target.value }))} />
-            <select className="mb-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value as ReminderCategory }))}>
+          <Card padding="sm" hover={false}>
+            <div className="mb-2 text-[14px] font-bold text-text-primary">Quick add</div>
+            <input className="kg-input mb-2 w-full" placeholder="Title" value={form.title} onChange={(e) => setForm((f) => ({ ...f, title: e.target.value }))} />
+            <input type="date" className="kg-input mb-2 w-full" value={form.dueDate} onChange={(e) => setForm((f) => ({ ...f, dueDate: e.target.value }))} />
+            <select className="kg-input mb-2 w-full" value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value as ReminderCategory }))}>
               {CATEGORIES.map((c) => (
                 <option key={c} value={c}>
                   {c.replace("_", " ")}
                 </option>
               ))}
             </select>
-            <select className="mb-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" value={form.priority} onChange={(e) => setForm((f) => ({ ...f, priority: e.target.value as TaskPriority }))}>
+            <select className="kg-input mb-2 w-full" value={form.priority} onChange={(e) => setForm((f) => ({ ...f, priority: e.target.value as TaskPriority }))}>
               <option value="critical">Critical</option>
               <option value="high">High</option>
               <option value="medium">Medium</option>
               <option value="low">Low</option>
             </select>
-            <select className="mb-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" value={form.recurrence} onChange={(e) => setForm((f) => ({ ...f, recurrence: e.target.value as RecurrenceFreq }))}>
+            <select className="kg-input mb-2 w-full" value={form.recurrence} onChange={(e) => setForm((f) => ({ ...f, recurrence: e.target.value as RecurrenceFreq }))}>
               <option value="once">One time</option>
               <option value="daily">Daily</option>
               <option value="weekly">Weekly</option>
@@ -199,38 +187,38 @@ export function RemindersHubPage() {
               <option value="half_yearly">Half yearly</option>
               <option value="yearly">Yearly</option>
             </select>
-            <input type="number" className="mb-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Notify before (days)" value={form.notifyBeforeDays} onChange={(e) => setForm((f) => ({ ...f, notifyBeforeDays: e.target.value }))} />
-            <button onClick={save} disabled={!form.title.trim()} className="w-full rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">
+            <input type="number" className="kg-input mb-2 w-full" placeholder="Notify before (days)" value={form.notifyBeforeDays} onChange={(e) => setForm((f) => ({ ...f, notifyBeforeDays: e.target.value }))} />
+            <button onClick={save} disabled={!form.title.trim()} className="w-full kg-btn kg-btn-primary disabled:opacity-50">
               Save reminder
             </button>
-          </div>
+          </Card>
 
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="mb-2 text-sm font-bold">Presets</div>
+          <Card padding="sm" hover={false}>
+            <div className="mb-2 text-[14px] font-bold text-text-primary">Presets</div>
             <div className="max-h-56 space-y-1 overflow-auto">
               {REMINDER_PRESETS.map((p) => (
                 <button
                   key={p.title}
-                  className="block w-full rounded-lg px-2 py-1.5 text-left text-xs hover:bg-slate-50"
+                  className="block w-full rounded-lg px-2 py-1.5 text-left text-xs hover:bg-bg-1"
                   onClick={() => setForm((f) => ({ ...f, title: p.title, category: p.category }))}
                 >
                   {p.title}
                 </button>
               ))}
             </div>
-          </div>
+          </Card>
         </div>
 
         <div className="space-y-3">
           <div className="flex flex-wrap gap-2">
-            <input className="min-w-[160px] flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm" placeholder="Search…" value={q} onChange={(e) => setQ(e.target.value)} />
-            <select className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm" value={filter} onChange={(e) => setFilter(e.target.value as any)}>
+            <input className="kg-input min-w-[160px] flex-1 !w-auto" placeholder="Search…" value={q} onChange={(e) => setQ(e.target.value)} />
+            <select className="kg-input !w-auto" value={filter} onChange={(e) => setFilter(e.target.value as any)}>
               <option value="open">Open</option>
               <option value="overdue">Overdue</option>
               <option value="done">Done</option>
               <option value="all">All</option>
             </select>
-            <select className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm" value={category} onChange={(e) => setCategory(e.target.value)}>
+            <select className="kg-input !w-auto" value={category} onChange={(e) => setCategory(e.target.value)}>
               <option value="all">All categories</option>
               {CATEGORIES.map((c) => (
                 <option key={c} value={c}>
@@ -239,28 +227,28 @@ export function RemindersHubPage() {
               ))}
             </select>
             {view === "calendar" ? (
-              <input type="month" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm" value={calMonth} onChange={(e) => setCalMonth(e.target.value)} />
+              <input type="month" className="kg-input !w-auto" value={calMonth} onChange={(e) => setCalMonth(e.target.value)} />
             ) : null}
           </div>
 
-          {loading ? <div className="h-40 animate-pulse rounded-2xl bg-slate-200/70" /> : null}
+          {loading ? <ContentLoading variant="table" label="Loading" /> : null}
 
           {view === "calendar" ? (
-            <div className="grid grid-cols-7 gap-1 rounded-2xl border border-slate-200 bg-white p-2 shadow-sm">
+            <div className="grid grid-cols-7 gap-1 rounded-[var(--radius-xl)] border border-stroke-0 bg-card-0 p-2 shadow-panel">
               {["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((d) => (
-                <div key={d} className="px-1 py-1 text-center text-[10px] font-bold uppercase text-slate-400">
+                <div key={d} className="px-1 py-1 text-center text-[10px] font-bold uppercase text-text-muted">
                   {d}
                 </div>
               ))}
               {calendarDays.map((c, i) => (
-                <div key={i} className={`min-h-[72px] rounded-lg border border-slate-100 p-1 ${c.date === today ? "bg-cyan-50" : "bg-slate-50/50"}`}>
-                  {c.date ? <div className="text-[10px] font-bold text-slate-600">{Number(c.date.slice(-2))}</div> : null}
+                <div key={i} className={`min-h-[72px] rounded-lg border border-stroke-0 p-1 ${c.date === today ? "bg-primary-light" : "bg-bg-1"}`}>
+                  {c.date ? <div className="text-[10px] font-bold text-text-secondary">{Number(c.date.slice(-2))}</div> : null}
                   {c.items.slice(0, 2).map((r) => (
-                    <div key={r.id} className="truncate rounded bg-white px-1 text-[9px] font-semibold text-slate-700">
+                    <div key={r.id} className="truncate rounded bg-card-0 px-1 text-[9px] font-semibold text-text-secondary">
                       {r.title}
                     </div>
                   ))}
-                  {c.items.length > 2 ? <div className="text-[9px] text-slate-400">+{c.items.length - 2}</div> : null}
+                  {c.items.length > 2 ? <div className="text-[9px] text-text-muted">+{c.items.length - 2}</div> : null}
                 </div>
               ))}
             </div>
@@ -272,28 +260,28 @@ export function RemindersHubPage() {
                 const done = !!(r.completed || r.done);
                 const overdue = !done && String(r.dueDate || "") < today;
                 return (
-                  <div key={r.id} className="flex flex-wrap items-start justify-between gap-3 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
+                  <div key={r.id} className="flex flex-wrap items-start justify-between gap-3 rounded-[var(--radius-xl)] border border-stroke-0 bg-card-0 p-4 shadow-panel">
                     <div className="min-w-0">
-                      <div className={`font-semibold ${done ? "text-slate-400 line-through" : "text-slate-900"}`}>{r.title}</div>
+                      <div className={`font-semibold ${done ? "text-text-muted line-through" : "text-text-primary"}`}>{r.title}</div>
                       <div className="mt-1 flex flex-wrap gap-1 text-[10px] font-bold uppercase">
-                        <span className="rounded-full bg-slate-100 px-2 py-0.5">{r.dueDate}</span>
-                        <span className="rounded-full bg-slate-100 px-2 py-0.5">{r.category || "custom"}</span>
-                        <span className="rounded-full bg-slate-100 px-2 py-0.5">{r.priority || "medium"}</span>
-                        {r.recurrence && r.recurrence !== "once" ? <span className="rounded-full bg-cyan-50 px-2 py-0.5 text-cyan-800">{r.recurrence}</span> : null}
-                        {overdue ? <span className="rounded-full bg-rose-100 px-2 py-0.5 text-rose-700">overdue</span> : null}
+                        <span className="rounded-full bg-bg-1 px-2 py-0.5">{r.dueDate}</span>
+                        <span className="rounded-full bg-bg-1 px-2 py-0.5">{r.category || "custom"}</span>
+                        <span className="rounded-full bg-bg-1 px-2 py-0.5">{r.priority || "medium"}</span>
+                        {r.recurrence && r.recurrence !== "once" ? <span className="rounded-full bg-primary-light px-2 py-0.5 text-primary">{r.recurrence}</span> : null}
+                        {overdue ? <span className="rounded-full bg-danger-bg px-2 py-0.5 text-danger">overdue</span> : null}
                       </div>
-                      {r.notes ? <div className="mt-1 text-xs text-slate-500">{r.notes}</div> : null}
+                      {r.notes ? <div className="mt-1 text-xs text-text-muted">{r.notes}</div> : null}
                     </div>
                     {!done ? (
                       <div className="flex flex-wrap gap-2">
                         <button
-                          className="rounded-lg bg-emerald-50 px-2 py-1 text-xs font-semibold text-emerald-800"
+                          className="rounded-lg bg-success-bg px-2 py-1 text-xs font-semibold text-success"
                           onClick={() => markDone(r)}
                         >
                           Complete
                         </button>
                         <button
-                          className="rounded-lg bg-amber-50 px-2 py-1 text-xs font-semibold text-amber-800"
+                          className="rounded-lg bg-warning-bg px-2 py-1 text-xs font-semibold text-warning"
                           onClick={async () => {
                             const until = new Date();
                             until.setDate(until.getDate() + 1);
@@ -308,7 +296,7 @@ export function RemindersHubPage() {
                   </div>
                 );
               })}
-              {!rows.length && !loading ? <div className="rounded-2xl border border-dashed border-slate-200 py-12 text-center text-sm text-slate-500">No reminders match.</div> : null}
+              {!rows.length && !loading ? <EmptyState title="No reminders match." /> : null}
             </div>
           )}
         </div>

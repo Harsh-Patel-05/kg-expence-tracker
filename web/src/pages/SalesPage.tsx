@@ -1,10 +1,11 @@
 import { addDoc, collection, serverTimestamp } from "firebase/firestore";
 import { useState } from "react";
 import { Card } from "@/components/ui/Card";
-import { db } from "@/lib/firebase";
+import { Button } from "@/components/ui/Button";
+import { FieldLabel, Input } from "@/components/ui/Input";
+import { PageHeader, SectionTitle } from "@/components/ui/PageHeader";
+import { auth, db } from "@/lib/firebase";
 import { isoDate, num } from "@/lib/utils";
-
-const OWNER_USER_ID = "owner";
 
 export function SalesPage() {
   const [date, setDate] = useState(isoDate());
@@ -18,7 +19,7 @@ export function SalesPage() {
     setMsg(null);
     try {
       await addDoc(collection(db, "sales"), {
-        userId: OWNER_USER_ID,
+        userId: auth.currentUser?.uid ?? "owner",
         date,
         cashAmount: num(cash),
         onlineAmount: num(online),
@@ -27,8 +28,8 @@ export function SalesPage() {
       setCash("");
       setOnline("");
       setMsg("Saved!");
-    } catch (e: any) {
-      setMsg(e?.message ?? "Failed to save");
+    } catch (e: unknown) {
+      setMsg(e instanceof Error ? e.message : "Failed to save");
     } finally {
       setSaving(false);
     }
@@ -36,33 +37,50 @@ export function SalesPage() {
 
   return (
     <div className="grid gap-4">
-      <Card>
-        <div className="mb-3">
-          <div className="text-sm font-semibold">Add Sales (end of day)</div>
-          <div className="text-xs text-white/55">Enter Cash + Online for the day. Balances update automatically on Dashboard.</div>
-        </div>
+      <PageHeader
+        eyebrow="Operations"
+        title="Sales"
+        description="Enter end-of-day cash and online totals. Dashboard balances update from these entries."
+      />
+      <Card hover={false}>
+        <SectionTitle title="Add sales (end of day)" description="Cash + Online for the selected date." />
         <div className="grid gap-3 md:grid-cols-3">
-          <label className="grid gap-1 text-xs text-white/60">
-            Date
-            <input className="rounded-xl border border-stroke-0 bg-white/5 px-3 py-2 text-sm text-white" value={date} onChange={(e) => setDate(e.target.value)} type="date" />
-          </label>
-          <label className="grid gap-1 text-xs text-white/60">
-            Cash (₹)
-            <input className="rounded-xl border border-stroke-0 bg-white/5 px-3 py-2 text-sm text-white" value={cash} onChange={(e) => setCash(e.target.value)} inputMode="decimal" placeholder="e.g. 12000" />
-          </label>
-          <label className="grid gap-1 text-xs text-white/60">
-            Online / UPI (₹)
-            <input className="rounded-xl border border-stroke-0 bg-white/5 px-3 py-2 text-sm text-white" value={online} onChange={(e) => setOnline(e.target.value)} inputMode="decimal" placeholder="e.g. 6800" />
-          </label>
+          <div>
+            <FieldLabel htmlFor="sales-date">Date</FieldLabel>
+            <Input id="sales-date" value={date} onChange={(e) => setDate(e.target.value)} type="date" />
+          </div>
+          <div>
+            <FieldLabel htmlFor="sales-cash">Cash (₹)</FieldLabel>
+            <Input
+              id="sales-cash"
+              value={cash}
+              onChange={(e) => setCash(e.target.value)}
+              inputMode="decimal"
+              placeholder="e.g. 12000"
+            />
+          </div>
+          <div>
+            <FieldLabel htmlFor="sales-online">Online / UPI (₹)</FieldLabel>
+            <Input
+              id="sales-online"
+              value={online}
+              onChange={(e) => setOnline(e.target.value)}
+              inputMode="decimal"
+              placeholder="e.g. 6800"
+            />
+          </div>
         </div>
-        <div className="mt-3 flex items-center gap-3">
-          <button disabled={saving} onClick={save} className="rounded-xl bg-indigo-500 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-400 disabled:opacity-50">
+        <div className="mt-4 flex flex-wrap items-center gap-3">
+          <Button disabled={saving} onClick={() => void save()}>
             {saving ? "Saving…" : "Save Sales"}
-          </button>
-          {msg ? <div className="text-sm text-white/70">{msg}</div> : null}
+          </Button>
+          {msg ? (
+            <div className={`text-sm ${msg === "Saved!" ? "text-success" : "text-danger"}`} role="status">
+              {msg}
+            </div>
+          ) : null}
         </div>
       </Card>
     </div>
   );
 }
-

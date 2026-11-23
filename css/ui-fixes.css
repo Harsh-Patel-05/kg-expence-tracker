@@ -10,14 +10,14 @@
 }
 
 .appNavToggle:hover {
-  background: rgba(79, 70, 229, 0.1) !important;
-  color: #4f46e5 !important;
-  border-color: rgba(79, 70, 229, 0.35) !important;
+  background: rgba(232, 122, 58, 0.1) !important;
+  color: #e87a3a !important;
+  border-color: rgba(232, 122, 58, 0.35) !important;
 }
 
 .appNavToggle:hover,
 .appNavToggle:focus {
-  color: #4f46e5 !important;
+  color: #e87a3a !important;
 }
 
 button.secondary,
@@ -75,9 +75,9 @@ button.secondary:hover,
 .btn-ghost:hover,
 .period-chip:not(.active):hover,
 .tabBtn:not(.active):hover {
-  color: #4f46e5 !important;
-  background: rgba(79, 70, 229, 0.1) !important;
-  border-color: rgba(79, 70, 229, 0.3) !important;
+  color: #e87a3a !important;
+  background: rgba(232, 122, 58, 0.1) !important;
+  border-color: rgba(232, 122, 58, 0.3) !important;
 }
 
 .period-chip.active,
@@ -102,7 +102,7 @@ button.secondary:hover,
 .btn-secondary:hover,
 .appNavToggle:hover,
 .period-chip:not(.active):hover {
-  color: #4f46e5 !important;
+  color: #e87a3a !important;
 }
 
 /* ─── Charts: no crop when sidebar opens/closes ─── */
@@ -372,11 +372,11 @@ body.pos-mode .sidebar-brand {
   justify-content: center;
   height: 120px;
   border-radius: 12px;
-  background: linear-gradient(135deg, rgba(99,102,241,.12), rgba(139,92,246,.12));
+  background: linear-gradient(135deg, rgba(232,122,58,.12), rgba(160,74,53,.12));
   color: var(--primary);
   font-weight: 800;
   font-size: 13px;
-  border: 1px dashed rgba(99,102,241,.35);
+  border: 1px dashed rgba(232,122,58,.35);
 }
 
 .expense-rank-row {
@@ -396,7 +396,7 @@ body.pos-mode .sidebar-brand {
 .expense-rank-bar {
   height: 6px;
   border-radius: 99px;
-  background: rgba(99, 102, 241, 0.12);
+  background: rgba(232, 122, 58, 0.12);
   overflow: hidden;
   margin-top: 6px;
 }

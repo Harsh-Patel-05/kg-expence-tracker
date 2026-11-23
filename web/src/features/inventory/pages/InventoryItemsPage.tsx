@@ -1,12 +1,16 @@
 import { useMemo, useState } from "react";
+import { Card } from "@/components/ui/Card";
 import { Link } from "react-router-dom";
-import { Search } from "lucide-react";
+import { Search, Inbox } from "lucide-react";
 import { inr, num } from "@/lib/utils";
 import { useRestaurantCollection } from "@/features/pos/hooks/useRestaurantCollection";
 import type { InventoryItemDoc, InventoryKind } from "../types";
 import { availableQty } from "../utils/alerts";
 import { upsertInventoryItem, softDeleteInventory, restoreInventory, adjustStock } from "../services/stockService";
 import { COMMON_UNITS } from "../utils/units";
+import { EmptyState, PageHeader } from "@/components/ui/PageHeader";
+
+import { ContentLoading } from "@/components/ui/Loading";
 
 const KINDS: InventoryKind[] = ["raw", "semi_finished", "finished", "packaging", "consumable", "cleaning", "kitchen_supply"];
 
@@ -74,37 +78,32 @@ export function InventoryItemsPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <Link to="/inventory" className="text-xs font-semibold text-cyan-700">
-            ← Inventory
-          </Link>
-          <h1 className="text-xl font-black">Inventory items</h1>
-        </div>
-      </div>
-      {msg ? <div className="rounded-xl bg-cyan-50 px-3 py-2 text-sm text-cyan-900">{msg}</div> : null}
-      {error ? <div className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div> : null}
+    <div className="grid gap-4">
+      <PageHeader
+        back={<Link to="/inventory" className="text-xs font-semibold text-primary"> ← Inventory </Link>}
+        title="Inventory items"
+      />
+      {msg ? <div className="rounded-lg border border-primary/20 bg-primary-light px-3 py-2 text-[13px] text-primary">{msg}</div> : null}
+      {error ? <div className="rounded-lg border border-red-200 bg-danger-bg px-3 py-2 text-[13px] text-danger">{error}</div> : null}
 
       <div className="grid gap-4 lg:grid-cols-[340px_minmax(0,1fr)]">
-        <form
-          className="space-y-2 rounded-2xl border border-slate-200 bg-white p-4 shadow-sm"
+        <Card hover={false} padding="sm"><form
+          className="space-y-2"
           onSubmit={(e) => {
             e.preventDefault();
             void save();
-          }}
-        >
-          <div className="text-sm font-bold">{form.id ? "Edit item" : "New item"}</div>
-          <input className="w-full rounded-xl border px-3 py-2 text-sm" placeholder="Name *" value={form.item} onChange={(e) => setForm({ ...form, item: e.target.value })} required />
+          }}>
+          <div className="text-[14px] font-bold text-text-primary">{form.id ? "Edit item" : "New item"}</div>
+          <input className="kg-input w-full" placeholder="Name *" value={form.item} onChange={(e) => setForm({ ...form, item: e.target.value })} required />
           <div className="grid grid-cols-2 gap-2">
-            <select className="rounded-xl border px-3 py-2 text-sm" value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })}>
+            <select className="kg-input !w-auto" value={form.unit} onChange={(e) => setForm({ ...form, unit: e.target.value })}>
               {COMMON_UNITS.map((u) => (
                 <option key={u} value={u}>
                   {u}
                 </option>
               ))}
             </select>
-            <select className="rounded-xl border px-3 py-2 text-sm" value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value as InventoryKind })}>
+            <select className="kg-input !w-auto" value={form.kind} onChange={(e) => setForm({ ...form, kind: e.target.value as InventoryKind })}>
               {KINDS.map((k) => (
                 <option key={k} value={k}>
                   {k}
@@ -113,26 +112,26 @@ export function InventoryItemsPage() {
             </select>
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <input className="rounded-xl border px-3 py-2 text-sm" type="number" step="any" placeholder="Qty" value={form.qty} onChange={(e) => setForm({ ...form, qty: e.target.value })} />
-            <input className="rounded-xl border px-3 py-2 text-sm" type="number" step="any" placeholder="Reorder / min" value={form.threshold} onChange={(e) => setForm({ ...form, threshold: e.target.value })} />
+            <input className="kg-input !w-auto" type="number" step="any" placeholder="Qty" value={form.qty} onChange={(e) => setForm({ ...form, qty: e.target.value })} />
+            <input className="kg-input !w-auto" type="number" step="any" placeholder="Reorder / min" value={form.threshold} onChange={(e) => setForm({ ...form, threshold: e.target.value })} />
           </div>
-          <input className="w-full rounded-xl border px-3 py-2 text-sm" placeholder="SKU" value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} />
-          <input className="w-full rounded-xl border px-3 py-2 text-sm" placeholder="Barcode" value={form.barcode} onChange={(e) => setForm({ ...form, barcode: e.target.value })} />
-          <input className="w-full rounded-xl border px-3 py-2 text-sm" placeholder="Storage location" value={form.storageLocation} onChange={(e) => setForm({ ...form, storageLocation: e.target.value })} />
-          <input className="w-full rounded-xl border px-3 py-2 text-sm" type="number" step="any" placeholder="Avg cost" value={form.avgCost} onChange={(e) => setForm({ ...form, avgCost: e.target.value })} />
-          <textarea className="w-full rounded-xl border px-3 py-2 text-sm" placeholder="Notes" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} />
-          <button disabled={busy} className="w-full rounded-xl bg-slate-900 py-2.5 text-sm font-bold text-white disabled:opacity-60">
+          <input className="kg-input w-full" placeholder="SKU" value={form.sku} onChange={(e) => setForm({ ...form, sku: e.target.value })} />
+          <input className="kg-input w-full" placeholder="Barcode" value={form.barcode} onChange={(e) => setForm({ ...form, barcode: e.target.value })} />
+          <input className="kg-input w-full" placeholder="Storage location" value={form.storageLocation} onChange={(e) => setForm({ ...form, storageLocation: e.target.value })} />
+          <input className="kg-input w-full" type="number" step="any" placeholder="Avg cost" value={form.avgCost} onChange={(e) => setForm({ ...form, avgCost: e.target.value })} />
+          <textarea className="kg-input w-full" placeholder="Notes" value={form.notes} onChange={(e) => setForm({ ...form, notes: e.target.value })} rows={2} />
+          <button disabled={busy} className="kg-btn kg-btn-primary w-full disabled:opacity-60">
             {busy ? "Saving…" : "Save item"}
           </button>
-        </form>
+        </form></Card>
 
         <div className="min-w-0 space-y-3">
           <div className="flex flex-wrap gap-2">
             <div className="relative min-w-[200px] flex-1">
-              <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input className="w-full rounded-xl border bg-white py-2 pl-8 pr-3 text-sm" placeholder="Search name / SKU / barcode" value={q} onChange={(e) => setQ(e.target.value)} />
+              <Search size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-text-muted" aria-hidden />
+              <input className="kg-input w-full !pl-9 pr-3" placeholder="Search name / SKU / barcode" value={q} onChange={(e) => setQ(e.target.value)} aria-label="Search inventory" />
             </div>
-            <select className="rounded-xl border bg-white px-3 py-2 text-sm" value={kind} onChange={(e) => setKind(e.target.value)}>
+            <select className="kg-input !w-auto" value={kind} onChange={(e) => setKind(e.target.value)}>
               <option value="all">All kinds</option>
               {KINDS.map((k) => (
                 <option key={k} value={k}>
@@ -140,7 +139,7 @@ export function InventoryItemsPage() {
                 </option>
               ))}
             </select>
-            <select className="rounded-xl border bg-white px-3 py-2 text-sm" value={stock} onChange={(e) => setStock(e.target.value)}>
+            <select className="kg-input !w-auto" value={stock} onChange={(e) => setStock(e.target.value)}>
               <option value="all">All stock</option>
               <option value="ok">Healthy</option>
               <option value="low">Low</option>
@@ -148,10 +147,10 @@ export function InventoryItemsPage() {
             </select>
           </div>
 
-          {loading ? <div className="h-40 animate-pulse rounded-2xl bg-slate-200/60" /> : null}
-          <div className="overflow-auto rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <table className="min-w-full text-left text-sm">
-              <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+          {loading ? <ContentLoading variant="table" label="Loading" /> : null}
+          <div className="overflow-auto rounded-[var(--radius-xl)] border border-stroke-0 bg-card-0 shadow-panel">
+            <table className="min-w-full text-left text-[13px]">
+              <thead className="bg-bg-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-text-muted">
                 <tr>
                   <th className="px-3 py-2">Item</th>
                   <th className="px-3 py-2">Stock</th>
@@ -162,17 +161,17 @@ export function InventoryItemsPage() {
               </thead>
               <tbody>
                 {rows.map((i) => (
-                  <tr key={i.id} className="border-t border-slate-100">
+                  <tr key={i.id} className="border-t border-stroke-0">
                     <td className="px-3 py-2">
                       <div className="font-semibold">{i.item}</div>
-                      <div className="text-[11px] text-slate-500">
+                      <div className="text-[11px] text-text-muted">
                         {i.kind || "raw"} · {i.sku || "no sku"}
                         {i.archived || i.isDeleted ? " · archived" : ""}
                       </div>
                     </td>
                     <td className="px-3 py-2">
                       {availableQty(i)} {i.unit}
-                      <div className="text-[11px] text-slate-500">min {i.threshold || i.minStock || 0}</div>
+                      <div className="text-[11px] text-text-muted">min {i.threshold || i.minStock || 0}</div>
                     </td>
                     <td className="px-3 py-2">{inr(i.avgCost || i.lastPurchaseCost || 0)}</td>
                     <td className="px-3 py-2 text-xs">{i.storageLocation || "—"}</td>
@@ -180,7 +179,7 @@ export function InventoryItemsPage() {
                       <div className="flex flex-wrap gap-1">
                         <button
                           type="button"
-                          className="rounded-lg border px-2 py-1 text-xs font-semibold"
+                          className="kg-btn kg-btn-secondary !px-2 !py-1 !text-[12px]"
                           onClick={() =>
                             setForm({
                               id: i.id,
@@ -201,7 +200,7 @@ export function InventoryItemsPage() {
                         </button>
                         <button
                           type="button"
-                          className="rounded-lg border px-2 py-1 text-xs font-semibold"
+                          className="kg-btn kg-btn-secondary !px-2 !py-1 !text-[12px]"
                           onClick={async () => {
                             const d = Number(prompt("Adjust delta (+ in / − out)", "1"));
                             if (!Number.isFinite(d) || !d) return;
@@ -217,11 +216,11 @@ export function InventoryItemsPage() {
                           ±
                         </button>
                         {i.archived || i.isDeleted ? (
-                          <button type="button" className="rounded-lg border px-2 py-1 text-xs" onClick={() => void restoreInventory(i.id).then(() => setMsg("Restored"))}>
+                          <button type="button" className="kg-btn kg-btn-secondary !px-2 !py-1 !text-[12px]" onClick={() => void restoreInventory(i.id).then(() => setMsg("Restored"))}>
                             Restore
                           </button>
                         ) : (
-                          <button type="button" className="rounded-lg border border-rose-200 px-2 py-1 text-xs text-rose-600" onClick={() => void softDeleteInventory(i.id).then(() => setMsg("Archived"))}>
+                          <button type="button" className="kg-btn border-danger/30 bg-danger-bg text-danger !px-2 !py-1 !text-[12px]" onClick={() => void softDeleteInventory(i.id).then(() => setMsg("Archived"))}>
                             Archive
                           </button>
                         )}
@@ -231,7 +230,7 @@ export function InventoryItemsPage() {
                 ))}
               </tbody>
             </table>
-            {!rows.length ? <div className="p-8 text-center text-sm text-slate-500">No items match.</div> : null}
+            {!rows.length ? <EmptyState className="m-3" icon={<Inbox size={18} />} title="No items match." /> : null}
           </div>
         </div>
       </div>

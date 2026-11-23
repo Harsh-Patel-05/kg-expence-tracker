@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Inbox } from "lucide-react";
 import { Link } from "react-router-dom";
 import { inr, isoDate, num } from "@/lib/utils";
 import { useRestaurantCollection } from "@/features/pos/hooks/useRestaurantCollection";
@@ -15,6 +16,10 @@ import {
 } from "../services/expenseService";
 import { canApproveExpense, canCreateExpense, canPayExpense } from "../utils/permissions";
 import { splitGst } from "../utils/gst";
+import { EmptyState, PageHeader, SectionTitle } from "@/components/ui/PageHeader";
+import { Card } from "@/components/ui/Card";
+
+import { ContentLoading } from "@/components/ui/Loading";
 
 export function ExpensesListPage() {
   const { role, user } = usePosAuth();
@@ -140,30 +145,26 @@ export function ExpensesListPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <Link to="/expenses" className="text-xs font-semibold text-cyan-700">
-            ← Expenses
-          </Link>
-          <h1 className="text-2xl font-black text-slate-900">Expense register</h1>
-        </div>
-      </div>
+    <div className="grid gap-4">
+      <PageHeader
+        back={<Link to="/expenses" className="text-xs font-semibold text-primary"> ← Expenses </Link>}
+        title="Expense register"
+      />
 
-      {msg ? <div className="rounded-xl bg-cyan-50 px-3 py-2 text-sm text-cyan-900">{msg}</div> : null}
-      {error ? <div className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div> : null}
+      {msg ? <div className="rounded-lg border border-primary/20 bg-primary-light px-3 py-2 text-[13px] text-primary">{msg}</div> : null}
+      {error ? <div className="rounded-lg border border-red-200 bg-danger-bg px-3 py-2 text-[13px] text-danger">{error}</div> : null}
 
       <div className="grid gap-4 lg:grid-cols-[340px_1fr]">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="mb-3 text-sm font-bold">{form.id ? "Edit expense" : "Add expense"}</div>
+        <Card padding="sm" hover={false}>
+          <SectionTitle title={form.id ? "Edit expense" : "Add expense"} />
           <div className="grid gap-2">
-            <label className="grid gap-1 text-xs font-semibold text-slate-600">
+            <label className="grid gap-1 text-[12px] font-semibold text-text-muted">
               Date
-              <input type="date" className="rounded-xl border border-slate-200 px-3 py-2 text-sm" value={form.date} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))} />
+              <input type="date" className="kg-input !w-auto" value={form.date} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))} />
             </label>
-            <label className="grid gap-1 text-xs font-semibold text-slate-600">
+            <label className="grid gap-1 text-[12px] font-semibold text-text-muted">
               Category
-              <select className="rounded-xl border border-slate-200 px-3 py-2 text-sm" value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}>
+              <select className="kg-input !w-auto" value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}>
                 {EXPENSE_CATEGORIES.map((c) => (
                   <option key={c.value} value={c.value}>
                     {c.label}
@@ -171,27 +172,27 @@ export function ExpensesListPage() {
                 ))}
               </select>
             </label>
-            <label className="grid gap-1 text-xs font-semibold text-slate-600">
+            <label className="grid gap-1 text-[12px] font-semibold text-text-muted">
               Amount
-              <input type="number" className="rounded-xl border border-slate-200 px-3 py-2 text-sm" value={form.amount} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))} />
+              <input type="number" className="kg-input !w-auto" value={form.amount} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))} />
             </label>
-            <label className="grid gap-1 text-xs font-semibold text-slate-600">
+            <label className="grid gap-1 text-[12px] font-semibold text-text-muted">
               Status
-              <select className="rounded-xl border border-slate-200 px-3 py-2 text-sm" value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value as any }))}>
+              <select className="kg-input !w-auto" value={form.status} onChange={(e) => setForm((f) => ({ ...f, status: e.target.value as any }))}>
                 <option value="unpaid">Unpaid</option>
                 <option value="paid">Paid</option>
               </select>
             </label>
-            <label className="grid gap-1 text-xs font-semibold text-slate-600">
+            <label className="grid gap-1 text-[12px] font-semibold text-text-muted">
               Paid from
-              <select className="rounded-xl border border-slate-200 px-3 py-2 text-sm" value={form.paidFrom} onChange={(e) => setForm((f) => ({ ...f, paidFrom: e.target.value as any }))}>
+              <select className="kg-input !w-auto" value={form.paidFrom} onChange={(e) => setForm((f) => ({ ...f, paidFrom: e.target.value as any }))}>
                 <option value="cash">Cash</option>
                 <option value="bank">Bank / Online</option>
               </select>
             </label>
-            <label className="grid gap-1 text-xs font-semibold text-slate-600">
+            <label className="grid gap-1 text-[12px] font-semibold text-text-muted">
               Vendor
-              <select className="rounded-xl border border-slate-200 px-3 py-2 text-sm" value={form.vendorName} onChange={(e) => setForm((f) => ({ ...f, vendorName: e.target.value }))}>
+              <select className="kg-input !w-auto" value={form.vendorName} onChange={(e) => setForm((f) => ({ ...f, vendorName: e.target.value }))}>
                 <option value="">None</option>
                 {suppliers.map((s) => (
                   <option key={s.id} value={s.name || ""}>
@@ -200,23 +201,23 @@ export function ExpensesListPage() {
                 ))}
               </select>
             </label>
-            <label className="grid gap-1 text-xs font-semibold text-slate-600">
+            <label className="grid gap-1 text-[12px] font-semibold text-text-muted">
               Invoice #
-              <input className="rounded-xl border border-slate-200 px-3 py-2 text-sm" value={form.invoiceNumber} onChange={(e) => setForm((f) => ({ ...f, invoiceNumber: e.target.value }))} />
+              <input className="kg-input !w-auto" value={form.invoiceNumber} onChange={(e) => setForm((f) => ({ ...f, invoiceNumber: e.target.value }))} />
             </label>
-            <label className="grid gap-1 text-xs font-semibold text-slate-600">
+            <label className="grid gap-1 text-[12px] font-semibold text-text-muted">
               GST %
-              <input type="number" className="rounded-xl border border-slate-200 px-3 py-2 text-sm" value={form.gstRate} onChange={(e) => setForm((f) => ({ ...f, gstRate: e.target.value }))} />
+              <input type="number" className="kg-input !w-auto" value={form.gstRate} onChange={(e) => setForm((f) => ({ ...f, gstRate: e.target.value }))} />
             </label>
-            <label className="flex items-center gap-2 text-xs font-semibold text-slate-600">
+            <label className="flex items-center gap-2 text-[12px] font-semibold text-text-muted">
               <input type="checkbox" checked={form.taxInclusive} onChange={(e) => setForm((f) => ({ ...f, taxInclusive: e.target.checked }))} />
               Tax inclusive
             </label>
-            <label className="grid gap-1 text-xs font-semibold text-slate-600">
+            <label className="grid gap-1 text-[12px] font-semibold text-text-muted">
               Note
-              <textarea className="rounded-xl border border-slate-200 px-3 py-2 text-sm" rows={2} value={form.note} onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))} />
+              <textarea className="kg-input !w-auto" rows={2} value={form.note} onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))} />
             </label>
-            <label className="grid gap-1 text-xs font-semibold text-slate-600">
+            <label className="grid gap-1 text-[12px] font-semibold text-text-muted">
               Bill / invoice
               <input
                 type="file"
@@ -232,22 +233,22 @@ export function ExpensesListPage() {
                 }}
               />
             </label>
-            {preview ? <img src={preview} alt="Bill preview" className="max-h-40 rounded-xl border border-slate-200 object-contain" /> : null}
-            <button disabled={!canCreate || busy || !form.amount} onClick={save} className="rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50">
+            {preview ? <img src={preview} alt="Bill preview" className="max-h-40 rounded-lg border border-stroke-0 object-contain" /> : null}
+            <button disabled={!canCreate || busy || !form.amount} onClick={save} className="kg-btn kg-btn-primary disabled:opacity-50">
               {busy ? "Saving…" : "Save expense"}
             </button>
             {form.id ? (
-              <button type="button" className="rounded-xl border border-slate-200 px-3 py-2 text-sm" onClick={() => setForm((f) => ({ ...f, id: "" }))}>
+              <button type="button" className="kg-btn kg-btn-secondary" onClick={() => setForm((f) => ({ ...f, id: "" }))}>
                 Clear edit
               </button>
             ) : null}
           </div>
-        </div>
+        </Card>
 
         <div className="space-y-3">
           <div className="flex flex-wrap gap-2">
-            <input className="min-w-[180px] flex-1 rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm" placeholder="Search number, vendor, invoice…" value={q} onChange={(e) => setQ(e.target.value)} />
-            <select className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm" value={category} onChange={(e) => setCategory(e.target.value)}>
+            <input className="kg-input min-w-[180px] flex-1 !w-auto" placeholder="Search number, vendor, invoice…" value={q} onChange={(e) => setQ(e.target.value)} />
+            <select className="kg-input !w-auto" value={category} onChange={(e) => setCategory(e.target.value)}>
               <option value="all">All categories</option>
               {EXPENSE_CATEGORIES.map((c) => (
                 <option key={c.value} value={c.value}>
@@ -255,7 +256,7 @@ export function ExpensesListPage() {
                 </option>
               ))}
             </select>
-            <select className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm" value={payStatus} onChange={(e) => setPayStatus(e.target.value)}>
+            <select className="kg-input !w-auto" value={payStatus} onChange={(e) => setPayStatus(e.target.value)}>
               <option value="all">All status</option>
               <option value="paid">Paid</option>
               <option value="unpaid">Unpaid</option>
@@ -263,26 +264,27 @@ export function ExpensesListPage() {
             </select>
           </div>
 
-          {loading ? <div className="h-40 animate-pulse rounded-2xl bg-slate-200/70" /> : null}
+          {loading ? <ContentLoading variant="table" label="Loading" /> : null}
 
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+          <Card hover={false} className="!p-0">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[640px] text-left text-[13px]">
+              <thead className="bg-bg-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-text-muted">
                 <tr>
                   <th className="px-3 py-2">Expense</th>
                   <th className="px-3 py-2">Vendor</th>
                   <th className="px-3 py-2">Amount</th>
                   <th className="px-3 py-2">Pay</th>
                   <th className="px-3 py-2">Approval</th>
-                  <th className="px-3 py-2" />
+                  <th className="px-3 py-2"><span className="sr-only">Actions</span></th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((e) => (
-                  <tr key={e.id} className="border-t border-slate-100">
+                  <tr key={e.id} className="border-t border-stroke-0">
                     <td className="px-3 py-2">
                       <div className="font-semibold capitalize">{e.category.replace(/_/g, " ")}</div>
-                      <div className="text-xs text-slate-500">
+                      <div className="text-xs text-text-muted">
                         {e.expenseNumber || e.id.slice(0, 6)} · {e.date}
                         {e.invoiceNumber ? ` · Inv ${e.invoiceNumber}` : ""}
                       </div>
@@ -290,19 +292,19 @@ export function ExpensesListPage() {
                     <td className="px-3 py-2">{e.vendorName || "—"}</td>
                     <td className="px-3 py-2 font-bold">{inr(e.amount)}</td>
                     <td className="px-3 py-2">
-                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase">{e.status}</span>
+                      <span className="rounded-md bg-bg-1 px-2 py-0.5 text-[10px] font-bold uppercase">{e.status}</span>
                     </td>
                     <td className="px-3 py-2">
-                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase">{e.approvalStatus || "—"}</span>
+                      <span className="rounded-md bg-bg-1 px-2 py-0.5 text-[10px] font-bold uppercase">{e.approvalStatus || "—"}</span>
                     </td>
                     <td className="px-3 py-2">
                       <div className="flex flex-wrap justify-end gap-2">
-                        <button className="text-xs font-semibold text-cyan-700" onClick={() => edit(e)}>
+                        <button className="text-xs font-semibold text-primary" onClick={() => edit(e)}>
                           Edit
                         </button>
                         {canPay ? (
                           <button
-                            className="text-xs font-semibold text-emerald-700"
+                            className="text-xs font-semibold text-success"
                             onClick={async () => {
                               await toggleExpensePaid(e.id, e.status !== "paid", e.paidFrom || "cash");
                               setMsg(e.status === "paid" ? "Marked unpaid" : "Marked paid");
@@ -313,21 +315,21 @@ export function ExpensesListPage() {
                         ) : null}
                         {canApprove && e.approvalStatus === "pending" ? (
                           <>
-                            <button className="text-xs font-semibold text-emerald-700" onClick={() => decideExpenseApproval(e.id, "approved", "", user?.uid)}>
+                            <button className="text-xs font-semibold text-success" onClick={() => decideExpenseApproval(e.id, "approved", "", user?.uid)}>
                               Approve
                             </button>
-                            <button className="text-xs font-semibold text-rose-600" onClick={() => decideExpenseApproval(e.id, "rejected", "", user?.uid)}>
+                            <button className="text-xs font-semibold text-danger" onClick={() => decideExpenseApproval(e.id, "rejected", "", user?.uid)}>
                               Reject
                             </button>
                           </>
                         ) : null}
-                        <button className="text-xs font-semibold text-slate-600" onClick={async () => { await duplicateExpense(e.id); setMsg("Duplicated"); }}>
+                        <button className="text-xs font-semibold text-text-secondary" onClick={async () => { await duplicateExpense(e.id); setMsg("Duplicated"); }}>
                           Dup
                         </button>
-                        <button className="text-xs font-semibold text-amber-700" onClick={async () => { await archiveExpense(e.id); setMsg("Archived"); }}>
+                        <button className="text-xs font-semibold text-warning" onClick={async () => { await archiveExpense(e.id); setMsg("Archived"); }}>
                           Archive
                         </button>
-                        <button className="text-xs font-semibold text-rose-600" onClick={async () => { await softDeleteExpense(e.id); setMsg("Deleted"); }}>
+                        <button className="text-xs font-semibold text-danger" onClick={async () => { await softDeleteExpense(e.id); setMsg("Deleted"); }}>
                           Del
                         </button>
                       </div>
@@ -336,8 +338,9 @@ export function ExpensesListPage() {
                 ))}
               </tbody>
             </table>
-            {!rows.length && !loading ? <div className="py-10 text-center text-sm text-slate-500">No expenses found.</div> : null}
-          </div>
+            </div>
+            {!rows.length && !loading ? <EmptyState className="m-3" icon={<Inbox size={18} />} title="No expenses found." /> : null}
+          </Card>
         </div>
       </div>
     </div>

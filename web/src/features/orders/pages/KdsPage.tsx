@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { clsx } from "clsx";
-import { ArrowLeft } from "lucide-react";
+import { EmptyState, PageHeader } from "@/components/ui/PageHeader";
 import { usePosAuth } from "@/features/pos/auth/PosAuthProvider";
 import { canAccessKds, canAssignChef } from "@/features/pos/utils/permissions";
 import { filterByKitchenCategory, KDS_CATEGORIES, useLiveOrders, type LiveOrder } from "../hooks/useLiveOrders";
@@ -10,6 +10,8 @@ import { assignChef, updateKitchenStatus, activateScheduledOrders } from "../ser
 import type { KitchenStatus } from "@/features/pos/types";
 import { useRestaurantCollection } from "@/features/pos/hooks/useRestaurantCollection";
 import { flushOfflineQueue } from "../services/channelOrders";
+
+import { ContentLoading, PageLoading } from "@/components/ui/Loading";
 
 export function KdsPage() {
   const { role, loading: authLoading } = usePosAuth();
@@ -55,59 +57,65 @@ export function KdsPage() {
   }
 
   if (authLoading) {
-    return <div className="grid min-h-screen place-items-center bg-slate-950 text-slate-300">Loading KDS…</div>;
+    return <PageLoading label="Loading kitchen…" />;
   }
   if (!canAccessKds(role)) {
     return (
-      <div className="grid min-h-screen place-items-center bg-slate-950 p-6 text-center text-slate-200">
-        <div>
-          <div className="text-lg font-bold">Kitchen access denied</div>
-          <div className="mt-2 text-sm text-slate-400">Role: {role}</div>
-          <Link to="/orders" className="mt-4 inline-block text-cyan-400">
-            Back
-          </Link>
-        </div>
+      <div className="grid gap-4">
+        <PageHeader eyebrow="Order management" title="Kitchen Display" />
+        <EmptyState
+          title="Kitchen access denied"
+          description={`Your role (${role}) cannot open the kitchen display.`}
+          action={
+            <Link to="/orders" className="kg-btn kg-btn-secondary">
+              Back to orders
+            </Link>
+          }
+        />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-slate-950 text-slate-100">
-      <header className="sticky top-0 z-20 border-b border-white/10 bg-slate-950/90 px-4 py-3 backdrop-blur">
-        <div className="mx-auto flex max-w-[1800px] flex-wrap items-center gap-3">
-          <Link to="/orders" className="inline-flex items-center gap-1 rounded-lg border border-white/10 px-2 py-1 text-sm text-slate-300">
-            <ArrowLeft size={14} /> OMS
-          </Link>
-          <div className="text-lg font-black tracking-tight">Kitchen Display</div>
-          <div className="text-xs text-slate-400">Realtime · dark · touch</div>
-          <div className="ml-auto flex flex-wrap gap-2">
+    <div className="grid gap-4">
+      <PageHeader
+        eyebrow="Order management"
+        title="Kitchen Display"
+        description="Realtime · touch"
+        actions={
+          <>
+            <Link to="/orders" className="kg-btn kg-btn-secondary">
+              Orders
+            </Link>
+            <Link to="/pos" className="kg-btn kg-btn-secondary">
+              POS
+            </Link>
             {KDS_CATEGORIES.map((c) => (
               <button
                 key={c}
                 type="button"
                 onClick={() => setCategory(c)}
-                className={clsx(
-                  "rounded-full px-3 py-1.5 text-xs font-bold",
-                  category === c ? "bg-cyan-400 text-slate-950" : "bg-white/5 text-slate-300"
-                )}
+                className={clsx("kg-btn capitalize", category === c ? "kg-btn-primary" : "kg-btn-secondary")}
               >
                 {c}
               </button>
             ))}
-          </div>
-        </div>
-      </header>
+          </>
+        }
+      />
 
-      {msg ? <div className="mx-auto max-w-[1800px] px-4 pt-3 text-sm text-cyan-300">{msg}</div> : null}
-      {error ? <div className="mx-auto max-w-[1800px] px-4 pt-3 text-sm text-rose-300">{error}</div> : null}
-      {loading ? <div className="mx-4 mt-4 h-24 animate-pulse rounded-2xl bg-white/5" /> : null}
+      {msg ? <div className="rounded-lg border border-primary/20 bg-primary-light px-3 py-2 text-[13px] text-primary">{msg}</div> : null}
+      {error ? <div className="rounded-lg border border-red-200 bg-danger-bg px-3 py-2 text-[13px] text-danger">{error}</div> : null}
+      {loading ? <ContentLoading variant="block" label="Loading" /> : null}
 
-      <div className="mx-auto flex max-w-[1800px] gap-3 overflow-x-auto p-4">
+      <div className="flex gap-3 overflow-x-auto">
         {KDS_COLUMNS.map((col) => (
-          <div key={col.id} className="min-w-[280px] flex-1 rounded-2xl border border-white/10 bg-slate-900/80 p-2">
+          <div key={col.id} className="min-w-[280px] flex-1 rounded-[var(--radius-xl)] border border-stroke-0 bg-bg-1 p-2">
             <div className="mb-2 flex items-center justify-between px-2 py-1">
-              <div className="text-xs font-black uppercase tracking-wider text-slate-400">{col.label}</div>
-              <div className="rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-bold">{(columns[col.id] || []).length}</div>
+              <div className="text-xs font-bold uppercase tracking-wider text-text-muted">{col.label}</div>
+              <div className="rounded-md bg-card-0 px-2 py-0.5 text-[11px] font-bold text-text-secondary ring-1 ring-stroke-0">
+                {(columns[col.id] || []).length}
+              </div>
             </div>
             <div className="space-y-2">
               {(columns[col.id] || []).map((o) => (
@@ -157,46 +165,46 @@ function KdsCard(props: {
   return (
     <article
       className={clsx(
-        "rounded-2xl border p-3",
-        o.delayed ? "border-orange-400/60 bg-orange-500/10" : "border-white/10 bg-slate-950/60",
-        o.priority === "vip" || o.priority === "express" ? "ring-1 ring-cyan-400/50" : ""
+        "rounded-[var(--radius-xl)] border p-3 shadow-panel",
+        o.delayed ? "border-danger/40 bg-danger-bg" : "border-stroke-0 bg-card-0",
+        o.priority === "vip" || o.priority === "express" ? "ring-1 ring-primary/50" : ""
       )}
     >
       <div className="flex items-start justify-between gap-2">
         <div>
-          <div className="text-base font-black">{o.invoiceNo || o.id.slice(0, 7)}</div>
-          <div className="text-xs text-slate-400">
+          <div className="text-[14px] font-bold text-text-primary">{o.invoiceNo || o.id.slice(0, 7)}</div>
+          <div className="text-xs text-text-muted">
             {ORDER_TYPE_LABELS[o.orderType] || o.orderType}
             {o.tableName ? ` · ${o.tableName}` : ""}
             {o.customerName ? ` · ${o.customerName}` : ""}
           </div>
         </div>
-        <div className={clsx("rounded-lg px-2 py-1 text-sm font-black", o.ageMin > o.eta ? "bg-rose-500 text-white" : "bg-white/10")}>
+        <div className={clsx("rounded-lg px-2 py-1 text-[13px] font-bold", o.ageMin > o.eta ? "bg-danger text-white" : "bg-bg-1 text-text-secondary")}>
           {o.ageMin}m
         </div>
       </div>
 
       <ul className="mt-3 space-y-1.5">
         {(o.items || []).map((l) => (
-          <li key={l.lineId} className="text-sm">
+          <li key={l.lineId} className="text-[13px]">
             <span className="font-bold">
               {l.qty}× {l.name}
             </span>
             {(l.kitchenNote || l.note || l.specialInstructions) && (
-              <div className="text-xs text-amber-200/90">{l.kitchenNote || l.note || l.specialInstructions}</div>
+              <div className="text-xs font-semibold text-warning">{l.kitchenNote || l.note || l.specialInstructions}</div>
             )}
           </li>
         ))}
       </ul>
 
-      {o.kitchenNote ? <div className="mt-2 rounded-lg bg-white/5 px-2 py-1 text-xs text-slate-300">{o.kitchenNote}</div> : null}
-      {o.chefName ? <div className="mt-2 text-[11px] text-slate-400">Chef: {o.chefName}</div> : null}
+      {o.kitchenNote ? <div className="mt-2 rounded-lg bg-bg-1 px-2 py-1 text-xs text-text-secondary">{o.kitchenNote}</div> : null}
+      {o.chefName ? <div className="mt-2 text-[11px] text-text-muted">Chef: {o.chefName}</div> : null}
 
       <div className="mt-3 flex flex-wrap gap-2">
         {next ? (
           <button
             type="button"
-            className="min-h-11 flex-1 rounded-xl bg-cyan-400 px-3 text-sm font-black text-slate-950"
+            className="kg-btn kg-btn-primary min-h-11 flex-1"
             onClick={() => props.onBump(next)}
           >
             Mark {next}
@@ -204,7 +212,7 @@ function KdsCard(props: {
         ) : null}
         {props.canAssign && !o.chefName ? (
           <select
-            className="min-h-11 rounded-xl border border-white/10 bg-slate-900 px-2 text-xs"
+            className="kg-input min-h-11 !w-auto"
             defaultValue=""
             onChange={(e) => e.target.value && props.onAssignChef(e.target.value)}
           >

@@ -1,8 +1,23 @@
-import { motion } from "framer-motion";
+import { useNavigate } from "react-router-dom";
 import { BarChart, Bar, CartesianGrid, Tooltip, XAxis, YAxis, ResponsiveContainer, PieChart, Pie, Cell } from "recharts";
-import { Landmark, Wallet, TrendingUp, ReceiptIndianRupee, AlertCircle, PiggyBank, ShoppingBag } from "lucide-react";
+import {
+  Landmark,
+  Wallet,
+  TrendingUp,
+  ReceiptIndianRupee,
+  AlertCircle,
+  PiggyBank,
+  ShoppingBag,
+  ArrowRight,
+  BarChart3,
+  PieChart as PieIcon,
+  Inbox,
+  CalendarClock
+} from "lucide-react";
 import { KpiCard } from "@/components/ui/KpiCard";
 import { Card } from "@/components/ui/Card";
+import { Button } from "@/components/ui/Button";
+import { EmptyState, PageHeader, SectionTitle } from "@/components/ui/PageHeader";
 import { inr, num } from "@/lib/utils";
 import { useRestaurantCollection } from "@/features/pos/hooks/useRestaurantCollection";
 import type { ExpenseDoc, SaleDoc, SupplierBillDoc, ReminderDoc, StaffDoc, AttendanceDoc, AdvanceDoc } from "@/lib/firestoreTypes";
@@ -22,7 +37,10 @@ function daysFromToday(iso: string): number {
   return Math.round((b - a) / (1000 * 60 * 60 * 24));
 }
 
+const CHART = ["#E56B2C", "#9A3F24", "#F2A65A", "#CF5A1F", "#B45309", "#78350F"];
+
 export function DashboardPage() {
+  const navigate = useNavigate();
   const sales = useRestaurantCollection<SaleDoc>({ path: "sales", max: 300 });
   const expenses = useRestaurantCollection<ExpenseDoc>({ path: "expenses", max: 300 });
   const supplierBills = useRestaurantCollection<SupplierBillDoc>({ path: "supplierBills", max: 100 });
@@ -117,141 +135,186 @@ export function DashboardPage() {
 
   return (
     <div className="grid gap-4">
-      <motion.div
-        initial={{ opacity: 0, y: -8 }}
-        animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.45 }}
-        className="relative overflow-hidden rounded-[20px] border border-[#E9EDF5] bg-white p-6 shadow-[0_8px_30px_rgba(0,0,0,0.05)]"
-      >
-        <div className="pointer-events-none absolute -right-8 -top-10 h-40 w-40 rounded-full bg-[#6D5EF7]/10 blur-2xl" />
-        <div className="relative">
-          <div className="text-[12px] font-semibold uppercase tracking-[0.14em] text-[#6D5EF7]">Welcome back</div>
-          <div className="mt-1 text-[34px] font-bold tracking-tight text-[#111827]">{BRAND.restaurantName}</div>
-          <div className="mt-2 max-w-xl text-[15px] text-[#6B7280]">
-            Powered by {BRAND.appName} — live operations, finance, and AI insights.
-          </div>
-        </div>
-      </motion.div>
+      <PageHeader
+        eyebrow="Operations overview"
+        title="Dashboard"
+        description={`Live balances, sales, and payables — ${BRAND.restaurantName}`}
+        actions={
+          <>
+            <Button variant="secondary" onClick={() => navigate("/pos")}>
+              Open POS
+            </Button>
+            <Button onClick={() => navigate("/sales")}>
+              Add sales <ArrowRight size={14} />
+            </Button>
+          </>
+        }
+      />
 
-      <div className="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
-        <KpiCard title="Cash Balance" value={inr(totals.cashBalance)} icon={<Wallet size={18} />} />
-        <KpiCard title="Bank Balance" value={inr(totals.bankBalance)} icon={<Landmark size={18} />} />
-        <KpiCard title="Total Balance" value={inr(totals.totalBalance)} icon={<PiggyBank size={18} />} />
-        <KpiCard title="Total Revenue" value={inr(totals.totalRevenue)} icon={<TrendingUp size={18} />} tone="good" />
-        <KpiCard title="Unpaid Bills" value={inr(totals.unpaidBills)} icon={<AlertCircle size={18} />} tone={totals.unpaidBills > 0 ? "bad" : "neutral"} />
-        <KpiCard title="Net Profit" value={inr(totals.netProfit)} icon={<ReceiptIndianRupee size={18} />} tone={totals.netProfit >= 0 ? "good" : "bad"} hint={`Salary accrued (month): ${inr(totals.salaryAccrued)}`} />
-        <KpiCard title="Total Sales" value={inr(totals.totalSales)} icon={<ShoppingBag size={18} />} />
-        <KpiCard title="Expenses (total)" value={inr(totals.totalExpenses)} icon={<ReceiptIndianRupee size={18} />} />
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+        <KpiCard title="Cash Balance" value={inr(totals.cashBalance)} icon={<Wallet size={16} />} />
+        <KpiCard title="Bank Balance" value={inr(totals.bankBalance)} icon={<Landmark size={16} />} />
+        <KpiCard title="Total Balance" value={inr(totals.totalBalance)} icon={<PiggyBank size={16} />} />
+        <KpiCard title="Total Revenue" value={inr(totals.totalRevenue)} icon={<TrendingUp size={16} />} tone="good" />
+        <KpiCard
+          title="Unpaid Bills"
+          value={inr(totals.unpaidBills)}
+          icon={<AlertCircle size={16} />}
+          tone={totals.unpaidBills > 0 ? "bad" : "neutral"}
+        />
+        <KpiCard
+          title="Net Profit"
+          value={inr(totals.netProfit)}
+          icon={<ReceiptIndianRupee size={16} />}
+          tone={totals.netProfit >= 0 ? "good" : "bad"}
+          hint={`Salary accrued: ${inr(totals.salaryAccrued)}`}
+        />
+        <KpiCard title="Total Sales" value={inr(totals.totalSales)} icon={<ShoppingBag size={16} />} />
+        <KpiCard title="Expenses" value={inr(totals.totalExpenses)} icon={<ReceiptIndianRupee size={16} />} />
       </div>
 
       <div className="grid gap-4 xl:grid-cols-2">
-        <Card gradientTop="cyan">
-          <div className="mb-3 flex items-center justify-between">
-            <div>
-              <div className="text-sm font-extrabold text-slate-900">Daily sales (Cash vs Online)</div>
-              <div className="text-xs text-slate-500">Last 7 entries</div>
+        <Card hover={false}>
+          <SectionTitle title="Daily sales" description="Cash vs online · last 7 entries" right={<BarChart3 size={16} className="text-text-muted" aria-hidden />} />
+          {last7.length ? (
+            <div className="h-[240px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={last7}>
+                  <CartesianGrid stroke="#E6E8EE" strokeDasharray="3 3" vertical={false} />
+                  <XAxis dataKey="date" stroke="#6B7280" fontSize={11} tickLine={false} axisLine={false} />
+                  <YAxis stroke="#6B7280" fontSize={11} tickLine={false} axisLine={false} width={40} />
+                  <Tooltip
+                    contentStyle={{
+                      background: "#fff",
+                      border: "1px solid #E6E8EE",
+                      borderRadius: 10,
+                      color: "#111827",
+                      boxShadow: "0 8px 20px rgba(17,24,39,0.08)",
+                      fontSize: 12
+                    }}
+                  />
+                  <Bar dataKey="Cash" fill="#E56B2C" radius={[6, 6, 0, 0]} />
+                  <Bar dataKey="Online" fill="#9A3F24" radius={[6, 6, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
             </div>
-          </div>
-          <div className="h-[280px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <BarChart data={last7}>
-                <CartesianGrid stroke="#e2e8f0" strokeDasharray="4 4" />
-                <XAxis dataKey="date" stroke="#64748b" fontSize={12} />
-                <YAxis stroke="#64748b" fontSize={12} />
-                <Tooltip contentStyle={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 16, color: "#0f172a", boxShadow: "0 12px 30px rgba(15,23,42,0.08)" }} />
-                <Bar dataKey="Cash" fill="#14B8A6" radius={[10, 10, 0, 0]} />
-                <Bar dataKey="Online" fill="#06B6D4" radius={[10, 10, 0, 0]} />
-              </BarChart>
-            </ResponsiveContainer>
-          </div>
+          ) : (
+            <EmptyState
+              icon={<BarChart3 size={18} />}
+              title="No sales entries yet"
+              description="Add end-of-day cash and online totals to see trends here."
+              action={<Button variant="secondary" onClick={() => navigate("/sales")}>Add first sale</Button>}
+            />
+          )}
         </Card>
 
-        <Card gradientTop="gold">
-          <div className="mb-3 flex items-center justify-between">
-            <div>
-              <div className="text-sm font-extrabold text-slate-900">Expense breakdown</div>
-              <div className="text-xs text-slate-500">All time by category</div>
+        <Card hover={false}>
+          <SectionTitle title="Expense breakdown" description="All time by category" right={<PieIcon size={16} className="text-text-muted" aria-hidden />} />
+          {expByCat.length ? (
+            <div className="h-[240px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <Pie data={expByCat} dataKey="value" nameKey="name" innerRadius={52} outerRadius={88} paddingAngle={2}>
+                    {expByCat.map((_, idx) => (
+                      <Cell key={idx} fill={CHART[idx % CHART.length]} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{
+                      background: "#fff",
+                      border: "1px solid #E6E8EE",
+                      borderRadius: 10,
+                      color: "#111827",
+                      fontSize: 12
+                    }}
+                  />
+                </PieChart>
+              </ResponsiveContainer>
             </div>
-          </div>
-          <div className="h-[280px]">
-            <ResponsiveContainer width="100%" height="100%">
-              <PieChart>
-                <Pie data={expByCat} dataKey="value" nameKey="name" innerRadius={55} outerRadius={95} paddingAngle={3}>
-                  {expByCat.map((_, idx) => (
-                    <Cell
-                      key={idx}
-                      fill={["#14B8A6", "#06B6D4", "#FBBF24", "#F97316", "#8B5CF6", "#EC4899"][idx % 6]}
-                    />
-                  ))}
-                </Pie>
-                <Tooltip contentStyle={{ background: "#fff", border: "1px solid #e2e8f0", borderRadius: 16, color: "#0f172a" }} />
-              </PieChart>
-            </ResponsiveContainer>
-          </div>
+          ) : (
+            <EmptyState
+              icon={<PieIcon size={18} />}
+              title="No expenses recorded"
+              description="Log rent, utilities, and misc costs to see category split."
+              action={<Button variant="secondary" onClick={() => navigate("/expenses")}>Go to expenses</Button>}
+            />
+          )}
         </Card>
       </div>
 
       <div className="grid gap-4 xl:grid-cols-2">
-        <Card gradientTop="purple">
-          <div className="mb-3">
-            <div className="text-sm font-extrabold text-slate-900">Recent transactions</div>
-            <div className="text-xs text-slate-500">Latest sales + expenses + supplier payments</div>
-          </div>
-          <div className="grid gap-2">
-            {recentTx.map((t, i) => (
-              <div key={i} className="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50/80 px-3 py-2.5 transition hover:bg-white hover:shadow-sm">
-                <div className="min-w-0">
-                  <div className="text-sm font-semibold text-slate-800">{t.kind}</div>
-                  <div className="text-xs text-slate-500">{t.date}</div>
+        <Card hover={false}>
+          <SectionTitle title="Recent transactions" description="Sales, expenses, supplier payments" />
+          {recentTx.length ? (
+            <div className="grid gap-1.5">
+              {recentTx.map((t, i) => (
+                <div
+                  key={i}
+                  className="flex items-center justify-between rounded-lg border border-stroke-0 bg-bg-1/60 px-3 py-2.5"
+                >
+                  <div className="min-w-0">
+                    <div className="text-[13px] font-semibold text-text-primary">{t.kind}</div>
+                    <div className="text-[11px] text-text-muted">{t.date}</div>
+                  </div>
+                  <div className={t.amount >= 0 ? "text-[13px] font-bold text-success tabular-nums" : "text-[13px] font-bold text-danger tabular-nums"}>
+                    {t.amount >= 0 ? "+" : "-"}
+                    {inr(Math.abs(t.amount))}
+                  </div>
                 </div>
-                <div className={t.amount >= 0 ? "font-bold text-emerald-600" : "font-bold text-rose-600"}>{inr(Math.abs(t.amount))}</div>
-              </div>
-            ))}
-            {!recentTx.length ? <div className="rounded-2xl border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-slate-500">No transactions yet.</div> : null}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <EmptyState
+              icon={<Inbox size={18} />}
+              title="No transactions yet"
+              description="Activity from sales and expenses will show up here."
+            />
+          )}
         </Card>
 
-        <Card gradientTop="orange">
-          <div className="mb-3">
-            <div className="text-sm font-extrabold text-slate-900">Upcoming payments & reminders</div>
-            <div className="text-xs text-slate-500">Bills due soon and your custom reminders</div>
-          </div>
-          <div className="grid gap-2">
-            {upcomingBills.map((b) => (
-              <div key={b.id} className="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50/80 px-3 py-2.5">
-                <div className="min-w-0">
-                  <div className="text-sm font-semibold text-slate-800">{b.title}</div>
-                  <div className="text-xs text-slate-500">
-                    {b.days < 0 ? `${Math.abs(b.days)}d overdue` : b.days === 0 ? "Due today" : `in ${b.days} days`}
+        <Card hover={false}>
+          <SectionTitle title="Upcoming payments" description="Bills due soon and reminders" />
+          {upcomingBills.length || upcomingReminders.length ? (
+            <div className="grid gap-1.5">
+              {upcomingBills.map((b) => (
+                <div key={b.id} className="flex items-center justify-between rounded-lg border border-stroke-0 bg-bg-1/60 px-3 py-2.5">
+                  <div className="min-w-0">
+                    <div className="text-[13px] font-semibold text-text-primary">{b.title}</div>
+                    <div className="text-[11px] text-text-muted">
+                      {b.days < 0 ? `${Math.abs(b.days)}d overdue` : b.days === 0 ? "Due today" : `in ${b.days} days`}
+                    </div>
                   </div>
+                  <div className="text-[13px] font-bold text-danger tabular-nums">{inr(b.amount)}</div>
                 </div>
-                <div className="font-bold text-rose-600">{inr(b.amount)}</div>
-              </div>
-            ))}
-            {upcomingReminders.map((r) => (
-              <div key={(r as any).id} className="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50/80 px-3 py-2.5">
-                <div className="min-w-0">
-                  <div className="text-sm font-semibold text-slate-800">{r.title}</div>
-                  <div className="text-xs text-slate-500">
-                    Due {r.dueDate} • in {r.days} days
+              ))}
+              {upcomingReminders.map((r) => (
+                <div key={(r as any).id} className="flex items-center justify-between rounded-lg border border-stroke-0 bg-bg-1/60 px-3 py-2.5">
+                  <div className="min-w-0">
+                    <div className="text-[13px] font-semibold text-text-primary">{r.title}</div>
+                    <div className="text-[11px] text-text-muted">
+                      Due {r.dueDate} · in {r.days} days
+                    </div>
                   </div>
+                  <div className="rounded-md bg-primary-light px-2 py-0.5 text-[10px] font-bold text-primary">Reminder</div>
                 </div>
-                <div className="rounded-full bg-violet-50 px-2 py-0.5 text-xs font-bold text-violet-700">Reminder</div>
-              </div>
-            ))}
-            {!upcomingBills.length && !upcomingReminders.length ? (
-              <div className="rounded-2xl border border-dashed border-slate-200 px-4 py-8 text-center text-sm text-slate-500">No upcoming items.</div>
-            ) : null}
-          </div>
+              ))}
+            </div>
+          ) : (
+            <EmptyState
+              icon={<CalendarClock size={18} />}
+              title="Nothing due soon"
+              description="Unpaid bills and reminders within the next few days appear here."
+              action={<Button variant="secondary" onClick={() => navigate("/reminders")}>Manage reminders</Button>}
+            />
+          )}
         </Card>
       </div>
 
       {(sales.error || expenses.error || supplierBills.error) && (
-        <div className="rounded-xl border border-rose-200 bg-rose-50 px-3 py-2 text-sm text-rose-700">
+        <div className="rounded-lg border border-red-200 bg-danger-bg px-3 py-2 text-[13px] text-danger">
           Data error: {sales.error ?? expenses.error ?? supplierBills.error}
         </div>
       )}
     </div>
   );
 }
-

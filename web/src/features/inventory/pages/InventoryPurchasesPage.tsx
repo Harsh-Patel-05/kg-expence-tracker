@@ -4,6 +4,10 @@ import { inr, num, isoDate } from "@/lib/utils";
 import { useRestaurantCollection } from "@/features/pos/hooks/useRestaurantCollection";
 import type { InventoryItemDoc, PurchaseEntryDoc, PurchaseLine, VendorDoc } from "../types";
 import { createPurchaseEntry, upsertVendor } from "../services/purchaseService";
+import { PageHeader, SectionTitle } from "@/components/ui/PageHeader";
+import { Card } from "@/components/ui/Card";
+
+import { ContentLoading } from "@/components/ui/Loading";
 
 export function InventoryPurchasesPage() {
   const { data: purchases, loading } = useRestaurantCollection<PurchaseEntryDoc>({ path: "purchases" });
@@ -15,6 +19,7 @@ export function InventoryPurchasesPage() {
   const [vendorId, setVendorId] = useState("");
   const [invoiceNumber, setInvoiceNumber] = useState("");
   const [line, setLine] = useState({ item: "", inventoryId: "", qty: "1", unit: "kg", rate: "0", gstRate: "5", expiryDate: "", batchNumber: "" });
+  const [lines, setLines] = useState<PurchaseLine[]>([]);
   const [paymentStatus, setPaymentStatus] = useState<"paid" | "unpaid">("unpaid");
   const [paymentMethod, setPaymentMethod] = useState<"cash" | "online">("cash");
 
@@ -66,20 +71,18 @@ export function InventoryPurchasesPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <div>
-        <Link to="/inventory" className="text-xs font-semibold text-cyan-700">
-          ← Inventory
-        </Link>
-        <h1 className="text-xl font-black">Purchase entries</h1>
-      </div>
-      {msg ? <div className="rounded-xl bg-cyan-50 px-3 py-2 text-sm text-cyan-900">{msg}</div> : null}
+    <div className="grid gap-4">
+      <PageHeader
+        back={<Link to="/inventory" className="text-xs font-semibold text-primary"> ← Inventory </Link>}
+        title="Purchase entries"
+      />
+      {msg ? <div className="rounded-lg border border-primary/20 bg-primary-light px-3 py-2 text-[13px] text-primary">{msg}</div> : null}
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <div className="space-y-3 rounded-2xl border bg-white p-4 shadow-sm">
-          <div className="text-sm font-bold">New purchase</div>
+        <Card hover={false} padding="sm"><div className="space-y-3">
+          <div className="text-[14px] font-bold text-text-primary">New purchase</div>
           <select
-            className="w-full rounded-xl border px-3 py-2 text-sm"
+            className="kg-input w-full"
             value={vendorId}
             onChange={(e) => {
               setVendorId(e.target.value);
@@ -93,13 +96,13 @@ export function InventoryPurchasesPage() {
               </option>
             ))}
           </select>
-          <input className="w-full rounded-xl border px-3 py-2 text-sm" placeholder="Or type new vendor name" value={vendorName} onChange={(e) => setVendorName(e.target.value)} />
-          <input className="w-full rounded-xl border px-3 py-2 text-sm" placeholder="Invoice number" value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} />
+          <input className="kg-input w-full" placeholder="Or type new vendor name" value={vendorName} onChange={(e) => setVendorName(e.target.value)} />
+          <input className="kg-input w-full" placeholder="Invoice number" value={invoiceNumber} onChange={(e) => setInvoiceNumber(e.target.value)} />
 
-          <div className="rounded-xl border border-dashed p-3 space-y-2">
-            <div className="text-xs font-bold uppercase text-slate-500">Add line</div>
+          <div className="space-y-2 rounded-lg border border-dashed border-stroke-1 bg-bg-1/50 p-3">
+            <div className="text-xs font-bold uppercase text-text-muted">Add line</div>
             <select
-              className="w-full rounded-xl border px-3 py-2 text-sm"
+              className="kg-input w-full"
               value={line.inventoryId}
               onChange={(e) => {
                 const it = items.find((x) => x.id === e.target.value);
@@ -119,72 +122,72 @@ export function InventoryPurchasesPage() {
                 </option>
               ))}
             </select>
-            <input className="w-full rounded-xl border px-3 py-2 text-sm" placeholder="Item name" value={line.item} onChange={(e) => setLine({ ...line, item: e.target.value })} />
+            <input className="kg-input w-full" placeholder="Item name" value={line.item} onChange={(e) => setLine({ ...line, item: e.target.value })} />
             <div className="grid grid-cols-3 gap-2">
-              <input className="rounded-xl border px-2 py-2 text-sm" type="number" placeholder="Qty" value={line.qty} onChange={(e) => setLine({ ...line, qty: e.target.value })} />
-              <input className="rounded-xl border px-2 py-2 text-sm" placeholder="Unit" value={line.unit} onChange={(e) => setLine({ ...line, unit: e.target.value })} />
-              <input className="rounded-xl border px-2 py-2 text-sm" type="number" placeholder="Rate" value={line.rate} onChange={(e) => setLine({ ...line, rate: e.target.value })} />
+              <input className="kg-input !w-auto" type="number" placeholder="Qty" value={line.qty} onChange={(e) => setLine({ ...line, qty: e.target.value })} />
+              <input className="kg-input !w-auto" placeholder="Unit" value={line.unit} onChange={(e) => setLine({ ...line, unit: e.target.value })} />
+              <input className="kg-input !w-auto" type="number" placeholder="Rate" value={line.rate} onChange={(e) => setLine({ ...line, rate: e.target.value })} />
             </div>
             <div className="grid grid-cols-2 gap-2">
-              <input className="rounded-xl border px-2 py-2 text-sm" type="date" value={line.expiryDate} onChange={(e) => setLine({ ...line, expiryDate: e.target.value })} />
-              <input className="rounded-xl border px-2 py-2 text-sm" placeholder="Batch #" value={line.batchNumber} onChange={(e) => setLine({ ...line, batchNumber: e.target.value })} />
+              <input className="kg-input !w-auto" type="date" value={line.expiryDate} onChange={(e) => setLine({ ...line, expiryDate: e.target.value })} />
+              <input className="kg-input !w-auto" placeholder="Batch #" value={line.batchNumber} onChange={(e) => setLine({ ...line, batchNumber: e.target.value })} />
             </div>
-            <button type="button" className="rounded-xl border px-3 py-2 text-sm font-semibold" onClick={addLine}>
+            <button type="button" className="kg-btn kg-btn-secondary" onClick={addLine}>
               Add line
             </button>
           </div>
 
-          <div className="space-y-1 text-sm">
+          <div className="space-y-1 text-[13px]">
             {lines.map((l, i) => (
-              <div key={i} className="flex justify-between rounded-lg bg-slate-50 px-2 py-1.5">
+              <div key={i} className="flex items-center justify-between rounded-lg border border-stroke-0 bg-bg-1/60 px-3 py-2 text-[13px]">
                 <span>
                   {l.item} × {l.qty} @ {inr(l.rate)}
                 </span>
-                <button type="button" className="text-xs text-rose-600" onClick={() => setLines((p) => p.filter((_, j) => j !== i))}>
+                <button type="button" className="text-xs text-danger" onClick={() => setLines((p) => p.filter((_, j) => j !== i))}>
                   Remove
                 </button>
               </div>
             ))}
           </div>
           <div className="grid grid-cols-2 gap-2">
-            <select className="rounded-xl border px-3 py-2 text-sm" value={paymentStatus} onChange={(e) => setPaymentStatus(e.target.value as "paid" | "unpaid")}>
+            <select className="kg-input !w-auto" value={paymentStatus} onChange={(e) => setPaymentStatus(e.target.value as "paid" | "unpaid")}>
               <option value="unpaid">Unpaid</option>
               <option value="paid">Paid</option>
             </select>
             {paymentStatus === "paid" ? (
-              <select className="rounded-xl border px-3 py-2 text-sm" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value as "cash" | "online")}>
+              <select className="kg-input !w-auto" value={paymentMethod} onChange={(e) => setPaymentMethod(e.target.value as "cash" | "online")}>
                 <option value="cash">Cash</option>
                 <option value="online">Online</option>
               </select>
             ) : (
-              <div className="rounded-xl border border-dashed px-3 py-2 text-xs text-slate-500">Due to supplier</div>
+              <div className="flex items-center rounded-lg border border-dashed border-stroke-1 bg-bg-1/50 px-3 py-2 text-[12px] text-text-muted">Due to supplier</div>
             )}
           </div>
-          <button type="button" disabled={busy || !lines.length} className="w-full rounded-xl bg-cyan-500 py-2.5 text-sm font-bold text-white disabled:opacity-50" onClick={() => void submit()}>
+          <button type="button" disabled={busy || !lines.length} className="kg-btn kg-btn-primary w-full disabled:opacity-50" onClick={() => void submit()}>
             {busy ? "Posting…" : "Post purchase & increase stock"}
           </button>
-        </div>
+        </div></Card>
 
-        <div className="rounded-2xl border bg-white p-4 shadow-sm">
-          <div className="mb-3 text-sm font-bold">Recent purchases</div>
-          {loading ? <div className="h-24 animate-pulse rounded-xl bg-slate-100" /> : null}
+        <Card padding="sm" hover={false}>
+          <SectionTitle title="Recent purchases" />
+          {loading ? <ContentLoading variant="block" label="Loading" /> : null}
           <div className="max-h-[520px] space-y-2 overflow-auto">
             {[...purchases]
               .sort((a, b) => String(b.date || "").localeCompare(String(a.date || "")))
               .slice(0, 40)
               .map((p) => (
-                <div key={p.id} className="rounded-xl border border-slate-100 px-3 py-2 text-sm">
+                <div key={p.id} className="rounded-lg border border-stroke-0 bg-bg-1/60 px-3 py-2.5 text-[13px] text-text-primary">
                   <div className="flex justify-between font-semibold">
                     <span>{p.purchaseNumber || p.invoiceNumber || p.id.slice(0, 6)}</span>
                     <span>{inr(p.total || p.price)}</span>
                   </div>
-                  <div className="text-xs text-slate-500">
+                  <div className="text-xs text-text-muted">
                     {p.date} · {p.vendorName || p.seller || "—"} · {p.paymentStatus || p.paidStatus || "—"}
                   </div>
                 </div>
               ))}
           </div>
-        </div>
+        </Card>
       </div>
     </div>
   );

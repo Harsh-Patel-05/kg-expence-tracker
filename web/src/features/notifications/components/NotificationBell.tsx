@@ -1,6 +1,7 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
 import { Bell } from "lucide-react";
+import { EmptyState } from "@/components/ui/PageHeader";
 import { useRestaurantCollection } from "@/features/pos/hooks/useRestaurantCollection";
 import type { NotificationDoc } from "@/features/pos/types";
 import { markNotificationRead } from "@/features/notifications/services/notificationEngine";
@@ -20,22 +21,24 @@ export function NotificationBell() {
       <button
         type="button"
         onClick={() => setOpen((o) => !o)}
-        className="relative grid h-10 w-10 place-items-center rounded-xl border border-[#E9EDF5] bg-white text-[#6B7280] hover:bg-[#F5F7FB]"
+        className="relative grid h-10 w-10 place-items-center rounded-xl border border-stroke-0 text-text-muted hover:bg-bg-1"
         aria-label="Notifications"
+        aria-expanded={open}
+        aria-haspopup="dialog"
       >
-        <Bell size={16} />
+        <Bell size={15} aria-hidden />
         {unread.length ? (
-          <span className="absolute -right-0.5 -top-0.5 min-w-[18px] rounded-full bg-[#EF4444] px-1 text-center text-[10px] font-bold text-white">
+          <span className="absolute -right-0.5 -top-0.5 min-w-[18px] rounded-full bg-danger px-1 text-center text-[10px] font-bold text-white">
             {unread.length > 99 ? "99+" : unread.length}
           </span>
         ) : null}
       </button>
 
       {open ? (
-        <div className="absolute right-0 z-50 mt-2 w-[360px] overflow-hidden rounded-[20px] border border-[#E9EDF5] bg-white shadow-[0_16px_40px_rgba(0,0,0,0.12)]">
-          <div className="flex items-center justify-between border-b border-[#E9EDF5] px-4 py-3">
-            <div className="text-[15px] font-bold text-[#111827]">Notifications</div>
-            <Link to="/notifications" className="text-[13px] font-semibold text-[#6D5EF7]" onClick={() => setOpen(false)}>
+        <div className="absolute right-0 z-50 mt-2 w-[min(360px,calc(100vw-2rem))] overflow-hidden rounded-[var(--radius-xl)] border border-stroke-0 bg-card-0 shadow-float" role="dialog" aria-label="Notification list">
+          <div className="flex items-center justify-between border-b border-stroke-0 px-4 py-3">
+            <div className="text-[14px] font-bold text-text-primary">Notifications</div>
+            <Link to="/notifications" className="text-[12px] font-semibold text-primary" onClick={() => setOpen(false)}>
               View all
             </Link>
           </div>
@@ -44,17 +47,17 @@ export function NotificationBell() {
               <button
                 key={n.id}
                 type="button"
-                className="block w-full border-b border-[#F5F7FB] px-4 py-3 text-left hover:bg-[#F5F7FB]"
+                className="block w-full border-b border-stroke-0 px-4 py-3 text-left hover:bg-bg-1"
                 onClick={async () => {
                   await markNotificationRead(n.id, true);
                   setOpen(false);
                 }}
               >
-                <div className="text-[14px] font-semibold text-[#111827]">{n.title}</div>
-                <div className="truncate text-[13px] text-[#6B7280]">{n.body}</div>
+                <div className="text-[13px] font-semibold text-text-primary">{n.title}</div>
+                <div className="truncate text-[12px] text-text-muted">{n.body}</div>
               </button>
             ))}
-            {!preview.length ? <div className="px-4 py-10 text-center text-[13px] text-[#6B7280]">You&apos;re all caught up.</div> : null}
+            {!preview.length ? <EmptyState className="m-3" icon={<Bell size={18} />} title="You&apos;re all caught up" description="New alerts will show up here." /> : null}
           </div>
         </div>
       ) : null}

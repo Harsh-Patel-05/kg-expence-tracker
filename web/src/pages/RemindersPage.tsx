@@ -3,6 +3,9 @@ import { useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { db } from "@/lib/firebase";
 import { isoDate, num } from "@/lib/utils";
+import { Button } from "@/components/ui/Button";
+import { Input } from "@/components/ui/Input";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 const OWNER_USER_ID = "owner";
 
@@ -35,30 +38,31 @@ export function RemindersPage() {
 
   return (
     <div className="grid gap-4">
-      <Card>
+      <PageHeader eyebrow="Operations" title="Reminders" description="Due-date alerts that surface on the Dashboard." />
+      <Card hover={false}>
         <div className="mb-3">
-          <div className="text-sm font-semibold">Reminder system</div>
-          <div className="text-xs text-white/55">Shows on Dashboard when due date is within N days.</div>
+          <div className="text-[14px] font-bold text-text-primary">Reminder system</div>
+          <div className="text-[12px] text-text-muted">Shows on Dashboard when due date is within N days.</div>
         </div>
         <div className="grid gap-3 md:grid-cols-3">
-          <label className="grid gap-1 text-xs text-white/60">
+          <label className="grid gap-1 text-[12px] font-semibold text-text-muted">
             Title
-            <input className="rounded-xl border border-stroke-0 bg-white/5 px-3 py-2 text-sm text-white" value={title} onChange={(e) => setTitle(e.target.value)} />
+            <Input value={title} onChange={(e) => setTitle(e.target.value)} />
           </label>
-          <label className="grid gap-1 text-xs text-white/60">
+          <label className="grid gap-1 text-[12px] font-semibold text-text-muted">
             Due date
-            <input className="rounded-xl border border-stroke-0 bg-white/5 px-3 py-2 text-sm text-white" value={dueDate} onChange={(e) => setDueDate(e.target.value)} type="date" />
+            <Input value={dueDate} onChange={(e) => setDueDate(e.target.value)} type="date" />
           </label>
-          <label className="grid gap-1 text-xs text-white/60">
+          <label className="grid gap-1 text-[12px] font-semibold text-text-muted">
             Notify days before
-            <input className="rounded-xl border border-stroke-0 bg-white/5 px-3 py-2 text-sm text-white" value={daysBefore} onChange={(e) => setDaysBefore(e.target.value)} inputMode="numeric" />
+            <Input value={daysBefore} onChange={(e) => setDaysBefore(e.target.value)} inputMode="numeric" />
           </label>
         </div>
         <div className="mt-3 flex items-center gap-3">
-          <button disabled={saving} onClick={save} className="rounded-xl bg-indigo-500 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-400 disabled:opacity-50">
+          <Button disabled={saving} onClick={save}>
             {saving ? "Saving…" : "Save reminder"}
-          </button>
-          {msg ? <div className="text-sm text-white/70">{msg}</div> : null}
+          </Button>
+          {msg ? <div className="text-[13px] text-text-secondary">{msg}</div> : null}
         </div>
       </Card>
     </div>

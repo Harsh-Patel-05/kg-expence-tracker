@@ -5,21 +5,25 @@ export function Card(
   props: PropsWithChildren<{
     className?: string;
     hover?: boolean;
+    padding?: "sm" | "md" | "lg";
     gradientTop?: "teal" | "cyan" | "green" | "gold" | "orange" | "purple" | "rose" | "none";
   }>
 ) {
+  const pad = props.padding === "sm" ? "p-4" : props.padding === "lg" ? "p-6" : "p-5";
+  const isFlexCol = typeof props.className === "string" && props.className.includes("flex-col");
   return (
     <div
       className={clsx(
-        "relative overflow-hidden rounded-[20px] border border-[#E9EDF5] bg-white p-6 text-[#111827] shadow-[0_8px_30px_rgba(0,0,0,0.05)] transition duration-300",
-        props.hover !== false && "hover:-translate-y-1.5 hover:shadow-[0_16px_40px_rgba(109,94,247,0.1)]",
+        "relative overflow-hidden rounded-[var(--radius-xl)] border border-stroke-0 bg-card-0 text-text-primary shadow-panel",
+        props.hover !== false && "transition hover:border-stroke-1 hover:shadow-float",
+        pad,
         props.className
       )}
     >
       {props.gradientTop && props.gradientTop !== "none" ? (
-        <div className="absolute inset-x-0 top-0 h-[3px] bg-gradient-to-r from-[#6D5EF7] to-[#8B7CFF]" />
+        <div className="absolute inset-x-0 top-0 h-0.5 bg-gradient-to-r from-primary to-accent" />
       ) : null}
-      <div className="relative">{props.children}</div>
+      <div className={clsx("relative", isFlexCol && "flex min-h-0 flex-1 flex-col")}>{props.children}</div>
     </div>
   );
 }

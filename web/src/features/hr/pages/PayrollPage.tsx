@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Inbox } from "lucide-react";
 import { Link } from "react-router-dom";
 import { inr, isoDate, num } from "@/lib/utils";
 import { useRestaurantCollection } from "@/features/pos/hooks/useRestaurantCollection";
@@ -15,6 +16,9 @@ import type {
 import { calcPayrollForMonth, monthISO } from "../utils/payroll";
 import { canRunPayroll } from "../utils/permissions";
 import { createAdvance, createIncentive, createTip, postSalary, toggleSalaryPaid } from "../services/payrollService";
+import { EmptyState, PageHeader } from "@/components/ui/PageHeader";
+import { Card } from "@/components/ui/Card";
+import { KpiCard } from "@/components/ui/KpiCard";
 
 export function PayrollPage() {
   const { role } = usePosAuth();
@@ -109,25 +113,25 @@ export function PayrollPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <Link to="/hr" className="text-xs font-semibold text-cyan-700">
-            ← HR
-          </Link>
-          <h1 className="text-2xl font-black text-slate-900">Payroll & advances</h1>
-        </div>
-        <input type="month" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm" value={month} onChange={(e) => setMonth(e.target.value)} />
-      </div>
+    <div className="grid gap-4">
+      <PageHeader
+        back={<Link to="/hr" className="text-xs font-semibold text-primary"> ← HR </Link>}
+        title="Payroll & advances"
+        actions={
+          <>
+          <input type="month" className="kg-input !w-auto" value={month} onChange={(e) => setMonth(e.target.value)} />
+          </>
+        }
+      />
 
-      {msg ? <div className="rounded-xl bg-cyan-50 px-3 py-2 text-sm text-cyan-900">{msg}</div> : null}
+      {msg ? <div className="rounded-lg border border-primary/20 bg-primary-light px-3 py-2 text-[13px] text-primary">{msg}</div> : null}
 
-      <div className="flex flex-wrap gap-1 rounded-xl border border-slate-200 bg-white p-1 text-sm">
+      <div className="flex flex-wrap gap-2">
         {(["run", "history", "advances", "incentives", "tips"] as const).map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`rounded-lg px-3 py-1.5 capitalize ${tab === t ? "bg-slate-900 text-white" : "text-slate-600"}`}
+            className={`kg-btn capitalize ${tab === t ? "kg-btn-primary" : "kg-btn-secondary"}`}
           >
             {t}
           </button>
@@ -137,31 +141,22 @@ export function PayrollPage() {
       {tab === "run" ? (
         <div className="space-y-3">
           <div className="grid gap-3 sm:grid-cols-3">
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="text-xs font-semibold uppercase text-slate-500">Total monthly salary</div>
-              <div className="mt-1 text-xl font-black text-slate-900">{inr(Math.round(payrollTotals.monthly))}</div>
-            </div>
-            <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-              <div className="text-xs font-semibold uppercase text-slate-500">Total advances given</div>
-              <div className="mt-1 text-xl font-black text-slate-900">{inr(Math.round(payrollTotals.advances))}</div>
-            </div>
-            <div className={`rounded-2xl border p-4 shadow-sm ${payrollTotals.net >= 0 ? "border-emerald-200 bg-emerald-50" : "border-rose-200 bg-rose-50"}`}>
-              <div className="text-xs font-semibold uppercase text-slate-500">To pay at month end</div>
-              <div className={`mt-1 text-xl font-black ${payrollTotals.net >= 0 ? "text-emerald-700" : "text-rose-700"}`}>{inr(Math.round(payrollTotals.net))}</div>
-            </div>
+            <KpiCard title="Total monthly salary" value={inr(Math.round(payrollTotals.monthly))} />
+            <KpiCard title="Total advances given" value={inr(Math.round(payrollTotals.advances))} />
+            <KpiCard title="To pay at month end" value={inr(Math.round(payrollTotals.net))} tone={payrollTotals.net >= 0 ? "good" : "bad"} />
           </div>
           <div className="flex justify-end">
             <button
               disabled={!canRun || busy}
               onClick={generateAll}
-              className="rounded-xl bg-cyan-500 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+              className="kg-btn kg-btn-primary disabled:opacity-50"
             >
               {busy ? "Generating…" : "Generate payslips"}
             </button>
           </div>
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+          <Card hover={false} className="!p-0">
+            <table className="w-full text-left text-[13px]">
+              <thead className="bg-bg-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-text-muted">
                 <tr>
                   <th className="px-3 py-2">Employee</th>
                   <th className="px-3 py-2">Present eq</th>
@@ -173,7 +168,7 @@ export function PayrollPage() {
               </thead>
               <tbody>
                 {payrollRows.map((r) => (
-                  <tr key={r.name} className="border-t border-slate-100">
+                  <tr key={r.name} className="border-t border-stroke-0">
                     <td className="px-3 py-2 font-semibold">{r.name}</td>
                     <td className="px-3 py-2">{r.presentEquivalent}</td>
                     <td className="px-3 py-2">{inr(r.earned)}</td>
@@ -184,14 +179,14 @@ export function PayrollPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </Card>
         </div>
       ) : null}
 
       {tab === "history" ? (
-        <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-          <table className="w-full text-left text-sm">
-            <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+        <Card hover={false} className="!p-0">
+          <table className="w-full text-left text-[13px]">
+            <thead className="bg-bg-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-text-muted">
               <tr>
                 <th className="px-3 py-2">Employee</th>
                 <th className="px-3 py-2">Gross</th>
@@ -202,7 +197,7 @@ export function PayrollPage() {
             </thead>
             <tbody>
               {monthSalaries.map((s) => (
-                <tr key={s.id} className="border-t border-slate-100">
+                <tr key={s.id} className="border-t border-stroke-0">
                   <td className="px-3 py-2 font-semibold">{s.name}</td>
                   <td className="px-3 py-2">{inr(s.amount)}</td>
                   <td className="px-3 py-2">{inr(s.netSalary ?? s.amount)}</td>
@@ -210,7 +205,7 @@ export function PayrollPage() {
                   <td className="px-3 py-2 text-right">
                     {canRun ? (
                       <button
-                        className="text-xs font-semibold text-cyan-700"
+                        className="text-xs font-semibold text-primary"
                         onClick={async () => {
                           await toggleSalaryPaid(s.id, s.status !== "paid");
                           setMsg(s.status === "paid" ? "Marked unpaid" : "Marked paid");
@@ -224,16 +219,16 @@ export function PayrollPage() {
               ))}
             </tbody>
           </table>
-          {!monthSalaries.length ? <div className="py-10 text-center text-sm text-slate-500">No payslips for this month.</div> : null}
-        </div>
+          {!monthSalaries.length ? <EmptyState className="m-3" icon={<Inbox size={18} />} title="No payslips for this month." /> : null}
+        </Card>
       ) : null}
 
       {tab === "advances" ? (
         <div className="grid gap-4 lg:grid-cols-[300px_1fr]">
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="mb-2 text-sm font-bold">Record advance</div>
+          <Card padding="sm" hover={false}>
+            <div className="mb-2 text-[14px] font-bold text-text-primary">Record advance</div>
             <select
-              className="mb-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+              className="kg-input mb-2 w-full"
               value={advForm.name}
               onChange={(e) => setAdvForm((f) => ({ ...f, name: e.target.value }))}
             >
@@ -247,13 +242,13 @@ export function PayrollPage() {
             <input
               type="number"
               placeholder="Amount"
-              className="mb-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm"
+              className="kg-input mb-2 w-full"
               value={advForm.amount}
               onChange={(e) => setAdvForm((f) => ({ ...f, amount: e.target.value }))}
             />
             <button
               disabled={!canRun || !advForm.name}
-              className="w-full rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+              className="w-full kg-btn kg-btn-primary disabled:opacity-50"
               onClick={async () => {
                 const emp = active.find((s) => s.name === advForm.name);
                 await createAdvance({
@@ -271,10 +266,10 @@ export function PayrollPage() {
             >
               Save advance
             </button>
-          </div>
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+          </Card>
+          <Card hover={false} className="!p-0">
+            <table className="w-full text-left text-[13px]">
+              <thead className="bg-bg-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-text-muted">
                 <tr>
                   <th className="px-3 py-2">Date</th>
                   <th className="px-3 py-2">Name</th>
@@ -286,7 +281,7 @@ export function PayrollPage() {
                 {advances
                   .filter((a) => String(a.month || "").slice(0, 7) === month)
                   .map((a) => (
-                    <tr key={a.id} className="border-t border-slate-100">
+                    <tr key={a.id} className="border-t border-stroke-0">
                       <td className="px-3 py-2">{a.date}</td>
                       <td className="px-3 py-2 font-semibold">{a.name}</td>
                       <td className="px-3 py-2">{inr(a.amount)}</td>
@@ -295,15 +290,15 @@ export function PayrollPage() {
                   ))}
               </tbody>
             </table>
-          </div>
+          </Card>
         </div>
       ) : null}
 
       {tab === "incentives" ? (
         <div className="grid gap-4 lg:grid-cols-[300px_1fr]">
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="mb-2 text-sm font-bold">Add incentive</div>
-            <select className="mb-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" value={incForm.name} onChange={(e) => setIncForm((f) => ({ ...f, name: e.target.value }))}>
+          <Card padding="sm" hover={false}>
+            <div className="mb-2 text-[14px] font-bold text-text-primary">Add incentive</div>
+            <select className="kg-input mb-2 w-full" value={incForm.name} onChange={(e) => setIncForm((f) => ({ ...f, name: e.target.value }))}>
               <option value="">Employee</option>
               {active.map((s) => (
                 <option key={s.id} value={s.name}>
@@ -311,17 +306,17 @@ export function PayrollPage() {
                 </option>
               ))}
             </select>
-            <select className="mb-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" value={incForm.type} onChange={(e) => setIncForm((f) => ({ ...f, type: e.target.value as any }))}>
+            <select className="kg-input mb-2 w-full" value={incForm.type} onChange={(e) => setIncForm((f) => ({ ...f, type: e.target.value as any }))}>
               <option value="sales">Sales</option>
               <option value="performance">Performance</option>
               <option value="attendance">Attendance</option>
               <option value="festival">Festival</option>
               <option value="custom">Custom</option>
             </select>
-            <input type="number" placeholder="Amount" className="mb-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" value={incForm.amount} onChange={(e) => setIncForm((f) => ({ ...f, amount: e.target.value }))} />
+            <input type="number" placeholder="Amount" className="kg-input mb-2 w-full" value={incForm.amount} onChange={(e) => setIncForm((f) => ({ ...f, amount: e.target.value }))} />
             <button
               disabled={!canRun || !incForm.name}
-              className="w-full rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+              className="w-full kg-btn kg-btn-primary disabled:opacity-50"
               onClick={async () => {
                 const emp = active.find((s) => s.name === incForm.name);
                 await createIncentive({ name: incForm.name, staffId: emp?.id, amount: num(incForm.amount), type: incForm.type, month });
@@ -331,10 +326,10 @@ export function PayrollPage() {
             >
               Save incentive
             </button>
-          </div>
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+          </Card>
+          <Card hover={false} className="!p-0">
+            <table className="w-full text-left text-[13px]">
+              <thead className="bg-bg-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-text-muted">
                 <tr>
                   <th className="px-3 py-2">Name</th>
                   <th className="px-3 py-2">Type</th>
@@ -345,7 +340,7 @@ export function PayrollPage() {
                 {incentives
                   .filter((i) => String(i.month || "").slice(0, 7) === month)
                   .map((i) => (
-                    <tr key={i.id} className="border-t border-slate-100">
+                    <tr key={i.id} className="border-t border-stroke-0">
                       <td className="px-3 py-2 font-semibold">{i.name}</td>
                       <td className="px-3 py-2 capitalize">{i.type}</td>
                       <td className="px-3 py-2">{inr(i.amount)}</td>
@@ -353,15 +348,15 @@ export function PayrollPage() {
                   ))}
               </tbody>
             </table>
-          </div>
+          </Card>
         </div>
       ) : null}
 
       {tab === "tips" ? (
         <div className="grid gap-4 lg:grid-cols-[300px_1fr]">
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="mb-2 text-sm font-bold">Record tip</div>
-            <select className="mb-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" value={tipForm.name} onChange={(e) => setTipForm((f) => ({ ...f, name: e.target.value }))}>
+          <Card padding="sm" hover={false}>
+            <div className="mb-2 text-[14px] font-bold text-text-primary">Record tip</div>
+            <select className="kg-input mb-2 w-full" value={tipForm.name} onChange={(e) => setTipForm((f) => ({ ...f, name: e.target.value }))}>
               <option value="">Employee (optional for shared)</option>
               {active.map((s) => (
                 <option key={s.id} value={s.name}>
@@ -369,16 +364,16 @@ export function PayrollPage() {
                 </option>
               ))}
             </select>
-            <select className="mb-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" value={tipForm.mode} onChange={(e) => setTipForm((f) => ({ ...f, mode: e.target.value as any }))}>
+            <select className="kg-input mb-2 w-full" value={tipForm.mode} onChange={(e) => setTipForm((f) => ({ ...f, mode: e.target.value as any }))}>
               <option value="cash">Cash</option>
               <option value="online">Online</option>
               <option value="shared">Shared</option>
               <option value="individual">Individual</option>
             </select>
-            <input type="number" placeholder="Amount" className="mb-2 w-full rounded-xl border border-slate-200 px-3 py-2 text-sm" value={tipForm.amount} onChange={(e) => setTipForm((f) => ({ ...f, amount: e.target.value }))} />
+            <input type="number" placeholder="Amount" className="kg-input mb-2 w-full" value={tipForm.amount} onChange={(e) => setTipForm((f) => ({ ...f, amount: e.target.value }))} />
             <button
               disabled={!canRun}
-              className="w-full rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+              className="w-full kg-btn kg-btn-primary disabled:opacity-50"
               onClick={async () => {
                 const emp = active.find((s) => s.name === tipForm.name);
                 await createTip({ amount: num(tipForm.amount), mode: tipForm.mode, name: tipForm.name || undefined, staffId: emp?.id });
@@ -388,10 +383,10 @@ export function PayrollPage() {
             >
               Save tip
             </button>
-          </div>
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+          </Card>
+          <Card hover={false} className="!p-0">
+            <table className="w-full text-left text-[13px]">
+              <thead className="bg-bg-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-text-muted">
                 <tr>
                   <th className="px-3 py-2">Date</th>
                   <th className="px-3 py-2">Name</th>
@@ -403,7 +398,7 @@ export function PayrollPage() {
                 {tips
                   .filter((t) => String(t.date || "").slice(0, 7) === month)
                   .map((t) => (
-                    <tr key={t.id} className="border-t border-slate-100">
+                    <tr key={t.id} className="border-t border-stroke-0">
                       <td className="px-3 py-2">{t.date}</td>
                       <td className="px-3 py-2">{t.name || "Shared"}</td>
                       <td className="px-3 py-2 capitalize">{t.mode}</td>
@@ -412,7 +407,7 @@ export function PayrollPage() {
                   ))}
               </tbody>
             </table>
-          </div>
+          </Card>
         </div>
       ) : null}
     </div>

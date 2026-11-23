@@ -93,11 +93,12 @@ describe("posMenu variants", () => {
     ]);
     const el = { innerHTML: "", insertAdjacentHTML() {} };
     menu.renderGrid(el, menu.getGroups(), { pageSize: 50 });
-    assert.match(el.innerHTML, /kg-pos-sizes/);
+    assert.match(el.innerHTML, /kg-tile-sizes/);
     assert.match(el.innerHTML, /data-size-id="1"/);
     assert.match(el.innerHTML, /data-size-id="2"/);
-    assert.match(el.innerHTML, /500 ग्राम/);
-    assert.match(el.innerHTML, /1 किलो/);
+    // Compact English chips on the grid (kitchen print still uses Hindi labels)
+    assert.match(el.innerHTML, /500g/);
+    assert.match(el.innerHTML, /1kg/);
   });
 
   it("renders size chips for Chinese on-kilo groups", () => {
@@ -108,9 +109,9 @@ describe("posMenu variants", () => {
     ]);
     const el = { innerHTML: "", insertAdjacentHTML() {} };
     menu.renderGrid(el, menu.getGroups(), { pageSize: 50 });
-    assert.match(el.innerHTML, /kg-pos-sizes/);
-    assert.match(el.innerHTML, /500 ग्राम/);
-    assert.match(el.innerHTML, /1 किलो/);
+    assert.match(el.innerHTML, /kg-tile-sizes/);
+    assert.match(el.innerHTML, /500g/);
+    assert.match(el.innerHTML, /1kg/);
     assert.doesNotMatch(el.innerHTML, /kg-pos-add-btn/);
   });
 });

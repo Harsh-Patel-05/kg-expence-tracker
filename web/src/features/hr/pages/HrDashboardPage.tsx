@@ -1,5 +1,5 @@
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
+import { Inbox } from "lucide-react";
 import { useMemo } from "react";
 import { inr, isoDate, num } from "@/lib/utils";
 import { useRestaurantCollection } from "@/features/pos/hooks/useRestaurantCollection";
@@ -13,19 +13,14 @@ import type {
   TaskDoc
 } from "../types";
 import { attendanceStatsForMonth, monthISO, presentEquivalent } from "../utils/payroll";
+import { EmptyState, PageHeader, SectionTitle } from "@/components/ui/PageHeader";
+import { Card } from "@/components/ui/Card";
+import { KpiCard } from "@/components/ui/KpiCard";
+
+import { ContentLoading } from "@/components/ui/Loading";
 
 function Stat({ label, value, hint }: { label: string; value: string | number; hint?: string }) {
-  return (
-    <motion.div
-      initial={{ opacity: 0, y: 8 }}
-      animate={{ opacity: 1, y: 0 }}
-      className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm backdrop-blur"
-    >
-      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</div>
-      <div className="mt-1 text-2xl font-black text-slate-900">{value}</div>
-      {hint ? <div className="mt-1 text-xs text-slate-500">{hint}</div> : null}
-    </motion.div>
-  );
+  return <KpiCard title={label} value={String(value)} hint={hint} />;
 }
 
 export function HrDashboardPage() {
@@ -61,40 +56,40 @@ export function HrDashboardPage() {
   }, [activeStaff, attendance, month]);
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Staff & HR</div>
-          <h1 className="text-2xl font-black tracking-tight text-slate-900">Workforce command</h1>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Link to="/hr/employees" className="rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white">
+    <div className="grid gap-4">
+      <PageHeader
+        eyebrow="Staff & HR"
+        title="Workforce command"
+        actions={
+          <>
+          <Link to="/hr/employees" className="kg-btn kg-btn-primary">
             Employees
           </Link>
-          <Link to="/hr/attendance" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold">
+          <Link to="/hr/attendance" className="kg-btn kg-btn-secondary">
             Attendance
           </Link>
-          <Link to="/hr/leave" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold">
+          <Link to="/hr/leave" className="kg-btn kg-btn-secondary">
             Leave
           </Link>
-          <Link to="/hr/payroll" className="rounded-xl bg-cyan-500 px-3 py-2 text-sm font-semibold text-white">
+          <Link to="/hr/payroll" className="kg-btn kg-btn-secondary">
             Payroll
           </Link>
-          <Link to="/hr/shifts" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold">
+          <Link to="/hr/shifts" className="kg-btn kg-btn-secondary">
             Shifts
           </Link>
-          <Link to="/tasks" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold">
+          <Link to="/tasks" className="kg-btn kg-btn-secondary">
             Tasks
           </Link>
-          <Link to="/reminders" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold">
+          <Link to="/reminders" className="kg-btn kg-btn-secondary">
             Reminders
           </Link>
-        </div>
-      </div>
+          </>
+        }
+      />
 
-      {loading ? <div className="h-24 animate-pulse rounded-2xl bg-slate-200/70" /> : null}
+      {loading ? <ContentLoading variant="block" label="Loading" /> : null}
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Stat label="Active staff" value={activeStaff.length} hint={`${presentEq} present eq today`} />
         <Stat label="Attendance %" value={`${attendancePct}%`} hint={`Month ${month}`} />
         <Stat label="Pending leave" value={pendingLeave.length} />
@@ -106,45 +101,45 @@ export function HrDashboardPage() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="mb-3 text-sm font-bold">Today's attendance</div>
+        <Card padding="sm" hover={false}>
+          <SectionTitle title="Today's attendance" />
           <div className="max-h-72 space-y-2 overflow-auto">
             {activeStaff.slice(0, 12).map((s) => {
               const row = todayAtt.find((a) => a.name.toLowerCase() === s.name.toLowerCase());
               return (
-                <div key={s.id} className="flex items-center justify-between rounded-xl bg-slate-50 px-3 py-2 text-sm">
+                <div key={s.id} className="flex items-center justify-between rounded-lg border border-stroke-0 bg-bg-1/60 px-3 py-2.5 text-[13px]">
                   <div>
                     <div className="font-semibold">{s.name}</div>
-                    <div className="text-xs text-slate-500">
+                    <div className="text-xs text-text-muted">
                       {s.department || "—"} · {s.designation || s.role || "staff"}
                     </div>
                   </div>
-                  <span className="rounded-full bg-white px-2 py-0.5 text-[10px] font-bold uppercase text-slate-600">
+                  <span className="rounded-md bg-card-0 px-2 py-0.5 text-[10px] font-bold uppercase text-text-secondary">
                     {row?.status || "unmarked"}
                   </span>
                 </div>
               );
             })}
-            {!activeStaff.length ? <div className="py-8 text-center text-sm text-slate-500">No employees yet.</div> : null}
+            {!activeStaff.length ? <EmptyState className="m-3" icon={<Inbox size={18} />} title="No employees yet." /> : null}
           </div>
-        </div>
+        </Card>
 
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="mb-3 text-sm font-bold">Pending leave approvals</div>
+        <Card padding="sm" hover={false}>
+          <SectionTitle title="Pending leave approvals" />
           <div className="max-h-72 space-y-2 overflow-auto">
             {pendingLeave.slice(0, 10).map((l) => (
-              <div key={l.id} className="rounded-xl bg-slate-50 px-3 py-2 text-sm">
+              <div key={l.id} className="rounded-lg border border-stroke-0 bg-bg-1/60 px-3 py-2.5 text-[13px]">
                 <div className="font-semibold">
                   {l.name} · {l.leaveType}
                 </div>
-                <div className="text-xs text-slate-500">
+                <div className="text-xs text-text-muted">
                   {l.fromDate} → {l.toDate} ({l.days}d)
                 </div>
               </div>
             ))}
-            {!pendingLeave.length ? <div className="py-8 text-center text-sm text-slate-500">No pending leave.</div> : null}
+            {!pendingLeave.length ? <EmptyState className="m-3" icon={<Inbox size={18} />} title="No pending leave." /> : null}
           </div>
-        </div>
+        </Card>
       </div>
     </div>
   );

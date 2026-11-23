@@ -7,7 +7,7 @@ import type {
   IncentiveDoc,
   PayrollResult,
   TipDoc
-} from "./types";
+} from "../types";
 import type { WithId } from "@/features/pos/hooks/useRestaurantCollection";
 
 /** Port of vanilla attendance presentEquivalent */

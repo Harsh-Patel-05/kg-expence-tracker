@@ -1,9 +1,11 @@
 import { useMemo, useState } from "react";
+import { Card } from "@/components/ui/Card";
 import { Link } from "react-router-dom";
 import { num } from "@/lib/utils";
 import { useRestaurantCollection } from "@/features/pos/hooks/useRestaurantCollection";
 import type { InventoryItemDoc, WastageDoc } from "../types";
 import { recordWastage, createStockTransfer, savePhysicalCount, LOCATIONS } from "../services/opsService";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 export function InventoryOpsPage() {
   const { data: items } = useRestaurantCollection<InventoryItemDoc>({ path: "inventory" });
@@ -40,26 +42,24 @@ export function InventoryOpsPage() {
   );
 
   return (
-    <div className="space-y-4">
-      <div>
-        <Link to="/inventory" className="text-xs font-semibold text-cyan-700">
-          ← Inventory
-        </Link>
-        <h1 className="text-xl font-black">Stock operations</h1>
-      </div>
-      {msg ? <div className="rounded-xl bg-cyan-50 px-3 py-2 text-sm text-cyan-900">{msg}</div> : null}
+    <div className="grid gap-4">
+      <PageHeader
+        back={<Link to="/inventory" className="text-xs font-semibold text-primary"> ← Inventory </Link>}
+        title="Stock operations"
+      />
+      {msg ? <div className="rounded-lg border border-primary/20 bg-primary-light px-3 py-2 text-[13px] text-primary">{msg}</div> : null}
 
       <div className="flex gap-2">
         {(["waste", "transfer", "count"] as const).map((t) => (
-          <button key={t} type="button" onClick={() => setTab(t)} className={`rounded-full px-3 py-1.5 text-xs font-bold capitalize ${tab === t ? "bg-slate-900 text-white" : "bg-white border"}`}>
+          <button key={t} type="button" onClick={() => setTab(t)} className={`kg-btn capitalize ${tab === t ? "kg-btn-primary" : "kg-btn-secondary"}`}>
             {t}
           </button>
         ))}
       </div>
 
       {tab === "waste" ? (
-        <div className="max-w-lg space-y-2 rounded-2xl border bg-white p-4 shadow-sm">
-          <select className="w-full rounded-xl border px-3 py-2 text-sm" value={itemId} onChange={(e) => setItemId(e.target.value)}>
+        <Card hover={false} padding="sm" className="max-w-lg"><div className="space-y-2">
+          <select className="kg-input w-full" value={itemId} onChange={(e) => setItemId(e.target.value)}>
             <option value="">Select item</option>
             {items.filter((i) => !i.isDeleted).map((i) => (
               <option key={i.id} value={i.id}>
@@ -67,18 +67,18 @@ export function InventoryOpsPage() {
               </option>
             ))}
           </select>
-          <input className="w-full rounded-xl border px-3 py-2 text-sm" type="number" value={qty} onChange={(e) => setQty(e.target.value)} />
-          <select className="w-full rounded-xl border px-3 py-2 text-sm" value={reason} onChange={(e) => setReason(e.target.value as WastageDoc["reason"])}>
+          <input className="kg-input w-full" type="number" value={qty} onChange={(e) => setQty(e.target.value)} />
+          <select className="kg-input w-full" value={reason} onChange={(e) => setReason(e.target.value as WastageDoc["reason"])}>
             {["expired", "burnt", "spoiled", "kitchen", "return", "prep", "other"].map((r) => (
               <option key={r} value={r}>
                 {r}
               </option>
             ))}
           </select>
-          <input className="w-full rounded-xl border px-3 py-2 text-sm" placeholder="Notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
+          <input className="kg-input w-full" placeholder="Notes" value={notes} onChange={(e) => setNotes(e.target.value)} />
           <button
             type="button"
-            className="w-full rounded-xl bg-rose-500 py-2.5 text-sm font-bold text-white"
+            className="kg-btn w-full bg-danger text-white hover:brightness-95"
             onClick={async () => {
               if (!selected) return;
               try {
@@ -100,13 +100,13 @@ export function InventoryOpsPage() {
           >
             Record wastage
           </button>
-          <div className="pt-2 text-xs text-slate-500">{wastage.length} wastage records</div>
-        </div>
+          <div className="pt-2 text-xs text-text-muted">{wastage.length} wastage records</div>
+        </div></Card>
       ) : null}
 
       {tab === "transfer" ? (
-        <div className="max-w-lg space-y-2 rounded-2xl border bg-white p-4 shadow-sm">
-          <select className="w-full rounded-xl border px-3 py-2 text-sm" value={itemId} onChange={(e) => setItemId(e.target.value)}>
+        <Card hover={false} padding="sm" className="max-w-lg"><div className="space-y-2">
+          <select className="kg-input w-full" value={itemId} onChange={(e) => setItemId(e.target.value)}>
             <option value="">Select item</option>
             {items.filter((i) => !i.isDeleted).map((i) => (
               <option key={i.id} value={i.id}>
@@ -114,16 +114,16 @@ export function InventoryOpsPage() {
               </option>
             ))}
           </select>
-          <input className="w-full rounded-xl border px-3 py-2 text-sm" type="number" value={qty} onChange={(e) => setQty(e.target.value)} />
+          <input className="kg-input w-full" type="number" value={qty} onChange={(e) => setQty(e.target.value)} />
           <div className="grid grid-cols-2 gap-2">
-            <select className="rounded-xl border px-3 py-2 text-sm" value={fromLoc} onChange={(e) => setFromLoc(e.target.value)}>
+            <select className="kg-input !w-auto" value={fromLoc} onChange={(e) => setFromLoc(e.target.value)}>
               {LOCATIONS.map((l) => (
                 <option key={l} value={l}>
                   From: {l}
                 </option>
               ))}
             </select>
-            <select className="rounded-xl border px-3 py-2 text-sm" value={toLoc} onChange={(e) => setToLoc(e.target.value)}>
+            <select className="kg-input !w-auto" value={toLoc} onChange={(e) => setToLoc(e.target.value)}>
               {LOCATIONS.map((l) => (
                 <option key={l} value={l}>
                   To: {l}
@@ -133,7 +133,7 @@ export function InventoryOpsPage() {
           </div>
           <button
             type="button"
-            className="w-full rounded-xl bg-slate-900 py-2.5 text-sm font-bold text-white"
+            className="kg-btn kg-btn-primary w-full"
             onClick={async () => {
               if (!selected) return;
               try {
@@ -153,30 +153,30 @@ export function InventoryOpsPage() {
           >
             Transfer stock location
           </button>
-        </div>
+        </div></Card>
       ) : null}
 
       {tab === "count" ? (
-        <div className="space-y-3 rounded-2xl border bg-white p-4 shadow-sm">
-          <div className="text-sm font-bold">Physical stock count</div>
+        <Card hover={false} padding="sm"><div className="space-y-3">
+          <div className="text-[14px] font-bold text-text-primary">Physical stock count</div>
           <div className="max-h-[420px] space-y-2 overflow-auto">
             {countLines.map((l) => (
-              <div key={l.inventoryId} className="grid grid-cols-[1fr_80px_100px_80px] items-center gap-2 text-sm">
+              <div key={l.inventoryId} className="grid grid-cols-[1fr_80px_100px_80px] items-center gap-2 text-[13px]">
                 <div className="font-semibold">{l.item}</div>
-                <div className="text-slate-500">{l.systemQty}</div>
+                <div className="text-text-muted">{l.systemQty}</div>
                 <input
-                  className="rounded-lg border px-2 py-1"
+                  className="kg-input !w-auto"
                   type="number"
                   value={counts[l.inventoryId] ?? String(l.systemQty)}
                   onChange={(e) => setCounts((c) => ({ ...c, [l.inventoryId]: e.target.value }))}
                 />
-                <div className={l.variance ? "font-bold text-amber-600" : "text-slate-400"}>{l.variance}</div>
+                <div className={l.variance ? "font-bold text-warning" : "text-text-muted"}>{l.variance}</div>
               </div>
             ))}
           </div>
           <button
             type="button"
-            className="rounded-xl bg-cyan-500 px-4 py-2.5 text-sm font-bold text-white"
+            className="kg-btn kg-btn-primary"
             onClick={async () => {
               try {
                 await savePhysicalCount({ lines: countLines, applyAdjustments: true });
@@ -188,7 +188,7 @@ export function InventoryOpsPage() {
           >
             Save count & apply adjustments
           </button>
-        </div>
+        </div></Card>
       ) : null}
     </div>
   );

@@ -5,6 +5,9 @@ import { db } from "@/lib/firebase";
 import { isoDate, num, inr } from "@/lib/utils";
 import type { SupplierBillDoc, SupplierDoc } from "@/lib/firestoreTypes";
 import { useRealtimeCollection } from "@/lib/useRealtimeCollection";
+import { Button } from "@/components/ui/Button";
+import { Input, Select } from "@/components/ui/Input";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 const OWNER_USER_ID = "owner";
 
@@ -69,75 +72,76 @@ export function SuppliersPage() {
 
   return (
     <div className="grid gap-4">
+      <PageHeader eyebrow="Procurement" title="Suppliers" description="Supplier list and paid / unpaid bills." />
       <div className="grid gap-4 xl:grid-cols-2">
-        <Card>
+        <Card hover={false}>
           <div className="mb-3">
-            <div className="text-sm font-semibold">Add supplier</div>
-            <div className="text-xs text-white/55">Save your supplier list.</div>
+            <div className="text-[14px] font-bold text-text-primary">Add supplier</div>
+            <div className="text-[12px] text-text-muted">Save your supplier list.</div>
           </div>
           <div className="flex gap-2">
-            <input className="min-w-0 flex-1 rounded-xl border border-stroke-0 bg-white/5 px-3 py-2 text-sm text-white" placeholder="Supplier name" value={supplierName} onChange={(e) => setSupplierName(e.target.value)} />
-            <button disabled={saving || !supplierName.trim()} onClick={addSupplier} className="rounded-xl bg-indigo-500 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-400 disabled:opacity-50">
+            <Input className="min-w-0 flex-1" placeholder="Supplier name" value={supplierName} onChange={(e) => setSupplierName(e.target.value)} />
+            <Button disabled={saving || !supplierName.trim()} onClick={addSupplier}>
               Add
-            </button>
+            </Button>
           </div>
         </Card>
 
-        <Card>
+        <Card hover={false}>
           <div className="mb-3 flex items-center justify-between">
             <div>
-              <div className="text-sm font-semibold">Unpaid total</div>
-              <div className="text-xs text-white/55">All suppliers</div>
+              <div className="text-[14px] font-bold text-text-primary">Unpaid total</div>
+              <div className="text-[12px] text-text-muted">All suppliers</div>
             </div>
-            <div className="text-xl font-semibold text-rose-200">{inr(unpaidTotal)}</div>
+            <div className="text-[22px] font-bold tracking-tight text-danger tabular-nums">{inr(unpaidTotal)}</div>
           </div>
         </Card>
       </div>
 
-      <Card>
+      <Card hover={false}>
         <div className="mb-3">
-          <div className="text-sm font-semibold">Add supplier bill</div>
-          <div className="text-xs text-white/55">Paid/Unpaid tracking. Unpaid shows on Dashboard.</div>
+          <div className="text-[14px] font-bold text-text-primary">Add supplier bill</div>
+          <div className="text-[12px] text-text-muted">Paid/Unpaid tracking. Unpaid shows on Dashboard.</div>
         </div>
         <div className="grid gap-3 md:grid-cols-3">
-          <select className="rounded-xl border border-stroke-0 bg-white/5 px-3 py-2 text-sm text-white" value={billSupplierId} onChange={(e) => setBillSupplierId(e.target.value)}>
+          <Select value={billSupplierId} onChange={(e) => setBillSupplierId(e.target.value)}>
             <option value="">Select supplier</option>
             {suppliers.data.map((s: any) => (
               <option key={s.id} value={s.id}>
                 {s.name}
               </option>
             ))}
-          </select>
-          <input className="rounded-xl border border-stroke-0 bg-white/5 px-3 py-2 text-sm text-white" placeholder="Amount (₹)" value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" />
-          <select className="rounded-xl border border-stroke-0 bg-white/5 px-3 py-2 text-sm text-white" value={status} onChange={(e) => setStatus(e.target.value as any)}>
+          </Select>
+          <Input placeholder="Amount (₹)" value={amount} onChange={(e) => setAmount(e.target.value)} inputMode="decimal" />
+          <Select value={status} onChange={(e) => setStatus(e.target.value as any)}>
             <option value="unpaid">Unpaid</option>
             <option value="paid">Paid</option>
-          </select>
-          <label className="grid gap-1 text-xs text-white/60">
+          </Select>
+          <label className="grid gap-1 text-[12px] font-semibold text-text-muted">
             Bill date
-            <input className="rounded-xl border border-stroke-0 bg-white/5 px-3 py-2 text-sm text-white" value={billDate} onChange={(e) => setBillDate(e.target.value)} type="date" />
+            <Input value={billDate} onChange={(e) => setBillDate(e.target.value)} type="date" />
           </label>
-          <label className="grid gap-1 text-xs text-white/60">
+          <label className="grid gap-1 text-[12px] font-semibold text-text-muted">
             Due date
-            <input className="rounded-xl border border-stroke-0 bg-white/5 px-3 py-2 text-sm text-white" value={dueDate} onChange={(e) => setDueDate(e.target.value)} type="date" />
+            <Input value={dueDate} onChange={(e) => setDueDate(e.target.value)} type="date" />
           </label>
           {status === "paid" ? (
-            <label className="grid gap-1 text-xs text-white/60">
+            <label className="grid gap-1 text-[12px] font-semibold text-text-muted">
               Paid from
-              <select className="rounded-xl border border-stroke-0 bg-white/5 px-3 py-2 text-sm text-white" value={paidFrom} onChange={(e) => setPaidFrom(e.target.value as any)}>
+              <Select value={paidFrom} onChange={(e) => setPaidFrom(e.target.value as any)}>
                 <option value="cash">Cash</option>
                 <option value="bank">Bank</option>
-              </select>
+              </Select>
             </label>
           ) : (
             <div />
           )}
         </div>
         <div className="mt-3 flex items-center gap-3">
-          <button disabled={saving || !billSupplierId} onClick={addBill} className="rounded-xl bg-indigo-500 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-400 disabled:opacity-50">
+          <Button disabled={saving || !billSupplierId} onClick={addBill}>
             Save bill
-          </button>
-          {msg ? <div className="text-sm text-white/70">{msg}</div> : null}
+          </Button>
+          {msg ? <div className="text-[13px] text-text-secondary">{msg}</div> : null}
         </div>
       </Card>
     </div>

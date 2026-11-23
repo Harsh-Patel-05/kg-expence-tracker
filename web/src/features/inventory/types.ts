@@ -170,7 +170,7 @@ export type StockTransferDoc = AuditFields & {
   fromLocation: string;
   toLocation: string;
   approvalStatus?: "pending" | "approved" | "rejected";
-  transferStatus?: "draft" | "in_transit" | "completed" | "cancelled";
+  transferStatus?: "draft" | "pending" | "in_transit" | "completed" | "cancelled";
   reason?: string;
   syncStatus?: SyncStatus;
 };

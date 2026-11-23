@@ -52,7 +52,6 @@ export async function saveForecastSnapshot(result: ForecastResult) {
   await setDoc(ref, {
     ...payload,
     syncStatus: "synced",
-    isDeleted: false,
     ...auditCreate({ status: "active" })
   });
 

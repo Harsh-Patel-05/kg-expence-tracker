@@ -24,19 +24,19 @@ export class RouteErrorBoundary extends Component<Props, State> {
   render() {
     if (this.state.hasError) {
       return (
-        <div className="rounded-[28px] border border-rose-200 bg-white/95 p-8 text-center shadow-lg">
-          <div className="text-lg font-extrabold text-slate-900">This screen hit a snag</div>
-          <p className="mt-2 text-sm text-slate-600">{this.state.message}</p>
+        <div className="rounded-[var(--radius-xl)] border border-danger/30 bg-card-0 p-8 text-center shadow-panel">
+          <div className="text-lg font-bold text-text-primary">This screen hit a snag</div>
+          <p className="mt-2 text-sm text-text-secondary">{this.state.message}</p>
           <button
             type="button"
-            className="mt-4 rounded-2xl bg-gradient-to-r from-teal-500 to-cyan-500 px-4 py-2.5 text-sm font-bold text-white shadow-md"
+            className="mt-4 rounded-[var(--rp-radius-btn)] bg-primary px-4 py-2.5 text-sm font-semibold text-white shadow-[var(--shadow-neonCyan)] hover:bg-primary-hover"
             onClick={() => this.setState({ hasError: false, message: "" })}
           >
             Try again
           </button>
           <button
             type="button"
-            className="ml-2 mt-4 rounded-2xl border border-slate-200 bg-white px-4 py-2.5 text-sm font-semibold text-slate-700"
+            className="ml-2 mt-4 rounded-[var(--rp-radius-btn)] border border-stroke-0 bg-card-0 px-4 py-2.5 text-sm font-semibold text-text-secondary hover:bg-bg-1"
             onClick={() => window.location.reload()}
           >
             Refresh

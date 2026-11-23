@@ -82,7 +82,11 @@ export function gstSummary(expenses: ExpenseDoc[]) {
   );
 }
 
-export function validateInvoiceUnique(invoiceNumber: string | undefined, existing: ExpenseDoc[], excludeId?: string) {
+export function validateInvoiceUnique(
+  invoiceNumber: string | undefined,
+  existing: Array<ExpenseDoc & { id?: string }>,
+  excludeId?: string
+) {
   if (!invoiceNumber?.trim()) return true;
   const needle = invoiceNumber.trim().toLowerCase();
   return !existing.some((e) => e.id !== excludeId && String(e.invoiceNumber || "").toLowerCase() === needle && !e.isDeleted);

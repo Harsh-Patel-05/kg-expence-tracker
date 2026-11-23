@@ -191,12 +191,22 @@ export function downloadText(filename: string, content: string, mime = "text/csv
   URL.revokeObjectURL(url);
 }
 
+export function escapeHtml(s: unknown) {
+  return String(s ?? "")
+    .replace(/&/g, "&amp;")
+    .replace(/</g, "&lt;")
+    .replace(/>/g, "&gt;")
+    .replace(/"/g, "&quot;")
+    .replace(/'/g, "&#39;");
+}
+
 export function printReport(title: string, htmlBody: string) {
   const w = window.open("", "_blank", "noopener,noreferrer,width=900,height=700");
   if (!w) return;
-  w.document.write(`<!doctype html><html><head><title>${title}</title>
+  const safeTitle = escapeHtml(title);
+  w.document.write(`<!doctype html><html><head><title>${safeTitle}</title>
     <style>body{font-family:system-ui,sans-serif;padding:24px;color:#111} table{width:100%;border-collapse:collapse} th,td{border:1px solid #ddd;padding:8px;text-align:left} h1{font-size:18px}</style>
-    </head><body><h1>${title}</h1>${htmlBody}</body></html>`);
+    </head><body><h1>${safeTitle}</h1>${htmlBody}</body></html>`);
   w.document.close();
   w.focus();
   w.print();

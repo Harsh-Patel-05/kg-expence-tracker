@@ -327,3 +327,20 @@ button.pos-btn.green {
   background: linear-gradient(135deg, #e87a3a, #a04a35) !important;
   box-shadow: var(--primary-shadow) !important;
 }
+
+/* Accessibility — motion & focus (visual only; no layout changes) */
+:focus-visible {
+  outline: 2px solid rgba(232, 122, 58, 0.65);
+  outline-offset: 2px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}

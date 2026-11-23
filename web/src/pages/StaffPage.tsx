@@ -6,6 +6,9 @@ import { calcSalaryAccruedForMonth } from "@/lib/calculations";
 import type { AdvanceDoc, AttendanceDoc, StaffDoc } from "@/lib/firestoreTypes";
 import { isoDate, num, inr } from "@/lib/utils";
 import { useRealtimeCollection } from "@/lib/useRealtimeCollection";
+import { Button } from "@/components/ui/Button";
+import { Input, Select } from "@/components/ui/Input";
+import { PageHeader } from "@/components/ui/PageHeader";
 
 const OWNER_USER_ID = "owner";
 
@@ -104,85 +107,86 @@ export function StaffPage() {
 
   return (
     <div className="grid gap-4">
+      <PageHeader eyebrow="People" title="Staff" description="Staff list, attendance, advances, and monthly salary." />
       <div className="grid gap-4 xl:grid-cols-3">
-        <Card>
+        <Card hover={false}>
           <div className="mb-3">
-            <div className="text-sm font-semibold">Add staff</div>
-            <div className="text-xs text-white/55">Monthly salary is fixed; daily salary = monthly / 30.</div>
+            <div className="text-[14px] font-bold text-text-primary">Add staff</div>
+            <div className="text-[12px] text-text-muted">Monthly salary is fixed; daily salary = monthly / 30.</div>
           </div>
           <div className="grid gap-3">
-            <input className="rounded-xl border border-stroke-0 bg-white/5 px-3 py-2 text-sm text-white" placeholder="Staff name" value={name} onChange={(e) => setName(e.target.value)} />
-            <input className="rounded-xl border border-stroke-0 bg-white/5 px-3 py-2 text-sm text-white" placeholder="Monthly salary (₹)" value={monthlySalary} onChange={(e) => setMonthlySalary(e.target.value)} inputMode="decimal" />
-            <button disabled={saving || !name.trim()} onClick={addStaff} className="rounded-xl bg-indigo-500 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-400 disabled:opacity-50">
+            <Input placeholder="Staff name" value={name} onChange={(e) => setName(e.target.value)} />
+            <Input placeholder="Monthly salary (₹)" value={monthlySalary} onChange={(e) => setMonthlySalary(e.target.value)} inputMode="decimal" />
+            <Button disabled={saving || !name.trim()} onClick={addStaff}>
               Add staff
-            </button>
+            </Button>
           </div>
         </Card>
 
-        <Card>
+        <Card hover={false}>
           <div className="mb-3">
-            <div className="text-sm font-semibold">Daily attendance</div>
-            <div className="text-xs text-white/55">Present/Absent for salary calculation.</div>
+            <div className="text-[14px] font-bold text-text-primary">Daily attendance</div>
+            <div className="text-[12px] text-text-muted">Present/Absent for salary calculation.</div>
           </div>
           <div className="grid gap-3">
-            <select className="rounded-xl border border-stroke-0 bg-white/5 px-3 py-2 text-sm text-white" value={attStaffId} onChange={(e) => setAttStaffId(e.target.value)}>
+            <Select value={attStaffId} onChange={(e) => setAttStaffId(e.target.value)}>
               <option value="">Select staff</option>
               {staff.data.map((s: any) => (
                 <option key={s.id} value={s.id}>
                   {s.name}
                 </option>
               ))}
-            </select>
-            <input className="rounded-xl border border-stroke-0 bg-white/5 px-3 py-2 text-sm text-white" value={attDate} onChange={(e) => setAttDate(e.target.value)} type="date" />
-            <label className="flex items-center gap-2 text-sm text-white/70">
+            </Select>
+            <Input value={attDate} onChange={(e) => setAttDate(e.target.value)} type="date" />
+            <label className="flex items-center gap-2 text-sm text-text-secondary">
               <input type="checkbox" checked={present} onChange={(e) => setPresent(e.target.checked)} />
               Present
             </label>
-            <button disabled={saving || !attStaffId} onClick={markAttendance} className="rounded-xl bg-indigo-500 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-400 disabled:opacity-50">
+            <Button disabled={saving || !attStaffId} onClick={markAttendance}>
               Save attendance
-            </button>
+            </Button>
           </div>
         </Card>
 
-        <Card>
+        <Card hover={false}>
           <div className="mb-3">
-            <div className="text-sm font-semibold">Advance (deduct from salary)</div>
-            <div className="text-xs text-white/55">Tracks history and reduces payable salary.</div>
+            <div className="text-[14px] font-bold text-text-primary">Advance (deduct from salary)</div>
+            <div className="text-[12px] text-text-muted">Tracks history and reduces payable salary.</div>
           </div>
           <div className="grid gap-3">
-            <select className="rounded-xl border border-stroke-0 bg-white/5 px-3 py-2 text-sm text-white" value={advStaffId} onChange={(e) => setAdvStaffId(e.target.value)}>
+            <Select value={advStaffId} onChange={(e) => setAdvStaffId(e.target.value)}>
               <option value="">Select staff</option>
               {staff.data.map((s: any) => (
                 <option key={s.id} value={s.id}>
                   {s.name}
                 </option>
               ))}
-            </select>
-            <input className="rounded-xl border border-stroke-0 bg-white/5 px-3 py-2 text-sm text-white" value={advDate} onChange={(e) => setAdvDate(e.target.value)} type="date" />
-            <input className="rounded-xl border border-stroke-0 bg-white/5 px-3 py-2 text-sm text-white" placeholder="Amount (₹)" value={advAmount} onChange={(e) => setAdvAmount(e.target.value)} inputMode="decimal" />
-            <select className="rounded-xl border border-stroke-0 bg-white/5 px-3 py-2 text-sm text-white" value={advPaidFrom} onChange={(e) => setAdvPaidFrom(e.target.value as any)}>
+            </Select>
+            <Input value={advDate} onChange={(e) => setAdvDate(e.target.value)} type="date" />
+            <Input placeholder="Amount (₹)" value={advAmount} onChange={(e) => setAdvAmount(e.target.value)} inputMode="decimal" />
+            <Select value={advPaidFrom} onChange={(e) => setAdvPaidFrom(e.target.value as any)}>
               <option value="cash">Cash</option>
               <option value="bank">Bank</option>
-            </select>
-            <button disabled={saving || !advStaffId} onClick={addAdvance} className="rounded-xl bg-indigo-500 px-4 py-2 text-sm font-semibold text-white hover:bg-indigo-400 disabled:opacity-50">
+            </Select>
+            <Button disabled={saving || !advStaffId} onClick={addAdvance}>
               Save advance
-            </button>
+            </Button>
           </div>
         </Card>
       </div>
 
-      <Card>
+      <Card hover={false}>
         <div className="mb-2 flex flex-wrap items-center justify-between gap-2">
           <div>
-            <div className="text-sm font-semibold">Salary (this month)</div>
-            <div className="text-xs text-white/55">Fixed 30-day logic: daily = monthly / 30; salary = daily * present days.</div>
+            <div className="text-[14px] font-bold text-text-primary">Salary (this month)</div>
+            <div className="text-[12px] text-text-muted">Fixed 30-day logic: daily = monthly / 30; salary = daily * present days.</div>
           </div>
-          <div className="text-sm text-white/80">
+          <div className="text-[13px] text-text-secondary">
             Gross: <span className="font-semibold">{inr(salarySummary.grossSalary)}</span> • Advances:{" "}
             <span className="font-semibold">{inr(salarySummary.totalAdvances)}</span> • Payable: <span className="font-semibold">{inr(salarySummary.payable)}</span>
           </div>
         </div>
-        {msg ? <div className="text-sm text-white/70">{msg}</div> : null}
+        {msg ? <div className="text-[13px] text-text-secondary">{msg}</div> : null}
       </Card>
     </div>
   );

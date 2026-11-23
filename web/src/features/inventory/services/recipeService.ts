@@ -82,7 +82,10 @@ export async function saveRecipe(input: Partial<RecipeDoc> & { name: string; id?
 
   // Sync simplified recipe onto linked menu item (vanilla POS compat)
   if (recipe.menuItemId) {
-    const simple = ingredients.map((i) => ({ item: i.item, qty: ingredientEffectiveQty(i) / Math.max(1, recipe.servingSize) }));
+    const simple = ingredients.map((i) => ({
+      item: i.item,
+      qty: ingredientEffectiveQty(i) / Math.max(1, num(recipe.servingSize) || 1)
+    }));
     const recipeText = simple.map((r) => `${r.item}:${r.qty}`).join(", ");
     await setDoc(
       doc(db, "menuItems", recipe.menuItemId),

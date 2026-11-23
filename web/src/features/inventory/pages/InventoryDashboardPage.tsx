@@ -1,19 +1,19 @@
-import { useMemo, useState } from "react";
+import { useMemo } from "react";
+import { Inbox } from "lucide-react";
 import { Link } from "react-router-dom";
-import { motion } from "framer-motion";
 import { inr, num } from "@/lib/utils";
 import { useRestaurantCollection } from "@/features/pos/hooks/useRestaurantCollection";
 import type { InventoryItemDoc, PurchaseEntryDoc, StockLotDoc, WastageDoc } from "../types";
 import { buildStockAlerts, availableQty } from "../utils/alerts";
 import { isoDate } from "@/lib/utils";
+import { EmptyState, PageHeader, SectionTitle } from "@/components/ui/PageHeader";
+import { Card } from "@/components/ui/Card";
+import { KpiCard } from "@/components/ui/KpiCard";
+
+import { ContentLoading } from "@/components/ui/Loading";
 
 function Stat({ label, value }: { label: string; value: string | number }) {
-  return (
-    <motion.div initial={{ opacity: 0, y: 8 }} animate={{ opacity: 1, y: 0 }} className="rounded-2xl border border-slate-200 bg-white/90 p-4 shadow-sm backdrop-blur">
-      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</div>
-      <div className="mt-1 text-2xl font-black text-slate-900">{value}</div>
-    </motion.div>
-  );
+  return <KpiCard title={label} value={String(value)} />;
 }
 
 export function InventoryDashboardPage() {
@@ -33,34 +33,34 @@ export function InventoryDashboardPage() {
   const wasteCost = wasteToday.reduce((s, w) => s + num(w.costImpact), 0);
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Inventory & recipes</div>
-          <h1 className="text-2xl font-black tracking-tight text-slate-900">Stock control</h1>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Link to="/inventory/items" className="rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white">
+    <div className="grid gap-4">
+      <PageHeader
+        eyebrow="Inventory & recipes"
+        title="Stock control"
+        actions={
+          <>
+          <Link to="/inventory/items" className="kg-btn kg-btn-primary">
             Items
           </Link>
-          <Link to="/inventory/purchases" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold">
+          <Link to="/inventory/purchases" className="kg-btn kg-btn-secondary">
             Purchases
           </Link>
-          <Link to="/inventory/ops" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold">
+          <Link to="/inventory/ops" className="kg-btn kg-btn-secondary">
             Adjust / Waste / Count
           </Link>
-          <Link to="/inventory/recipes" className="rounded-xl bg-cyan-500 px-3 py-2 text-sm font-semibold text-white">
+          <Link to="/inventory/recipes" className="kg-btn kg-btn-secondary">
             Recipes
           </Link>
-          <Link to="/inventory/production" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold">
+          <Link to="/inventory/production" className="kg-btn kg-btn-secondary">
             Production
           </Link>
-        </div>
-      </div>
+          </>
+        }
+      />
 
-      {loading ? <div className="h-24 animate-pulse rounded-2xl bg-slate-200/70" /> : null}
+      {loading ? <ContentLoading variant="block" label="Loading" /> : null}
 
-      <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+      <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <Stat label="Inventory value" value={inr(valuation)} />
         <Stat label="SKUs" value={active.length} />
         <Stat label="Low / critical" value={alerts.filter((a) => a.kind === "low" || a.kind === "critical" || a.kind === "out").length} />
@@ -72,27 +72,27 @@ export function InventoryDashboardPage() {
       </div>
 
       <div className="grid gap-4 lg:grid-cols-2">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="mb-3 text-sm font-bold">Stock & expiry alerts</div>
+        <Card padding="sm" hover={false}>
+          <SectionTitle title="Stock & expiry alerts" />
           <div className="max-h-80 space-y-2 overflow-auto">
             {alerts.slice(0, 20).map((a, i) => (
-              <div key={`${a.text}-${i}`} className="flex items-start justify-between gap-2 rounded-xl bg-slate-50 px-3 py-2 text-sm">
+              <div key={`${a.text}-${i}`} className="flex items-start justify-between gap-2 rounded-lg border border-stroke-0 bg-bg-1/60 px-3 py-2.5 text-[13px]">
                 <span>{a.text}</span>
-                <span className="shrink-0 rounded-full bg-white px-2 py-0.5 text-[10px] font-bold uppercase text-slate-500">{a.kind}</span>
+                <span className="shrink-0 rounded-md bg-card-0 px-2 py-0.5 text-[10px] font-bold uppercase text-text-muted">{a.kind}</span>
               </div>
             ))}
-            {!alerts.length ? <div className="py-6 text-center text-sm text-slate-500">No alerts — stock looks healthy.</div> : null}
+            {!alerts.length ? <EmptyState className="m-3" icon={<Inbox size={18} />} title="No alerts — stock looks healthy." /> : null}
           </div>
-        </div>
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="mb-3 text-sm font-bold">Top stock by value</div>
+        </Card>
+        <Card padding="sm" hover={false}>
+          <SectionTitle title="Top stock by value" />
           <div className="space-y-2">
             {[...active]
               .map((i) => ({ ...i, value: availableQty(i) * num(i.avgCost || i.lastPurchaseCost || i.costPrice) }))
               .sort((a, b) => b.value - a.value)
               .slice(0, 8)
               .map((i) => (
-                <div key={i.id} className="flex justify-between text-sm">
+                <div key={i.id} className="flex items-center justify-between rounded-lg border border-stroke-0 bg-bg-1/60 px-3 py-2.5 text-[13px]">
                   <span className="font-semibold">{i.item}</span>
                   <span>
                     {availableQty(i)} {i.unit} · {inr(i.value)}
@@ -100,7 +100,7 @@ export function InventoryDashboardPage() {
                 </div>
               ))}
           </div>
-        </div>
+        </Card>
       </div>
     </div>
   );

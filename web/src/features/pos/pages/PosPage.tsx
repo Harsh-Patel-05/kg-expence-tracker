@@ -1,8 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
+import { EmptyState, PageHeader } from "@/components/ui/PageHeader";
 import { AnimatePresence, motion } from "framer-motion";
 import {
-  ArrowLeft,
   PauseCircle,
   QrCode,
   RotateCcw,
@@ -10,6 +10,7 @@ import {
   Users,
   UtensilsCrossed
 } from "lucide-react";
+import { clsx } from "clsx";
 import { inr } from "@/lib/utils";
 import { useRestaurantCollection } from "../hooks/useRestaurantCollection";
 import type { CouponDoc, CustomerDoc, MenuItemDoc, OrderDoc, OrderType, TableDoc } from "../types";
@@ -23,6 +24,8 @@ import { getPosSettings, upsertCustomer, upsertTable } from "../services/posFire
 import { canAccessPos, canManualPrice } from "../utils/permissions";
 import { printGstReceipt, printKitchenTicket } from "../utils/printReceipt";
 import { createSplitOrders } from "../services/orderOps";
+import { PageLoading } from "@/components/ui/Loading";
+import { BRAND } from "@/lib/brand";
 
 const ORDER_TYPES: Array<{ id: OrderType; label: string }> = [
   { id: "dine_in", label: "Dine-in" },
@@ -80,14 +83,25 @@ export function PosPage() {
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
-      if (e.key === "/" && document.activeElement !== searchRef.current) {
+      const target = e.target as HTMLElement | null;
+      const tag = target?.tagName;
+      const typing =
+        tag === "INPUT" ||
+        tag === "TEXTAREA" ||
+        tag === "SELECT" ||
+        Boolean(target?.isContentEditable);
+
+      if (e.key === "/" && !typing) {
         e.preventDefault();
         searchRef.current?.focus();
+        return;
       }
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "enter") {
         e.preventDefault();
         void onCharge();
+        return;
       }
+      if (typing) return;
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "h") {
         e.preventDefault();
         void onHold();
@@ -205,64 +219,84 @@ export function PosPage() {
   }
 
   if (authLoading) {
-    return <div className="grid min-h-screen place-items-center text-slate-500">Loading POS…</div>;
+    return <PageLoading label="Loading POS…" />;
   }
   if (!canAccessPos(role)) {
     return (
-      <div className="grid min-h-screen place-items-center p-6 text-center">
-        <div>
-          <div className="text-lg font-semibold">POS access denied</div>
-          <div className="mt-2 text-sm text-slate-500">Your role ({role}) cannot open billing.</div>
-          <Link to="/" className="mt-4 inline-block text-cyan-600">
-            Back to dashboard
-          </Link>
-        </div>
+      <div className="grid gap-4">
+        <PageHeader eyebrow="Operations" title="POS" />
+        <EmptyState
+          title="POS access denied"
+          description={`Your role (${role}) cannot open billing.`}
+          action={
+            <Link to="/" className="kg-btn kg-btn-secondary">
+              Back to dashboard
+            </Link>
+          }
+        />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-[#F5F7FB] text-slate-900">
-      <header className="sticky top-0 z-20 border-b border-slate-200/80 bg-white/80 px-4 py-3 backdrop-blur">
-        <div className="mx-auto flex max-w-[1600px] flex-wrap items-center gap-3">
-          <Link to="/" className="inline-flex items-center gap-1 rounded-xl border border-slate-200 px-2 py-1.5 text-sm">
-            <ArrowLeft size={16} /> ERP
-          </Link>
-          <div className="text-sm font-bold tracking-tight">Enterprise POS</div>
-          <div className="ml-auto flex flex-wrap items-center gap-2">
-            {ORDER_TYPES.map((t) => (
-              <button
-                key={t.id}
-                type="button"
-                onClick={() => store.setOrderType(t.id)}
-                className={`rounded-full px-3 py-1 text-xs font-semibold ${store.orderType === t.id ? "bg-cyan-500 text-white" : "bg-slate-100 text-slate-600"}`}
-              >
-                {t.label}
-              </button>
-            ))}
-          </div>
+    <div className="flex h-full min-h-0 flex-col gap-2 overflow-hidden">
+      {/* Slim POS toolbar */}
+      <div className="flex shrink-0 flex-wrap items-center gap-2 rounded-[var(--radius-xl)] border border-stroke-0 bg-card-0 px-3 py-2 shadow-panel">
+        <div className="mr-1 min-w-0">
+          <div className="text-[10px] font-bold uppercase tracking-[0.12em] text-primary">{BRAND.restaurantName}</div>
+          <div className="text-[15px] font-bold leading-tight text-text-primary">POS Billing</div>
         </div>
-      </header>
+
+        <div className="flex flex-wrap gap-1">
+          {ORDER_TYPES.map((t) => (
+            <button
+              key={t.id}
+              type="button"
+              onClick={() => store.setOrderType(t.id)}
+              className={clsx(
+                "rounded-lg px-2.5 py-1.5 text-[11px] font-semibold",
+                store.orderType === t.id
+                  ? "bg-primary text-white"
+                  : "border border-stroke-0 bg-bg-1 text-text-secondary hover:border-primary/35"
+              )}
+            >
+              {t.label}
+            </button>
+          ))}
+        </div>
+
+        <div className="ml-auto flex flex-wrap items-center gap-1.5">
+          <Link to="/orders" className="kg-btn kg-btn-secondary !py-1.5 !text-[12px]">
+            Orders
+          </Link>
+          <Link to="/kds" className="kg-btn kg-btn-secondary !py-1.5 !text-[12px]">
+            Kitchen
+          </Link>
+          <button type="button" className="kg-btn kg-btn-secondary !p-2" title="Held bills" onClick={() => setShowHeld(true)}>
+            <PauseCircle size={15} />
+          </button>
+        </div>
+      </div>
 
       <AnimatePresence>
         {banner ? (
-          <motion.div
-            initial={{ y: -12, opacity: 0 }}
-            animate={{ y: 0, opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="mx-auto max-w-[1600px] px-4 pt-3"
-          >
-            <div className="rounded-xl border border-cyan-200 bg-cyan-50 px-3 py-2 text-sm text-cyan-900">{banner}</div>
+          <motion.div className="shrink-0" initial={{ y: -8, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ opacity: 0 }}>
+            <div className="rounded-lg border border-primary/20 bg-primary-light px-3 py-2 text-[13px] font-medium text-primary">{banner}</div>
           </motion.div>
         ) : null}
       </AnimatePresence>
 
-      <div className="mx-auto grid max-w-[1600px] gap-4 p-4 lg:grid-cols-[minmax(0,1.4fr)_minmax(320px,0.9fr)]">
-        {/* LEFT: catalog */}
-        <section className="min-w-0 space-y-3">
-          <div className="flex flex-wrap gap-2">
-            <div className="relative min-w-[220px] flex-1">
-              <Search className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" size={16} />
+      <div className="grid min-h-0 flex-1 gap-2 overflow-hidden lg:grid-cols-[minmax(0,1.55fr)_minmax(340px,0.85fr)]">
+        {/* LEFT — catalog */}
+        <section className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-stroke-0 bg-card-0 p-2.5 shadow-panel">
+          <div className="flex shrink-0 flex-wrap items-center gap-1.5">
+            <div className="relative min-w-[200px] flex-1">
+              <Search
+                size={15}
+                strokeWidth={2}
+                className="pointer-events-none absolute left-3 top-1/2 z-[1] -translate-y-1/2 text-text-muted"
+                aria-hidden
+              />
               <input
                 ref={searchRef}
                 value={store.search}
@@ -270,187 +304,185 @@ export function PosPage() {
                 onKeyDown={(e) => {
                   if (e.key === "Enter") void handleBarcodeOrSearchSubmit();
                 }}
-                placeholder="Search / barcode / QR · press / to focus"
-                className="w-full rounded-2xl border border-slate-200 bg-white py-2.5 pl-9 pr-3 text-sm outline-none ring-cyan-400 focus:ring-2"
+                placeholder="Search item or barcode"
+                aria-label="Search item or barcode"
+                className="kg-input !bg-bg-1 !py-2 !pl-9 !pr-10 text-[13px]"
               />
+              <kbd className="pointer-events-none absolute right-2.5 top-1/2 hidden -translate-y-1/2 rounded border border-stroke-0 bg-card-0 px-1.5 py-0.5 text-[10px] font-semibold text-text-muted sm:inline-block">
+                /
+              </kbd>
             </div>
-            <button
-              type="button"
-              className="inline-flex items-center gap-1 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm"
-              onClick={() => void handleBarcodeOrSearchSubmit()}
-              title="Resolve barcode / QR"
-            >
-              <QrCode size={16} /> Scan
+            <button type="button" className="kg-btn kg-btn-secondary !px-2.5 !py-2" onClick={() => void handleBarcodeOrSearchSubmit()} title="Scan barcode" aria-label="Scan barcode">
+              <QrCode size={15} aria-hidden />
             </button>
-            <button type="button" className="inline-flex items-center gap-1 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm" onClick={() => setShowCustomer(true)}>
-              <Users size={16} /> {store.customerName || "Customer"}
+            <button type="button" className="kg-btn kg-btn-secondary !px-2.5 !py-2 text-[12px]" onClick={() => setShowCustomer(true)}>
+              <Users size={14} aria-hidden />
+              <span className="max-w-[88px] truncate">{store.customerName || "Customer"}</span>
             </button>
-            <button type="button" className="inline-flex items-center gap-1 rounded-2xl border border-slate-200 bg-white px-3 py-2 text-sm" onClick={() => setShowTable(true)}>
-              <UtensilsCrossed size={16} /> {store.tableName || "Table"}
+            <button type="button" className="kg-btn kg-btn-secondary !px-2.5 !py-2 text-[12px]" onClick={() => setShowTable(true)}>
+              <UtensilsCrossed size={14} aria-hidden />
+              <span className="max-w-[72px] truncate">{store.tableName || "Table"}</span>
             </button>
           </div>
 
-          <div className="flex gap-2 overflow-x-auto pb-1">
+          <div className="mt-2 flex shrink-0 gap-1 overflow-x-auto pb-0.5">
             {categories.map((c) => (
               <button
                 key={c}
                 type="button"
                 onClick={() => store.setCategory(c)}
-                className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-semibold ${store.category === c ? "bg-slate-900 text-white" : "bg-white text-slate-600 border border-slate-200"}`}
+                className={clsx(
+                  "shrink-0 rounded-lg px-2.5 py-1 text-[11px] font-semibold",
+                  store.category === c
+                    ? "bg-primary text-white"
+                    : "border border-stroke-0 bg-bg-1 text-text-secondary hover:border-primary/35"
+                )}
               >
                 {c}
               </button>
             ))}
           </div>
 
-          {menuLoading ? <div className="h-40 animate-pulse rounded-2xl bg-slate-200/60" /> : null}
-          {menuError ? <div className="rounded-xl bg-rose-50 p-3 text-sm text-rose-700">{menuError}</div> : null}
-          <ProductGrid
-            items={filtered}
-            favoriteIds={store.favoriteIds}
-            onAdd={(item) => store.addProduct(item)}
-            onToggleFavorite={(id) => store.toggleFavorite(id)}
-          />
+          {menuError ? (
+            <div className="mt-2 shrink-0 rounded-lg border border-red-200 bg-danger-bg p-2 text-[12px] text-danger">{menuError}</div>
+          ) : null}
+
+          <div className="mt-2 min-h-0 flex-1 overflow-y-auto pr-0.5 kg-hide-scrollbar">
+            <ProductGrid
+              items={filtered}
+              favoriteIds={store.favoriteIds}
+              loading={menuLoading}
+              totalMenuCount={sortedMenu.length}
+              search={store.search}
+              category={store.category}
+              onAdd={(item) => store.addProduct(item)}
+              onToggleFavorite={(id) => store.toggleFavorite(id)}
+              onClearSearch={() => store.setSearch("")}
+              onResetCategory={() => store.setCategory("All")}
+            />
+          </div>
         </section>
 
-        {/* RIGHT: cart */}
-        <aside className="min-w-0 space-y-3 lg:sticky lg:top-20 lg:self-start">
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="mb-3 flex items-center justify-between gap-2">
-              <div>
-                <div className="text-sm font-bold">Current cart</div>
-                <div className="text-xs text-slate-500">
-                  {store.lines.reduce((s, l) => s + l.qty, 0)} items · {store.customerName || "Walk-in"}
-                  {store.tableName ? ` · ${store.tableName}` : ""}
-                </div>
-              </div>
-              <div className="flex gap-1">
-                <button type="button" className="rounded-lg border border-slate-200 p-2" title="Undo remove" onClick={() => store.undoRemove()}>
-                  <RotateCcw size={16} />
-                </button>
-                <button type="button" className="rounded-lg border border-slate-200 p-2" title="Held bills" onClick={() => setShowHeld(true)}>
-                  <PauseCircle size={16} />
-                </button>
+        {/* RIGHT — cart scrolls alone; totals + pay stay below (no overlap) */}
+        <aside className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-stroke-0 bg-card-0 shadow-panel">
+          <div className="flex shrink-0 items-center justify-between gap-2 border-b border-stroke-0 px-2.5 py-2">
+            <div className="min-w-0">
+              <div className="text-[13px] font-bold text-text-primary">Current cart</div>
+              <div className="truncate text-[11px] text-text-muted">
+                {store.lines.reduce((s, l) => s + l.qty, 0)} items · {store.customerName || "Walk-in"}
+                {store.tableName ? ` · ${store.tableName}` : ""} · {store.orderType.replace("_", " ")}
               </div>
             </div>
+            <div className="flex shrink-0 gap-1">
+              <button type="button" className="kg-btn kg-btn-secondary !p-1.5" title="Undo" onClick={() => store.undoRemove()}>
+                <RotateCcw size={14} />
+              </button>
+              <button
+                type="button"
+                className="kg-btn !border-danger/30 !p-1.5 !text-danger hover:!bg-danger-bg"
+                title="Clear cart"
+                onClick={() => {
+                  if (store.lines.length && confirm("Clear cart?")) store.clearCart();
+                }}
+              >
+                Clear
+              </button>
+            </div>
+          </div>
 
+          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2.5 py-2 kg-hide-scrollbar">
             <CartLines
               lines={store.lines}
               onBump={(id, d) => store.bumpQty(id, d)}
               onRemove={(id) => store.removeLine(id)}
               onEditNote={(id, note) => store.updateLine(id, { note })}
             />
+          </div>
 
-            <div className="mt-3 space-y-1 border-t border-slate-100 pt-3 text-sm">
+          <div className="flex max-h-[55%] shrink-0 flex-col overflow-y-auto overscroll-contain border-t border-stroke-0 bg-card-0 kg-hide-scrollbar">
+          <div className="space-y-2 px-2.5 py-2">
+            <div className="space-y-0.5 text-[12px]">
               <Row label="Subtotal" value={inr(totals.subtotal)} />
               {totals.itemDiscountTotal > 0 ? <Row label="Item discounts" value={`- ${inr(totals.itemDiscountTotal)}`} /> : null}
               {totals.billDiscount > 0 ? <Row label="Bill discount" value={`- ${inr(totals.billDiscount)}`} /> : null}
               {totals.couponDiscount > 0 ? <Row label="Coupon" value={`- ${inr(totals.couponDiscount)}`} /> : null}
-              <Row label={`CGST`} value={inr(totals.cgst)} />
-              <Row label={`SGST`} value={inr(totals.sgst)} />
+              <Row label="Tax (CGST+SGST)" value={inr(totals.cgst + totals.sgst)} />
               {totals.igst > 0 ? <Row label="IGST" value={inr(totals.igst)} /> : null}
               {totals.chargesTotal > 0 ? <Row label="Charges" value={inr(totals.chargesTotal)} /> : null}
               {totals.roundOff ? <Row label="Round off" value={inr(totals.roundOff)} /> : null}
-              <div className="flex justify-between pt-1 text-base font-black">
+              <div className="flex items-center justify-between rounded-lg bg-primary-light px-2.5 py-2 text-[14px] font-bold text-text-primary">
                 <span>Grand total</span>
-                <span>{inr(totals.total)}</span>
+                <span className="tabular-nums text-primary">{inr(totals.total)}</span>
               </div>
-              <div className="flex justify-between text-xs text-slate-500">
+              <div className="flex justify-between text-[11px] text-text-muted">
                 <span>Paid {inr(totals.paid)}</span>
                 <span>Balance {inr(totals.balance)}</span>
               </div>
             </div>
 
-            <div className="mt-3 grid gap-2">
-              <div className="grid grid-cols-[1fr_1fr_auto] gap-2">
-                <input
-                  className="rounded-xl border border-slate-200 px-2 py-2 text-xs"
-                  placeholder="Disc %"
-                  value={discPct}
-                  onChange={(e) => setDiscPct(e.target.value)}
-                />
-                <input
-                  className="rounded-xl border border-slate-200 px-2 py-2 text-xs"
-                  placeholder="Reason"
-                  value={discReason}
-                  onChange={(e) => setDiscReason(e.target.value)}
-                />
-                <button
-                  type="button"
-                  className="rounded-xl bg-slate-900 px-3 py-2 text-xs font-semibold text-white"
-                  onClick={() =>
-                    store.setDiscount({ type: "percent", value: Number(discPct) || 0, reason: discReason })
-                  }
-                >
-                  Apply
-                </button>
-              </div>
-              <div className="grid grid-cols-[1fr_auto] gap-2">
-                <input
-                  className="rounded-xl border border-slate-200 px-2 py-2 text-xs uppercase"
-                  placeholder="Coupon code"
-                  value={couponInput}
-                  onChange={(e) => setCouponInput(e.target.value)}
-                />
-                <button
-                  type="button"
-                  className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold"
-                  onClick={() => store.setCouponCode(couponInput.trim() || null)}
-                >
-                  Coupon
-                </button>
-              </div>
-              <div className="grid grid-cols-3 gap-2">
-                <button
-                  type="button"
-                  className="rounded-xl border border-slate-200 py-2 text-xs font-semibold"
-                  onClick={() => store.addCharge({ label: "Packing", amount: 10, type: "packing" })}
-                >
-                  + Packing
-                </button>
-                <button
-                  type="button"
-                  className="rounded-xl border border-slate-200 py-2 text-xs font-semibold"
-                  onClick={() => store.addCharge({ label: "Delivery", amount: 30, type: "delivery" })}
-                >
-                  + Delivery
-                </button>
-                <button
-                  type="button"
-                  className="rounded-xl border border-slate-200 py-2 text-xs font-semibold"
-                  onClick={() => store.addCharge({ label: "Service", amount: Math.round(totals.subtotal * 0.05), type: "service" })}
-                >
-                  + Service
-                </button>
-              </div>
-              {canManualPrice(role) ? (
-                <button
-                  type="button"
-                  className="rounded-xl border border-dashed border-slate-300 py-2 text-xs text-slate-600"
-                  onClick={() => {
-                    const name = prompt("Custom item name");
-                    const price = Number(prompt("Price") || 0);
-                    if (name) store.addCustomItem(name, price);
-                  }}
-                >
-                  Add custom / price override item
-                </button>
-              ) : null}
-            </div>
-
-            <div className="mt-3 flex gap-2">
+            <div className="grid grid-cols-[1fr_1fr_auto] gap-1.5">
+              <input className="kg-input !py-1.5 !text-[12px]" placeholder="Disc %" value={discPct} onChange={(e) => setDiscPct(e.target.value)} />
+              <input className="kg-input !py-1.5 !text-[12px]" placeholder="Reason" value={discReason} onChange={(e) => setDiscReason(e.target.value)} />
               <button
                 type="button"
-                disabled={busy}
-                onClick={() => void onHold()}
-                className="flex-1 rounded-xl border border-slate-200 py-2.5 text-sm font-semibold"
+                className="kg-btn kg-btn-primary !px-2.5 !text-[12px]"
+                onClick={() => store.setDiscount({ type: "percent", value: Number(discPct) || 0, reason: discReason })}
               >
-                Hold bill
+                Apply
+              </button>
+            </div>
+
+            <div className="grid grid-cols-[1fr_auto] gap-1.5">
+              <input
+                className="kg-input !py-1.5 !text-[12px] uppercase"
+                placeholder="Coupon"
+                value={couponInput}
+                onChange={(e) => setCouponInput(e.target.value)}
+              />
+              <button type="button" className="kg-btn kg-btn-secondary !text-[12px]" onClick={() => store.setCouponCode(couponInput.trim() || null)}>
+                Coupon
+              </button>
+            </div>
+
+            <div className="grid grid-cols-4 gap-1.5">
+              <button type="button" className="rounded-lg border border-stroke-0 bg-bg-1 px-1 py-1.5 text-[10px] font-semibold text-text-secondary hover:border-primary/35" onClick={() => store.addCharge({ label: "Packing", amount: 10, type: "packing" })}>
+                +Pack
+              </button>
+              <button type="button" className="rounded-lg border border-stroke-0 bg-bg-1 px-1 py-1.5 text-[10px] font-semibold text-text-secondary hover:border-primary/35" onClick={() => store.addCharge({ label: "Delivery", amount: 30, type: "delivery" })}>
+                +Deliv
+              </button>
+              <button type="button" className="rounded-lg border border-stroke-0 bg-bg-1 px-1 py-1.5 text-[10px] font-semibold text-text-secondary hover:border-primary/35" onClick={() => store.addCharge({ label: "Service", amount: Math.round(totals.subtotal * 0.05), type: "service" })}>
+                +Svc
               </button>
               <button
                 type="button"
+                disabled={busy}
+                className="rounded-lg border border-stroke-0 bg-bg-1 px-1 py-1.5 text-[10px] font-semibold text-text-secondary hover:border-primary/35 disabled:opacity-50"
+                onClick={() => void onHold()}
+              >
+                Hold
+              </button>
+            </div>
+
+            {canManualPrice(role) ? (
+              <button
+                type="button"
+                className="w-full rounded-lg border border-dashed border-stroke-1 py-1.5 text-[11px] font-semibold text-text-secondary hover:bg-bg-1"
+                onClick={() => {
+                  const name = prompt("Custom item name");
+                  const price = Number(prompt("Price") || 0);
+                  if (name) store.addCustomItem(name, price);
+                }}
+              >
+                + Custom item
+              </button>
+            ) : null}
+
+            <div className="grid grid-cols-2 gap-1.5">
+              <button
+                type="button"
                 disabled={busy || store.lines.length < 2}
-                className="rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-semibold"
+                className="kg-btn kg-btn-secondary !py-2 !text-[12px] disabled:opacity-50"
                 onClick={async () => {
                   const parts = Number(prompt("Split into how many equal bills?", "2") || 0);
                   if (parts < 2) return;
@@ -499,21 +531,18 @@ export function PosPage() {
                   }
                 }}
               >
-                Split
+                Split bill
               </button>
-              <button
-                type="button"
-                onClick={() => {
-                  if (confirm("Clear cart?")) store.clearCart();
-                }}
-                className="rounded-xl border border-rose-200 px-3 py-2.5 text-sm font-semibold text-rose-600"
-              >
-                Clear
+              <button type="button" className="kg-btn kg-btn-secondary !py-2 !text-[12px]" onClick={() => setShowHeld(true)}>
+                Held bills
               </button>
             </div>
           </div>
 
-          <PaymentPanel busy={busy} onCharge={onCharge} />
+          <div className="border-t border-stroke-0 px-2.5 pb-2.5 pt-2">
+            <PaymentPanel busy={busy} onCharge={onCharge} />
+          </div>
+          </div>
         </aside>
       </div>
 
@@ -524,7 +553,7 @@ export function PosPage() {
               <button
                 key={o.id}
                 type="button"
-                className="flex w-full items-center justify-between rounded-xl border border-slate-200 px-3 py-2 text-left text-sm hover:bg-slate-50"
+                className="flex w-full items-center justify-between rounded-lg border border-stroke-0 px-3 py-2 text-left text-[13px] hover:bg-bg-1 bg-bg-1 text-text-primary"
                 onClick={() => {
                   store.loadHeld({
                     orderId: o.id,
@@ -553,7 +582,7 @@ export function PosPage() {
                 <span className="font-bold">{inr(o.total)}</span>
               </button>
             ))}
-            {!heldOrders.length ? <div className="text-sm text-slate-500">No held bills</div> : null}
+            {!heldOrders.length ? <div className="text-[13px] text-text-muted">No held bills</div> : null}
           </div>
         </Modal>
       ) : null}
@@ -600,20 +629,20 @@ export function PosPage() {
 
 function Row({ label, value }: { label: string; value: string }) {
   return (
-    <div className="flex justify-between text-slate-600">
+    <div className="flex justify-between text-text-secondary">
       <span>{label}</span>
-      <span className="font-semibold text-slate-900">{value}</span>
+      <span className="font-semibold text-text-primary">{value}</span>
     </div>
   );
 }
 
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-slate-900/40 p-4" onClick={onClose}>
-      <div className="max-h-[80vh] w-full max-w-lg overflow-auto rounded-2xl bg-white p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
+    <div className="fixed inset-0 z-50 grid place-items-center bg-text-primary/40 p-4" onClick={onClose}>
+      <div className="max-h-[80vh] w-full max-w-lg overflow-auto rounded-[var(--radius-xl)] bg-card-0 p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
         <div className="mb-3 flex items-center justify-between">
           <div className="font-bold">{title}</div>
-          <button type="button" className="text-sm text-slate-500" onClick={onClose}>
+          <button type="button" className="text-[13px] text-text-muted" onClick={onClose}>
             Close
           </button>
         </div>
@@ -634,19 +663,19 @@ function CustomerForm(props: {
   return (
     <div className="space-y-3">
       <div className="flex gap-2">
-        <button type="button" className="rounded-xl border px-3 py-2 text-xs font-semibold" onClick={props.onWalkIn}>
+        <button type="button" className="kg-btn kg-btn-secondary" onClick={props.onWalkIn}>
           Walk-in
         </button>
-        <button type="button" className="rounded-xl border px-3 py-2 text-xs font-semibold" onClick={props.onGuest}>
+        <button type="button" className="kg-btn kg-btn-secondary" onClick={props.onGuest}>
           Guest
         </button>
       </div>
       <div className="grid grid-cols-[1fr_1fr_auto] gap-2">
-        <input className="rounded-xl border px-2 py-2 text-sm" placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
-        <input className="rounded-xl border px-2 py-2 text-sm" placeholder="Phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
+        <input className="kg-input !w-auto" placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
+        <input className="kg-input !w-auto" placeholder="Phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
         <button
           type="button"
-          className="rounded-xl bg-cyan-500 px-3 py-2 text-xs font-bold text-white"
+          className="kg-btn kg-btn-primary"
           onClick={async () => {
             if (!name.trim()) return;
             const id = await upsertCustomer({ name, phone, type: "regular" });
@@ -661,14 +690,14 @@ function CustomerForm(props: {
           <button
             key={c.id}
             type="button"
-            className="flex w-full justify-between rounded-xl border border-slate-100 px-3 py-2 text-left text-sm hover:bg-slate-50"
+            className="flex w-full justify-between rounded-lg border border-stroke-0 px-3 py-2 text-left text-[13px] hover:bg-bg-1 bg-bg-1 text-text-primary"
             onClick={() => props.onPick(c)}
           >
             <span>
               {c.name}
               {c.phone ? ` · ${c.phone}` : ""}
             </span>
-            <span className="text-xs text-slate-500">
+            <span className="text-xs text-text-muted">
               pts {c.rewardPoints || 0} · due {inr(c.pendingBalance || 0)}
             </span>
           </button>
@@ -685,7 +714,7 @@ function TableBoard(props: {
 }) {
   return (
     <div className="space-y-3">
-      <button type="button" className="rounded-xl border px-3 py-2 text-xs font-semibold" onClick={() => void props.onCreate()}>
+      <button type="button" className="kg-btn kg-btn-secondary" onClick={() => void props.onCreate()}>
         + New table
       </button>
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
@@ -694,22 +723,22 @@ function TableBoard(props: {
             key={t.id}
             type="button"
             onClick={() => props.onPick(t)}
-            className={`rounded-2xl border p-3 text-left ${
+            className={`rounded-[var(--radius-xl)] border p-3 text-left ${
               t.status === "occupied"
-                ? "border-rose-200 bg-rose-50"
+                ? "border-danger/30 bg-danger-bg"
                 : t.status === "reserved"
-                  ? "border-amber-200 bg-amber-50"
+                  ? "border-warning/30 bg-warning-bg"
                   : t.status === "cleaning"
-                    ? "border-slate-200 bg-slate-100"
-                    : "border-emerald-200 bg-emerald-50"
+                    ? "border-stroke-0 bg-bg-1"
+                    : "border-success/30 bg-success-bg"
             }`}
           >
             <div className="font-bold">{t.name}</div>
-            <div className="text-[11px] capitalize text-slate-600">{t.status || "available"} · {t.capacity || 4}p</div>
+            <div className="text-[11px] capitalize text-text-secondary">{t.status || "available"} · {t.capacity || 4}p</div>
           </button>
         ))}
       </div>
-      {!props.tables.length ? <div className="text-sm text-slate-500">No tables yet — create one.</div> : null}
+      {!props.tables.length ? <div className="text-[13px] text-text-muted">No tables yet — create one.</div> : null}
     </div>
   );
 }

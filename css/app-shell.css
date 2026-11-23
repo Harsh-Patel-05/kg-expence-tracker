@@ -19,9 +19,9 @@ body {
   padding: 0 !important;
   margin: 0;
   background:
-    radial-gradient(ellipse 70% 55% at 8% -5%, rgba(99, 102, 241, 0.18), transparent 55%),
-    radial-gradient(ellipse 55% 45% at 95% 5%, rgba(139, 92, 246, 0.14), transparent 50%),
-    radial-gradient(ellipse 50% 40% at 70% 90%, rgba(79, 70, 229, 0.1), transparent 55%),
+    radial-gradient(ellipse 70% 55% at 8% -5%, rgba(232, 122, 58, 0.18), transparent 55%),
+    radial-gradient(ellipse 55% 45% at 95% 5%, rgba(160, 74, 53, 0.14), transparent 50%),
+    radial-gradient(ellipse 50% 40% at 70% 90%, rgba(232, 122, 58, 0.1), transparent 55%),
     var(--bg-main) !important;
   background-attachment: fixed !important;
 }
@@ -34,7 +34,7 @@ body::after {
   filter: blur(60px);
   pointer-events: none;
   z-index: 0;
-  opacity: 0.55;
+  opacity: 0.35;
 }
 
 body::before {
@@ -42,7 +42,7 @@ body::before {
   height: 340px;
   top: -80px;
   left: -60px;
-  background: rgba(99, 102, 241, 0.22);
+  background: rgba(232, 122, 58, 0.22);
 }
 
 body::after {
@@ -50,7 +50,7 @@ body::after {
   height: 280px;
   bottom: 10%;
   right: -40px;
-  background: rgba(139, 92, 246, 0.16);
+  background: rgba(160, 74, 53, 0.16);
 }
 
 #appLoading,
@@ -190,7 +190,7 @@ body::after {
 }
 .main-content::-webkit-scrollbar-thumb,
 .nav-list::-webkit-scrollbar-thumb {
-  background: rgba(79, 70, 229, 0.28);
+  background: rgba(232, 122, 58, 0.28);
   border-radius: 99px;
 }
 

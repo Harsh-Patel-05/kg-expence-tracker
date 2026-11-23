@@ -1,12 +1,16 @@
 import { useMemo, useState } from "react";
 import { Link } from "react-router-dom";
-import { Search } from "lucide-react";
+import { Search, Inbox } from "lucide-react";
 import { inr, isoDate, num } from "@/lib/utils";
 import { useRestaurantCollection } from "@/features/pos/hooks/useRestaurantCollection";
 import { usePosAuth } from "@/features/pos/auth/PosAuthProvider";
 import type { EmployeeDoc, SalaryType } from "../types";
 import { upsertEmployee, softDeleteEmployee } from "../services/employeeService";
 import { canEditEmployees } from "../utils/permissions";
+import { EmptyState, PageHeader, SectionTitle } from "@/components/ui/PageHeader";
+import { Card } from "@/components/ui/Card";
+
+import { ContentLoading } from "@/components/ui/Loading";
 
 const emptyForm = {
   id: "",
@@ -109,22 +113,18 @@ export function EmployeesPage() {
   }
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-2">
-        <div>
-          <Link to="/hr" className="text-xs font-semibold text-cyan-700">
-            ← HR
-          </Link>
-          <h1 className="text-2xl font-black text-slate-900">Employee master</h1>
-        </div>
-      </div>
+    <div className="grid gap-4">
+      <PageHeader
+        back={<Link to="/hr" className="text-xs font-semibold text-primary"> ← HR </Link>}
+        title="Employee master"
+      />
 
-      {msg ? <div className="rounded-xl bg-cyan-50 px-3 py-2 text-sm text-cyan-900">{msg}</div> : null}
-      {error ? <div className="rounded-xl bg-rose-50 px-3 py-2 text-sm text-rose-700">{error}</div> : null}
+      {msg ? <div className="rounded-lg border border-primary/20 bg-primary-light px-3 py-2 text-[13px] text-primary">{msg}</div> : null}
+      {error ? <div className="rounded-lg border border-red-200 bg-danger-bg px-3 py-2 text-[13px] text-danger">{error}</div> : null}
 
       <div className="grid gap-4 lg:grid-cols-[340px_1fr]">
-        <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-          <div className="mb-3 text-sm font-bold">{form.id ? "Edit employee" : "Add employee"}</div>
+        <Card padding="sm" hover={false}>
+          <SectionTitle title={form.id ? "Edit employee" : "Add employee"} />
           <div className="grid gap-2">
             {(
               [
@@ -144,22 +144,22 @@ export function EmployeesPage() {
                 ["notes", "Notes"]
               ] as const
             ).map(([key, label]) => (
-              <label key={key} className="grid gap-1 text-xs font-semibold text-slate-600">
+              <label key={key} className="grid gap-1 text-[12px] font-semibold text-text-muted">
                 {label}
                 <input
                   disabled={!canEdit}
                   type={key.includes("Date") ? "date" : key.includes("Salary") || key.includes("Wage") || key.includes("Rate") ? "number" : "text"}
-                  className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                  className="kg-input !w-auto"
                   value={(form as any)[key]}
                   onChange={(e) => setForm((f) => ({ ...f, [key]: e.target.value }))}
                 />
               </label>
             ))}
-            <label className="grid gap-1 text-xs font-semibold text-slate-600">
+            <label className="grid gap-1 text-[12px] font-semibold text-text-muted">
               Salary type
               <select
                 disabled={!canEdit}
-                className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                className="kg-input !w-auto"
                 value={form.salaryType}
                 onChange={(e) => setForm((f) => ({ ...f, salaryType: e.target.value as SalaryType }))}
               >
@@ -171,34 +171,35 @@ export function EmployeesPage() {
             <button
               disabled={!canEdit || busy || !form.name.trim()}
               onClick={save}
-              className="mt-2 rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white disabled:opacity-50"
+              className="mt-2 kg-btn kg-btn-primary disabled:opacity-50"
             >
               {busy ? "Saving…" : "Save employee"}
             </button>
             {form.id ? (
               <button
                 type="button"
-                className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
+                className="rounded-lg border border-stroke-0 bg-bg-1/60 px-3 py-2.5 text-[13px] text-text-primary"
                 onClick={() => setForm({ ...emptyForm, joiningDate: isoDate() })}
               >
                 Clear form
               </button>
             ) : null}
           </div>
-        </div>
+        </Card>
 
         <div className="space-y-3">
           <div className="flex flex-wrap gap-2">
             <div className="relative min-w-[200px] flex-1">
-              <Search className="pointer-events-none absolute left-3 top-2.5 h-4 w-4 text-slate-400" />
+              <Search className="pointer-events-none absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-text-muted" aria-hidden />
               <input
-                className="w-full rounded-xl border border-slate-200 bg-white py-2 pl-9 pr-3 text-sm"
+                className="kg-input w-full !pl-9 pr-3"
                 placeholder="Search name, code, phone…"
                 value={q}
                 onChange={(e) => setQ(e.target.value)}
+                aria-label="Search employees"
               />
             </div>
-            <select className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm" value={dept} onChange={(e) => setDept(e.target.value)}>
+            <select className="kg-input !w-auto" value={dept} onChange={(e) => setDept(e.target.value)}>
               {departments.map((d) => (
                 <option key={d} value={d}>
                   {d === "all" ? "All departments" : d}
@@ -207,25 +208,26 @@ export function EmployeesPage() {
             </select>
           </div>
 
-          {loading ? <div className="h-40 animate-pulse rounded-2xl bg-slate-200/70" /> : null}
+          {loading ? <ContentLoading variant="table" label="Loading" /> : null}
 
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+          <Card hover={false} className="!p-0">
+            <div className="overflow-x-auto">
+            <table className="w-full min-w-[560px] text-left text-[13px]">
+              <thead className="bg-bg-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-text-muted">
                 <tr>
                   <th className="px-3 py-2">Employee</th>
                   <th className="px-3 py-2">Dept</th>
                   <th className="px-3 py-2">Salary</th>
                   <th className="px-3 py-2">Status</th>
-                  <th className="px-3 py-2" />
+                  <th className="px-3 py-2"><span className="sr-only">Actions</span></th>
                 </tr>
               </thead>
               <tbody>
                 {rows.map((s) => (
-                  <tr key={s.id} className="border-t border-slate-100">
+                  <tr key={s.id} className="border-t border-stroke-0">
                     <td className="px-3 py-2">
                       <div className="font-semibold">{s.name}</div>
-                      <div className="text-xs text-slate-500">
+                      <div className="text-xs text-text-muted">
                         {s.employeeCode || "—"} · {s.phone || "no phone"}
                       </div>
                     </td>
@@ -238,18 +240,18 @@ export function EmployeesPage() {
                           : inr(s.monthlySalary)}
                     </td>
                     <td className="px-3 py-2">
-                      <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[10px] font-bold uppercase">
+                      <span className="rounded-md bg-bg-1 px-2 py-0.5 text-[10px] font-bold uppercase">
                         {s.active === false ? "inactive" : "active"}
                       </span>
                     </td>
                     <td className="px-3 py-2 text-right">
                       {canEdit ? (
                         <div className="flex justify-end gap-2">
-                          <button className="text-xs font-semibold text-cyan-700" onClick={() => edit(s)}>
+                          <button className="text-xs font-semibold text-primary" onClick={() => edit(s)}>
                             Edit
                           </button>
                           <button
-                            className="text-xs font-semibold text-rose-600"
+                            className="text-xs font-semibold text-danger"
                             onClick={async () => {
                               await softDeleteEmployee(s.id);
                               setMsg("Employee deactivated");
@@ -264,8 +266,9 @@ export function EmployeesPage() {
                 ))}
               </tbody>
             </table>
-            {!rows.length && !loading ? <div className="py-10 text-center text-sm text-slate-500">No employees found.</div> : null}
-          </div>
+            </div>
+            {!rows.length && !loading ? <EmptyState className="m-3" icon={<Inbox size={18} />} title="No employees found." /> : null}
+          </Card>
         </div>
       </div>
     </div>

@@ -1,4 +1,5 @@
 import { useMemo, useState } from "react";
+import { Inbox } from "lucide-react";
 import { Link } from "react-router-dom";
 import {
   Bar,
@@ -25,6 +26,7 @@ import { buildSupplierLedger } from "@/features/suppliers/utils/ledger";
 import { canAccessReports, canExportReports, canViewSalaryReports } from "@/features/suppliers/utils/permissions";
 import {
   downloadText,
+  escapeHtml,
   expenseReport,
   inventoryReport,
   printReport,
@@ -40,8 +42,11 @@ import {
   type SaleLike
 } from "../utils/reportEngine";
 import { cacheReportSnapshot, logReportExport, saveScheduledReport } from "../services/reportService";
+import { EmptyState, PageHeader, SectionTitle } from "@/components/ui/PageHeader";
+import { Card } from "@/components/ui/Card";
+import { KpiCard } from "@/components/ui/KpiCard";
 
-const COLORS = ["#0f172a", "#06b6d4", "#64748b", "#f59e0b", "#ef4444", "#10b981", "#8b5cf6", "#ec4899"];
+const COLORS = ["#9A3F24", "#E56B2C", "#6B7280", "#F2A65A", "#DC2626", "#059669", "#CF5A1F", "#B45309"];
 
 type ReportTab =
   | "overview"
@@ -118,7 +123,7 @@ export function ReportsHubPage() {
   }
 
   if (!canAccess) {
-    return <div className="rounded-2xl border border-slate-200 bg-white p-8 text-center text-sm text-slate-500">No access to reports</div>;
+    return <EmptyState title="No access to reports" description="Your role cannot open this module." />;
   }
 
   const tabs: Array<{ id: ReportTab; label: string }> = [
@@ -135,24 +140,23 @@ export function ReportsHubPage() {
   ];
 
   return (
-    <div className="space-y-4">
-      <div className="flex flex-wrap items-center justify-between gap-3">
-        <div>
-          <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">Business intelligence</div>
-          <h1 className="text-2xl font-black tracking-tight text-slate-900">Reports & analytics</h1>
-        </div>
-        <div className="flex flex-wrap gap-2">
-          <Link to="/forecast" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold">
+    <div className="grid gap-4">
+      <PageHeader
+        eyebrow="Business intelligence"
+        title="Reports & analytics"
+        actions={
+          <>
+          <Link to="/forecast" className="kg-btn kg-btn-secondary">
             AI Forecast
           </Link>
-          <Link to="/suppliers" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold">
+          <Link to="/suppliers" className="kg-btn kg-btn-secondary">
             Suppliers
           </Link>
-          <Link to="/expenses" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold">
+          <Link to="/expenses" className="kg-btn kg-btn-secondary">
             Expenses
           </Link>
           <button
-            className="rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white"
+            className="kg-btn kg-btn-primary"
             onClick={async () => {
               await cacheReportSnapshot({
                 reportType: tab,
@@ -164,23 +168,24 @@ export function ReportsHubPage() {
           >
             Cache snapshot
           </button>
-        </div>
-      </div>
+          </>
+        }
+      />
 
-      {msg ? <div className="rounded-xl bg-cyan-50 px-3 py-2 text-sm text-cyan-900">{msg}</div> : null}
+      {msg ? <div className="rounded-lg border border-primary/20 bg-primary-light px-3 py-2 text-[13px] text-primary">{msg}</div> : null}
 
-      <div className="flex flex-wrap gap-2 rounded-2xl border border-slate-200 bg-white p-3 shadow-sm">
-        <label className="grid gap-1 text-xs font-semibold text-slate-600">
+      <Card hover={false} className="!p-3"><div className="flex flex-wrap gap-2">
+        <label className="grid gap-1 text-[12px] font-semibold text-text-muted">
           From
-          <input type="date" className="rounded-xl border border-slate-200 px-3 py-2 text-sm" value={from} onChange={(e) => setFrom(e.target.value)} />
+          <input type="date" className="kg-input !w-auto" value={from} onChange={(e) => setFrom(e.target.value)} />
         </label>
-        <label className="grid gap-1 text-xs font-semibold text-slate-600">
+        <label className="grid gap-1 text-[12px] font-semibold text-text-muted">
           To
-          <input type="date" className="rounded-xl border border-slate-200 px-3 py-2 text-sm" value={to} onChange={(e) => setTo(e.target.value)} />
+          <input type="date" className="kg-input !w-auto" value={to} onChange={(e) => setTo(e.target.value)} />
         </label>
-        <label className="grid gap-1 text-xs font-semibold text-slate-600">
+        <label className="grid gap-1 text-[12px] font-semibold text-text-muted">
           Category
-          <select className="rounded-xl border border-slate-200 px-3 py-2 text-sm" value={category} onChange={(e) => setCategory(e.target.value)}>
+          <select className="kg-input !w-auto" value={category} onChange={(e) => setCategory(e.target.value)}>
             <option value="all">All</option>
             {expR.byCategory.map((c) => (
               <option key={c.category} value={c.category}>
@@ -189,9 +194,9 @@ export function ReportsHubPage() {
             ))}
           </select>
         </label>
-        <label className="grid gap-1 text-xs font-semibold text-slate-600">
+        <label className="grid gap-1 text-[12px] font-semibold text-text-muted">
           Supplier
-          <select className="rounded-xl border border-slate-200 px-3 py-2 text-sm" value={supplier} onChange={(e) => setSupplier(e.target.value)}>
+          <select className="kg-input !w-auto" value={supplier} onChange={(e) => setSupplier(e.target.value)}>
             <option value="all">All</option>
             {suppliers.map((s) => (
               <option key={s.id} value={s.name}>
@@ -201,9 +206,9 @@ export function ReportsHubPage() {
           </select>
         </label>
         <div className="ml-auto flex items-end gap-2">
-          <input className="rounded-xl border border-slate-200 px-3 py-2 text-sm" placeholder="Schedule title" value={presetName} onChange={(e) => setPresetName(e.target.value)} />
+          <input className="kg-input !w-auto" placeholder="Schedule title" value={presetName} onChange={(e) => setPresetName(e.target.value)} />
           <button
-            className="rounded-xl border border-slate-200 px-3 py-2 text-sm font-semibold"
+            className="kg-btn kg-btn-secondary"
             onClick={async () => {
               await saveScheduledReport({
                 title: presetName || `${tab} report`,
@@ -217,18 +222,18 @@ export function ReportsHubPage() {
             Schedule
           </button>
         </div>
-      </div>
+      </div></Card>
 
-      <div className="flex flex-wrap gap-1 rounded-xl border border-slate-200 bg-white p-1 text-sm">
+      <div className="flex flex-wrap gap-2">
         {tabs.map((t) => (
-          <button key={t.id} onClick={() => setTab(t.id)} className={`rounded-lg px-3 py-1.5 ${tab === t.id ? "bg-slate-900 text-white" : "text-slate-600"}`}>
+          <button key={t.id} onClick={() => setTab(t.id)} className={`kg-btn ${tab === t.id ? "kg-btn-primary" : "kg-btn-secondary"}`}>
             {t.label}
           </button>
         ))}
       </div>
 
       {(tab === "overview" || tab === "sales" || tab === "profit") && (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <Kpi label="Sales" value={inr(salesR.total)} />
           <Kpi label="Expenses (paid)" value={inr(expR.paid)} />
           <Kpi label="Net profit" value={inr(profit.net)} />
@@ -241,11 +246,11 @@ export function ReportsHubPage() {
           <ChartCard title="Daily sales">
             <ResponsiveContainer width="100%" height={260}>
               <LineChart data={salesR.daily}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#E6E8EE" />
                 <XAxis dataKey="date" tick={{ fontSize: 10 }} />
                 <YAxis tick={{ fontSize: 10 }} />
                 <Tooltip formatter={(v: any) => inr(num(v))} />
-                <Line type="monotone" dataKey="value" stroke="#06b6d4" strokeWidth={2} dot={false} />
+                <Line type="monotone" dataKey="value" stroke="#E56B2C" strokeWidth={2} dot={false} />
               </LineChart>
             </ResponsiveContainer>
           </ChartCard>
@@ -265,7 +270,7 @@ export function ReportsHubPage() {
       ) : null}
 
       {tab === "profit" ? (
-        <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-4">
+        <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
           <Kpi label="Gross profit" value={inr(profit.gross)} />
           <Kpi label="COGS / purchases paid" value={inr(profit.cogs)} />
           <Kpi label="Food cost %" value={`${profit.foodCostPct.toFixed(1)}%`} />
@@ -275,7 +280,7 @@ export function ReportsHubPage() {
 
       {tab === "gst" ? (
         <div className="space-y-3">
-          <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
             <Kpi label="Taxable" value={inr(expR.gst.taxable)} />
             <Kpi label="CGST" value={inr(expR.gst.cgst)} />
             <Kpi label="SGST" value={inr(expR.gst.sgst)} />
@@ -307,11 +312,11 @@ export function ReportsHubPage() {
           <ChartCard title="Category spend">
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={expR.byCategory.slice(0, 12)}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#E6E8EE" />
                 <XAxis dataKey="category" tick={{ fontSize: 10 }} />
                 <YAxis tick={{ fontSize: 10 }} />
                 <Tooltip formatter={(v: any) => inr(num(v))} />
-                <Bar dataKey="total" fill="#0f172a" radius={[8, 8, 0, 0]} />
+                <Bar dataKey="total" fill="#9A3F24" radius={[8, 8, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </ChartCard>
@@ -321,7 +326,7 @@ export function ReportsHubPage() {
               printReport(
                 "Expense Report",
                 `<table><thead><tr><th>Category</th><th>Total</th></tr></thead><tbody>${expR.byCategory
-                  .map((c) => `<tr><td>${c.category}</td><td>${inr(c.total)}</td></tr>`)
+                  .map((c) => `<tr><td>${escapeHtml(c.category)}</td><td>${escapeHtml(inr(c.total))}</td></tr>`)
                   .join("")}</tbody></table>`
               )
             }
@@ -332,24 +337,24 @@ export function ReportsHubPage() {
 
       {tab === "inventory" ? (
         <div className="space-y-3">
-          <div className="grid gap-3 sm:grid-cols-4">
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
             <Kpi label="SKUs" value={invR.skus} />
             <Kpi label="Stock value" value={inr(invR.value)} />
             <Kpi label="Low stock" value={invR.low} />
             <Kpi label="Out of stock" value={invR.out} />
           </div>
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="mb-2 text-sm font-bold">Low stock items</div>
-            {invR.lowItems.map((i) => (
-              <div key={i.id} className="flex justify-between border-t border-slate-100 py-2 text-sm">
+          <Card padding="sm" hover={false}>
+            <div className="mb-2 text-[14px] font-bold text-text-primary">Low stock items</div>
+            {invR.lowItems.map((i, idx) => (
+              <div key={`${i.item || "item"}-${idx}`} className="flex justify-between border-t border-stroke-0 py-2 text-[13px]">
                 <span>{i.item}</span>
-                <span className="font-semibold text-amber-700">
+                <span className="font-semibold text-warning">
                   {availableSafe(i)} {i.unit}
                 </span>
               </div>
             ))}
-            {!invR.lowItems.length ? <div className="py-6 text-center text-sm text-slate-500">No low stock.</div> : null}
-          </div>
+            {!invR.lowItems.length ? <EmptyState className="m-3" icon={<Inbox size={18} />} title="No low stock." /> : null}
+          </Card>
         </div>
       ) : null}
 
@@ -363,18 +368,18 @@ export function ReportsHubPage() {
           <ChartCard title="Purchases by supplier">
             <ResponsiveContainer width="100%" height={280}>
               <BarChart data={purR.bySupplier.slice(0, 10)}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#E6E8EE" />
                 <XAxis dataKey="supplier" tick={{ fontSize: 10 }} />
                 <YAxis tick={{ fontSize: 10 }} />
                 <Tooltip formatter={(v: any) => inr(num(v))} />
-                <Bar dataKey="value" fill="#06b6d4" radius={[8, 8, 0, 0]} />
+                <Bar dataKey="value" fill="#E56B2C" radius={[8, 8, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </ChartCard>
-          <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-            <div className="mb-2 text-sm font-bold">Credit / overdue alerts</div>
+          <Card padding="sm" hover={false}>
+            <div className="mb-2 text-[14px] font-bold text-text-primary">Credit / overdue alerts</div>
             {supA.creditAlerts.concat(supA.overdue).slice(0, 12).map((r) => (
-              <div key={r.supplierId + r.name} className="flex justify-between border-t border-slate-100 py-2 text-sm">
+              <div key={r.supplierId + r.name} className="flex justify-between border-t border-stroke-0 py-2 text-[13px]">
                 <span className="font-semibold">{r.name}</span>
                 <span>
                   due {inr(r.outstanding)}
@@ -382,7 +387,7 @@ export function ReportsHubPage() {
                 </span>
               </div>
             ))}
-          </div>
+          </Card>
           <ExportBar
             onCsv={() =>
               exportCsv(
@@ -395,7 +400,7 @@ export function ReportsHubPage() {
               printReport(
                 "Supplier Report",
                 `<table><thead><tr><th>Supplier</th><th>Outstanding</th></tr></thead><tbody>${ledger
-                  .map((r) => `<tr><td>${r.name}</td><td>${inr(r.outstanding)}</td></tr>`)
+                  .map((r) => `<tr><td>${escapeHtml(r.name)}</td><td>${escapeHtml(inr(r.outstanding))}</td></tr>`)
                   .join("")}</tbody></table>`
               )
             }
@@ -413,11 +418,11 @@ export function ReportsHubPage() {
               <Kpi label="Unpaid" value={inr(salR.unpaid)} />
             </div>
           ) : (
-            <div className="rounded-xl bg-amber-50 px-3 py-2 text-sm text-amber-900">Salary figures hidden for your role.</div>
+            <div className="rounded-lg border border-warning/20 bg-warning-bg px-3 py-2 text-[13px] text-warning">Salary figures hidden for your role.</div>
           )}
-          <div className="overflow-hidden rounded-2xl border border-slate-200 bg-white shadow-sm">
-            <table className="w-full text-left text-sm">
-              <thead className="bg-slate-50 text-xs uppercase text-slate-500">
+          <Card hover={false} className="!p-0">
+            <table className="w-full text-left text-[13px]">
+              <thead className="bg-bg-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-text-muted">
                 <tr>
                   <th className="px-3 py-2">Employee</th>
                   <th className="px-3 py-2">Present eq</th>
@@ -427,7 +432,7 @@ export function ReportsHubPage() {
               </thead>
               <tbody>
                 {staffR.map((r) => (
-                  <tr key={r.name} className="border-t border-slate-100">
+                  <tr key={r.name} className="border-t border-stroke-0">
                     <td className="px-3 py-2 font-semibold">{r.name}</td>
                     <td className="px-3 py-2">{r.presentEq}</td>
                     <td className="px-3 py-2">{r.absent}</td>
@@ -436,7 +441,7 @@ export function ReportsHubPage() {
                 ))}
               </tbody>
             </table>
-          </div>
+          </Card>
         </div>
       ) : null}
 
@@ -449,11 +454,11 @@ export function ReportsHubPage() {
           <ChartCard title="Wastage by reason">
             <ResponsiveContainer width="100%" height={260}>
               <BarChart data={wasteR.byReason}>
-                <CartesianGrid strokeDasharray="3 3" stroke="#e2e8f0" />
+                <CartesianGrid strokeDasharray="3 3" stroke="#E6E8EE" />
                 <XAxis dataKey="reason" tick={{ fontSize: 10 }} />
                 <YAxis tick={{ fontSize: 10 }} />
                 <Tooltip formatter={(v: any) => inr(num(v))} />
-                <Bar dataKey="value" fill="#ef4444" radius={[8, 8, 0, 0]} />
+                <Bar dataKey="value" fill="#DC2626" radius={[8, 8, 0, 0]} />
               </BarChart>
             </ResponsiveContainer>
           </ChartCard>
@@ -477,30 +482,24 @@ export function ReportsHubPage() {
 }
 
 function Kpi({ label, value }: { label: string; value: string | number }) {
-  return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="text-xs font-semibold uppercase tracking-wide text-slate-500">{label}</div>
-      <div className="mt-1 text-2xl font-black text-slate-900">{value}</div>
-    </div>
-  );
+  return <KpiCard title={label} value={String(value)} />;
 }
-
 function ChartCard({ title, children }: { title: string; children: React.ReactNode }) {
   return (
-    <div className="rounded-2xl border border-slate-200 bg-white p-4 shadow-sm">
-      <div className="mb-2 text-sm font-bold">{title}</div>
+    <Card padding="sm" hover={false}>
+      <SectionTitle title={title} />
       {children}
-    </div>
+    </Card>
   );
 }
 
 function ExportBar({ onCsv, onPrint, canExport }: { onCsv: () => void; onPrint: () => void; canExport: boolean }) {
   return (
     <div className="flex flex-wrap gap-2">
-      <button disabled={!canExport} onClick={onCsv} className="rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white disabled:opacity-40">
+      <button disabled={!canExport} onClick={onCsv} className="kg-btn kg-btn-primary disabled:opacity-40">
         Export CSV / Excel
       </button>
-      <button disabled={!canExport} onClick={onPrint} className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-sm font-semibold disabled:opacity-40">
+      <button disabled={!canExport} onClick={onPrint} className="kg-btn kg-btn-secondary disabled:opacity-40">
         Print / PDF
       </button>
     </div>

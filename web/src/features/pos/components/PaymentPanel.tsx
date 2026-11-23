@@ -2,6 +2,7 @@ import { useMemo, useState } from "react";
 import { inr, num } from "@/lib/utils";
 import type { PaymentMode } from "../types";
 import { usePosStore } from "../store/posStore";
+import { LoadingLabel } from "@/components/ui/Loading";
 
 const MODES: PaymentMode[] = ["cash", "upi", "card", "wallet", "bank", "credit"];
 
@@ -17,35 +18,56 @@ export function PaymentPanel(props: { onCharge: () => Promise<void>; busy: boole
 
   const due = useMemo(() => t.balance, [t.balance]);
 
+  function quickPay(m: PaymentMode) {
+    setMode(m);
+    const a = due || t.total;
+    if (a > 0) {
+      addPayment(m, a);
+      setAmount("");
+    } else {
+      setAmount(String(a || ""));
+    }
+  }
+
   return (
-    <div className="space-y-3 rounded-2xl border border-slate-200 bg-slate-50 p-3">
-      <div className="text-xs font-bold uppercase tracking-wide text-slate-500">Payments</div>
-      <div className="flex flex-wrap gap-1.5">
+    <div className="space-y-2 bg-card-0">
+      <div className="flex items-center justify-between gap-2">
+        <div className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-muted">Payments</div>
+        {payments.length ? (
+          <button type="button" className="text-[11px] font-semibold text-danger hover:underline" onClick={() => clearPayments()}>
+            Clear pays
+          </button>
+        ) : null}
+      </div>
+
+      <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-6">
         {MODES.map((m) => (
           <button
             key={m}
             type="button"
-            onClick={() => {
-              setMode(m);
-              setAmount(String(due || t.total));
-            }}
-            className={`rounded-full px-3 py-1 text-xs font-semibold capitalize ${mode === m ? "bg-cyan-500 text-white" : "bg-white text-slate-700 border border-slate-200"}`}
+            onClick={() => quickPay(m)}
+            className={
+              mode === m
+                ? "rounded-lg bg-primary px-1.5 py-2 text-[11px] font-semibold capitalize text-white"
+                : "rounded-lg border border-stroke-0 bg-bg-1 px-1.5 py-2 text-[11px] font-semibold capitalize text-text-secondary hover:border-primary/40"
+            }
           >
             {m}
           </button>
         ))}
       </div>
-      <div className="grid grid-cols-[1fr_auto] gap-2">
+
+      <div className="grid grid-cols-[1fr_auto] gap-1.5">
         <input
           type="number"
-          className="rounded-xl border border-slate-200 px-3 py-2 text-sm"
-          placeholder="Amount"
+          className="kg-input !py-2"
+          placeholder={`Amount · due ${inr(due || t.total)}`}
           value={amount}
           onChange={(e) => setAmount(e.target.value)}
         />
         <button
           type="button"
-          className="rounded-xl bg-slate-900 px-3 py-2 text-sm font-semibold text-white"
+          className="kg-btn kg-btn-secondary"
           onClick={() => {
             const a = num(amount);
             if (a <= 0) return;
@@ -57,34 +79,32 @@ export function PaymentPanel(props: { onCharge: () => Promise<void>; busy: boole
           Add
         </button>
       </div>
+
       <input
-        className="w-full rounded-xl border border-slate-200 px-3 py-2 text-xs"
+        className="kg-input !py-1.5 !text-[12px]"
         placeholder="UPI / card reference (optional)"
         value={refNo}
         onChange={(e) => setRefNo(e.target.value)}
       />
-      <div className="space-y-1">
-        {payments.map((p) => (
-          <div key={p.id} className="flex justify-between text-xs text-slate-600">
-            <span className="capitalize">{p.mode}</span>
-            <span className="font-semibold">{inr(p.amount)}</span>
-          </div>
-        ))}
-        {!payments.length ? <div className="text-xs text-slate-400">No payments yet</div> : null}
-      </div>
-      <div className="flex gap-2">
-        <button type="button" className="rounded-xl border border-slate-200 bg-white px-3 py-2 text-xs font-semibold" onClick={() => clearPayments()}>
-          Clear
-        </button>
-        <button
-          type="button"
-          disabled={props.busy}
-          className="flex-1 rounded-xl bg-cyan-500 px-3 py-2 text-sm font-bold text-white disabled:opacity-60"
-          onClick={() => void props.onCharge()}
-        >
-          {props.busy ? "Processing…" : `Charge ${inr(t.total)}`}
-        </button>
-      </div>
+
+      {payments.length ? (
+        <div className="flex flex-wrap gap-1.5">
+          {payments.map((p) => (
+            <span key={p.id} className="rounded-md bg-bg-1 px-2 py-1 text-[11px] font-semibold capitalize text-text-secondary">
+              {p.mode} {inr(p.amount)}
+            </span>
+          ))}
+        </div>
+      ) : null}
+
+      <button
+        type="button"
+        disabled={props.busy || t.total <= 0}
+        className="kg-btn kg-btn-primary w-full !py-3 !text-[14px] disabled:opacity-60"
+        onClick={() => void props.onCharge()}
+      >
+        {props.busy ? <LoadingLabel>Processing…</LoadingLabel> : `Charge ${inr(t.total)}`}
+      </button>
     </div>
   );
 }
