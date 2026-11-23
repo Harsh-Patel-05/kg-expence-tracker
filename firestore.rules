@@ -1,0 +1,71 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    function signedIn() {
+      return request.auth != null;
+    }
+
+    function userRole() {
+      return get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role;
+    }
+
+    function isOwner() {
+      return signedIn() && (userRole() == 'owner' || userRole() == 'admin');
+    }
+
+    function isManager() {
+      return signedIn() && (userRole() == 'manager' || userRole() == 'admin' || userRole() == 'owner');
+    }
+
+    function canUseApp() {
+      // Signed-in users (including anonymous admin session) can use restaurant collections
+      return signedIn();
+    }
+
+    match /users/{userId} {
+      allow read: if signedIn() && (request.auth.uid == userId || isOwner() || isManager());
+      allow create: if signedIn() && request.auth.uid == userId;
+      allow update: if signedIn() && (request.auth.uid == userId || isOwner());
+      allow delete: if isOwner();
+    }
+
+    match /{collection}/{docId} {
+      allow read, write: if canUseApp()
+        && collection in [
+          'sales', 'purchases', 'expenses', 'inventory', 'inventory_movements',
+          'stock_lots', 'recurring_expenses',
+          'attendance', 'salaries', 'advances', 'suppliers', 'supplierPayments',
+          'staff', 'fixedSalaries', 'reminders', 'balance_transfers', 'daily_closings',
+          'investments', 'profit_withdrawals',
+          'kds_orders', 'kds_menu', 'kds_settings',
+          'menuItems', 'orders',
+          'customers', 'tables', 'payments', 'discounts', 'coupons', 'taxes',
+          'refunds', 'kitchenTickets', 'settings', 'transactions', 'activityLogs',
+          'notifications', 'orderItems', 'statusHistory', 'kitchenAssignments',
+          'drivers', 'kitchenOrders', 'deliveryOrders', 'scheduledOrders',
+          'bulkOrders', 'cateringOrders', 'phoneOrders', 'onlineOrders',
+          'recipes', 'recipeVersions', 'recipeIngredients', 'recipeCategories',
+          'productionBatches', 'batchTracking', 'expiryTracking', 'physicalStock',
+          'wastage', 'unitConversions', 'inventoryLogs', 'stockTransfers',
+          'stockAdjustments', 'stockTransactions', 'purchaseEntries', 'vendors',
+          'leaveRequests', 'incentives', 'tips', 'shifts', 'shiftAssignments',
+          'performance', 'tasks', 'recurringReminders', 'notificationQueue',
+          'notificationHistory', 'employeeDocuments', 'payrollHistory',
+          'roles', 'permissions',
+          'taskComments', 'taskChecklist', 'taskAttachments', 'taskActivity', 'taskLabels',
+          'expenseCategories', 'expenseAttachments', 'expensePayments',
+          'expenseAnalytics', 'expenseApprovals', 'supplierBills',
+          'supplierContacts', 'supplierRatings', 'supplierTransactions',
+          'supplierActivity', 'reportsCache', 'reportExports', 'analyticsSnapshots',
+          'dashboardMetrics', 'notificationCenter', 'notificationPreferences',
+          'userNotifications',
+          'calendarEvents', 'calendarCategories',
+          'documentFolders', 'documents', 'documentVersions', 'documentPermissions',
+          'documentTags', 'documentComments', 'documentExpiry',
+          'forecastSnapshots', 'forecastHistory', 'forecastAccuracy',
+          'dailySalesSummary', 'billCounters', 'posBills', 'printJobs',
+          'businessSettings', 'fixedCosts'
+        ];
+    }
+  }
+}

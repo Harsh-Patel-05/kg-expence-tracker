@@ -1,0 +1,434 @@
+/* UI fixes — contrast, chart overflow, professional spacing */
+
+/* ─── Menu / utility buttons: never invisible white-on-white ─── */
+.appNavToggle {
+  background: #fff !important;
+  color: #111827 !important;
+  border: 1px solid rgba(17, 24, 39, 0.12) !important;
+  box-shadow: 0 6px 18px rgba(15, 23, 42, 0.06) !important;
+  font-weight: 700 !important;
+}
+
+.appNavToggle:hover {
+  background: rgba(232, 122, 58, 0.1) !important;
+  color: #e87a3a !important;
+  border-color: rgba(232, 122, 58, 0.35) !important;
+}
+
+.appNavToggle:hover,
+.appNavToggle:focus {
+  color: #e87a3a !important;
+}
+
+button.secondary,
+.btn-secondary,
+button.btn-secondary,
+.btn-ghost,
+button.btn-ghost,
+.period-chip:not(.active),
+.tabBtn:not(.active),
+.notif-bell,
+.kg-logout-btn {
+  color: #5C2A1F !important;
+}
+
+/* Theme toggle: unselected icons = cream brown (visible on dark pill) */
+.theme-chip:not(.active) {
+  color: #fde8d8 !important;
+  background: transparent !important;
+  border: none !important;
+  box-shadow: none !important;
+}
+
+.theme-chip:not(.active) svg,
+.theme-chip:not(.active) i {
+  color: #fde8d8 !important;
+  stroke: #fde8d8 !important;
+}
+
+[data-theme="light"] .theme-chip:not(.active),
+[data-theme="light"] .theme-chip:not(.active) svg,
+[data-theme="light"] .theme-chip:not(.active) i {
+  color: #e87a3a !important;
+  stroke: #e87a3a !important;
+}
+
+.theme-chip.active,
+.theme-chip.active svg,
+.theme-chip.active i {
+  color: #fffaf6 !important;
+  stroke: #fffaf6 !important;
+}
+
+button.secondary,
+.btn-secondary,
+button.btn-secondary,
+.btn-ghost,
+button.btn-ghost {
+  background: rgba(255, 255, 255, 0.85) !important;
+  border: 1px solid rgba(17, 24, 39, 0.12) !important;
+  box-shadow: 0 6px 16px rgba(15, 23, 42, 0.05) !important;
+}
+
+button.secondary:hover,
+.btn-secondary:hover,
+.btn-ghost:hover,
+.period-chip:not(.active):hover,
+.tabBtn:not(.active):hover {
+  color: #e87a3a !important;
+  background: rgba(232, 122, 58, 0.1) !important;
+  border-color: rgba(232, 122, 58, 0.3) !important;
+}
+
+.period-chip.active,
+.tabBtn.active {
+  color: #fff !important;
+}
+
+[data-theme="dark"] .appNavToggle,
+[data-theme="dark"] button.secondary,
+[data-theme="dark"] .btn-secondary,
+[data-theme="dark"] .period-chip:not(.active),
+[data-theme="dark"] .tabBtn:not(.active),
+[data-theme="dark"] .notif-bell,
+[data-theme="dark"] .kg-logout-btn {
+  color: #f9fafb !important;
+  background: rgba(255, 255, 255, 0.06) !important;
+  border-color: rgba(255, 255, 255, 0.14) !important;
+}
+
+/* Kill global white-hover on light controls */
+button.secondary:hover,
+.btn-secondary:hover,
+.appNavToggle:hover,
+.period-chip:not(.active):hover {
+  color: #e87a3a !important;
+}
+
+/* ─── Charts: no crop when sidebar opens/closes ─── */
+.main-content {
+  min-width: 0 !important;
+  overflow-x: hidden !important;
+  width: 100% !important;
+  box-sizing: border-box !important;
+}
+
+.dashboard-section {
+  width: 100%;
+  min-width: 0;
+  max-width: 100%;
+  box-sizing: border-box;
+}
+
+.dash-charts-row {
+  display: grid !important;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr) !important;
+  gap: 16px !important;
+  width: 100% !important;
+  min-width: 0 !important;
+  max-width: 100% !important;
+  box-sizing: border-box;
+  align-items: stretch;
+}
+
+.dash-trend-card,
+.dash-online-card {
+  min-width: 0 !important;
+  max-width: 100% !important;
+  width: 100% !important;
+  overflow: hidden !important;
+  box-sizing: border-box !important;
+  padding: 16px 16px 12px !important;
+}
+
+.dash-trend-card .section-title,
+.dash-online-card .section-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-start;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px !important;
+}
+
+.dash-trend-card .section-title h2,
+.dash-online-card .section-title h2 {
+  font-size: 1.05rem !important;
+}
+
+.dash-online-card .period-filter {
+  flex-shrink: 0;
+  flex-wrap: wrap;
+  max-width: 100%;
+}
+
+.dash-online-card .period-chip {
+  font-size: 12px !important;
+  padding: 7px 12px !important;
+  white-space: nowrap;
+}
+
+.chart-wrap,
+.dash-trend-chart {
+  width: 100% !important;
+  max-width: 100% !important;
+  min-width: 0 !important;
+  height: 240px !important;
+  position: relative;
+  overflow: hidden !important;
+  box-sizing: border-box;
+}
+
+.chart-wrap canvas {
+  max-width: 100% !important;
+}
+
+.kpi-grid {
+  width: 100%;
+  min-width: 0;
+  gap: 14px !important;
+}
+
+.dash-hero {
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+/* Compact page headers / less empty top space */
+.dashboard-section > .card > .section-title {
+  margin: 0 0 10px !important;
+}
+
+.dashboard-section > .card > .section-title h2 {
+  font-size: 1.15rem !important;
+}
+
+.dpro-panel {
+  padding: 14px 16px !important;
+}
+
+/* Topbar clock + weather */
+.topbar-live {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-right: 6px;
+  flex-shrink: 0;
+}
+
+.topbar-clock,
+.topbar-weather {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 36px;
+  padding: 0 12px;
+  border-radius: 12px;
+  border: 1px solid var(--border-strong);
+  background: var(--glass-bg);
+  color: var(--text-primary);
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: 0.02em;
+  white-space: nowrap;
+  box-shadow: var(--shadow-sm);
+  backdrop-filter: blur(12px);
+}
+
+.topbar-weather {
+  color: var(--primary);
+  gap: 4px;
+}
+
+/* POS mode: icon-only nav + compact checkout dock */
+body.pos-mode .pos-shell {
+  padding: 12px !important;
+}
+
+body.pos-mode .pos-grid {
+  grid-template-columns: minmax(0, 1fr) minmax(300px, 360px) !important;
+  gap: 12px !important;
+  align-items: start;
+}
+
+body.pos-mode .pos-right {
+  position: sticky !important;
+  top: 4px !important;
+  max-height: calc(100vh - 88px) !important;
+  overflow: hidden !important;
+  display: flex !important;
+  flex-direction: column !important;
+  gap: 8px;
+  padding: 12px !important;
+}
+
+body.pos-mode .pos-cart-list {
+  flex: 1 1 auto;
+  min-height: 72px;
+  max-height: none !important;
+  overflow-y: auto !important;
+  margin: 0;
+  padding-right: 2px;
+}
+
+body.pos-mode .pos-checkout-dock {
+  flex: 0 0 auto;
+  border-top: 1px solid var(--border-strong);
+  padding-top: 8px;
+  margin-top: 4px;
+  max-height: 48vh;
+  overflow-y: auto;
+}
+
+body.pos-mode .pos-today-total,
+body.pos-mode #posTicketsBar {
+  display: none !important;
+}
+
+body.pos-mode .sidebar-brand {
+  justify-content: center;
+  padding: 4px 0 10px;
+}
+
+@media (max-width: 1200px) {
+  .dash-charts-row {
+    grid-template-columns: 1fr !important;
+  }
+  .chart-wrap,
+  .dash-trend-chart {
+    height: 220px !important;
+  }
+  body.pos-mode .pos-grid {
+    grid-template-columns: 1fr !important;
+  }
+  body.pos-mode .pos-right {
+    position: relative !important;
+    max-height: none !important;
+  }
+}
+
+@media (max-width: 720px) {
+  .topbar-clock {
+    display: none;
+  }
+}
+
+.expense-analytics-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 8px;
+}
+
+.docs-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
+  gap: 12px;
+}
+
+.doc-card {
+  border: 1px solid var(--border-strong);
+  border-radius: 18px;
+  background: var(--glass-bg);
+  padding: 14px;
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  min-width: 0;
+}
+
+.doc-card-title {
+  font-weight: 800;
+  font-size: 14px;
+  color: var(--text-primary);
+  word-break: break-word;
+}
+
+.doc-card-meta {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+.doc-card-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.doc-thumb {
+  width: 100%;
+  height: 120px;
+  object-fit: cover;
+  border-radius: 12px;
+  background: var(--bg-main);
+  border: 1px solid var(--border-strong);
+}
+
+.doc-file-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 120px;
+  border-radius: 12px;
+  background: linear-gradient(135deg, rgba(232,122,58,.12), rgba(160,74,53,.12));
+  color: var(--primary);
+  font-weight: 800;
+  font-size: 13px;
+  border: 1px dashed rgba(232,122,58,.35);
+}
+
+.expense-rank-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) auto auto;
+  gap: 10px;
+  align-items: center;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--border-strong);
+  font-size: 13px;
+}
+
+.expense-rank-row:last-child {
+  border-bottom: none;
+}
+
+.expense-rank-bar {
+  height: 6px;
+  border-radius: 99px;
+  background: rgba(232, 122, 58, 0.12);
+  overflow: hidden;
+  margin-top: 6px;
+}
+
+.expense-rank-bar > span {
+  display: block;
+  height: 100%;
+  background: linear-gradient(90deg, var(--primary), var(--secondary));
+  border-radius: 99px;
+}
+
+@media (max-width: 900px) {
+  .expense-analytics-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ─── Dark mode: suppress bright white shadows ─── */
+[data-theme="dark"] button.secondary,
+[data-theme="dark"] .btn-secondary,
+[data-theme="dark"] button.btn-secondary,
+[data-theme="dark"] .btn-ghost,
+[data-theme="dark"] button.btn-ghost {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: var(--text-primary) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  box-shadow: none !important;
+}
+
+[data-theme="dark"] .appNavToggle {
+  background: rgba(255, 255, 255, 0.08) !important;
+  color: var(--text-primary) !important;
+  border-color: rgba(255, 255, 255, 0.12) !important;
+  box-shadow: none !important;
+}

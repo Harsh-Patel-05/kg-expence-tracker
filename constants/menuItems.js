@@ -1,0 +1,60 @@
+export const MENU_CATEGORIES = [
+  { id: 'all', name: 'All', icon: '🍽️' },
+  { id: 'burger', name: 'Burgers', icon: '🍔' },
+  { id: 'pizza', name: 'Pizza', icon: '🍕' },
+  { id: 'sandwich', name: 'Sandwich', icon: '🥪' },
+  { id: 'beverage', name: 'Beverages', icon: '🥤' },
+  { id: 'dessert', name: 'Desserts', icon: '🍰' },
+  { id: 'starter', name: 'Starters', icon: '🍟' },
+];
+
+export const SAMPLE_MENU_ITEMS = [
+  {
+    id: '1',
+    name: 'Classic Burger',
+    description: 'Beef patty with lettuce, tomato, onion',
+    price: 12.99,
+    category: 'burger',
+    image: '🍔',
+  },
+  {
+    id: '2',
+    name: 'Margherita Pizza',
+    description: 'Fresh mozzarella, tomato, basil',
+    price: 14.99,
+    category: 'pizza',
+    image: '🍕',
+  },
+  {
+    id: '3',
+    name: 'Club Sandwich',
+    description: 'Chicken, bacon, lettuce, tomato',
+    price: 10.99,
+    category: 'sandwich',
+    image: '🥪',
+  },
+  {
+    id: '4',
+    name: 'Coca Cola',
+    description: 'Refreshing cola drink',
+    price: 2.99,
+    category: 'beverage',
+    image: '🥤',
+  },
+  {
+    id: '5',
+    name: 'Chocolate Cake',
+    description: 'Rich chocolate with cream',
+    price: 6.99,
+    category: 'dessert',
+    image: '🍰',
+  },
+  {
+    id: '6',
+    name: 'French Fries',
+    description: 'Crispy golden fries',
+    price: 4.99,
+    category: 'starter',
+    image: '🍟',
+  },
+];

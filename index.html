@@ -1,0 +1,3638 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>KG Restaurant Expense Tracker</title>
+  <script>
+    (function () {
+      try {
+        var p = localStorage.getItem("kg_theme_pref") || "system";
+        var d = p === "system"
+          ? (window.matchMedia("(prefers-color-scheme: dark)").matches ? "dark" : "light")
+          : p;
+        document.documentElement.setAttribute("data-theme", d);
+        document.documentElement.style.colorScheme = d;
+      } catch (e) {
+        document.documentElement.setAttribute("data-theme", "light");
+      }
+    })();
+  </script>
+  <link rel="stylesheet" href="css/design-system.css?v=20261123brand1" />
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/xlsx/dist/xlsx.full.min.js"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;700&display=swap');
+    
+    * { 
+      box-sizing: border-box; 
+      margin: 0; 
+      padding: 0; 
+    }
+    
+    body {
+      font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+      background: var(--bg-main);
+      color: var(--text-primary);
+      min-height: 100vh;
+      padding: 20px;
+      line-height: 1.6;
+      letter-spacing: 0.3px;
+      font-weight: 500;
+    }
+    
+    .page {
+      max-width: 1320px; 
+      margin: 0 auto; 
+      display: flex; 
+      gap: 20px; 
+      min-height: 100vh;
+      width: 100%;
+    }
+    
+    .sidebar {
+      width: 260px;
+      flex-shrink: 0;
+      display: block;
+    }
+
+    .app-topbar{
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      max-width: 1320px;
+      margin: 0 auto 12px;
+      padding: 10px 14px;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      box-shadow: var(--shadow);
+      position: sticky;
+      top: 8px;
+      z-index: 10020;
+    }
+    .app-topbar-title{
+      font-size: 14px;
+      font-weight: 800;
+      color: var(--text-primary);
+      letter-spacing: -0.01em;
+    }
+    .appNavToggle{
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 44px;
+      padding: 0 14px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      font-size: 14px;
+      font-weight: 700;
+      line-height: 1;
+      cursor: pointer;
+      box-shadow: var(--shadow);
+      flex-shrink: 0;
+    }
+    .appNavToggle:hover{
+      background: var(--primary-glow);
+      border-color: rgba(74, 169, 233, 0.35);
+      color: var(--primary);
+    }
+
+    .sidebarBackdrop{
+      display: none;
+      position: fixed;
+      inset: 0;
+      background: rgba(26, 32, 44, 0.45);
+      z-index: 9990;
+      backdrop-filter: blur(2px);
+    }
+    body.sidebar-open .sidebarBackdrop{ display: block; }
+
+    /* Small screens: sidebar slides in as drawer when menu is tapped */
+    @media (max-width: 900px){
+      .sidebar{
+        position: fixed;
+        left: 0;
+        top: 0;
+        bottom: 0;
+        z-index: 9995;
+        width: min(280px, 88vw);
+        transform: translateX(-110%);
+        transition: transform 0.25s ease;
+        padding: 12px 0 12px 12px;
+      }
+      body.sidebar-open .sidebar{ transform: translateX(0); }
+      body.sidebar-open{ overflow: hidden; }
+    }
+    
+    .sidebar .card {
+      background: var(--bg-sidebar);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      border-radius: var(--radius);
+      padding: 24px;
+      box-shadow: var(--shadow);
+      height: calc(100vh - 40px);
+      display: flex;
+      flex-direction: column;
+      backdrop-filter: blur(10px);
+      overflow: hidden;
+    }
+
+    .nav-list{
+      display:flex;
+      flex-direction:column;
+      gap: 0px;
+      flex: 1;
+      overflow: auto;
+      scrollbar-width: none; /* Firefox */
+      -ms-overflow-style: none; /* IE/Edge legacy */
+      padding-bottom: 8px; /* ensures last item stays inside */
+    }
+    .nav-list::-webkit-scrollbar{ display:none; } /* Chrome/Safari */
+
+    .nav-item{ flex-shrink: 0; }
+    
+    .nav-item {
+      padding: 14px 18px;
+      border-radius: var(--radius-small);
+      cursor: pointer;
+      transition: var(--transition);
+      color: var(--text-secondary);
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      font-weight: 500;
+      margin-bottom: 8px;
+      font-size: 14px;
+    }
+    
+    .nav-item:hover {
+      background: var(--primary-glow);
+      color: var(--primary);
+      transform: translateX(4px);
+    }
+    
+    .nav-item.active {
+      background: var(--primary);
+      color: #fff;
+      border-left: none;
+      font-weight: 600;
+      box-shadow: var(--primary-shadow);
+    }
+
+    /* POS (clean, light theme like reference) */
+    .pos-shell{
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 16px;
+      color: var(--text-primary);
+    }
+    .pos-topbar{
+      display:flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      align-items:center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+    .pos-topbar .left{
+      display:flex;
+      gap: 10px;
+      align-items:center;
+      flex: 1;
+      min-width: 280px;
+    }
+    .pos-search{
+      flex: 1;
+      min-width: 240px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 10px 12px;
+      outline:none;
+      font-size: 13px;
+      box-shadow: var(--shadow);
+    }
+    .pos-search:focus{
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-glow);
+    }
+    .pos-actionsbar{ display:flex; gap: 10px; align-items:center; flex-wrap: wrap; }
+    .pos-chiprow{ display:flex; gap: 10px; flex-wrap: wrap; margin: 12px 0; }
+    .pos-chip{
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      padding: 10px 16px;
+      border-radius: 999px;
+      cursor:pointer;
+      font-weight: 700;
+      font-size: 13px;
+      transition: var(--transition);
+      display:flex;
+      align-items:center;
+      gap: 10px;
+    }
+    .pos-chip.active{
+      border-color: var(--primary);
+      background: var(--primary);
+      color: #fff;
+    }
+    .pos-grid{
+      display:grid;
+      grid-template-columns: 1fr minmax(300px, 340px);
+      gap: 16px;
+      align-items:start;
+    }
+    .pos-card{
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 20px;
+      padding: 14px;
+      box-shadow: var(--shadow);
+    }
+    .pos-menu-grid{
+      display:grid;
+      grid-template-columns: repeat(4, minmax(0, 1fr));
+      gap: 10px;
+    }
+    .pos-item{
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      overflow:hidden;
+      background: var(--bg-card);
+      box-shadow: var(--shadow);
+      transition: var(--transition);
+      position: relative;
+      cursor: pointer;
+    }
+    .pos-item:hover{ transform: translateY(-2px); box-shadow: var(--shadow-hover); }
+    .pos-item.disabled{ opacity: 0.55; filter: grayscale(1); }
+    /* POS product card style (like reference screenshot) */
+    .pos-item{
+      border: 1px solid rgba(47,133,90,0.22);
+      border-radius: 18px;
+      overflow:visible;
+      background: var(--bg-card);
+      box-shadow: var(--shadow);
+      transition: var(--transition);
+      position: relative;
+      cursor: default;
+      min-height: 0;
+    }
+    .pos-item:hover{
+      transform: translateY(-2px);
+      box-shadow: var(--shadow-hover);
+      background: var(--nav-active-bg);
+      border-color: rgba(47,133,90,0.35);
+    }
+    .pos-item-media{
+      padding: 12px 10px 4px;
+      display:flex;
+      justify-content:center;
+      align-items:center;
+    }
+    .pos-item-media img{ display:none; }
+    .pos-item-initial{
+      width: 52px;
+      height: 52px;
+      border-radius: 16px;
+      display:grid;
+      place-items:center;
+      font-weight: 800;
+      font-size: 15px;
+      letter-spacing: -0.02em;
+      color: #fff;
+      background: linear-gradient(135deg, var(--primary), var(--secondary));
+      box-shadow: var(--primary-shadow);
+    }
+    .pos-item-body{
+      padding: 0 10px 12px;
+      text-align:center;
+      overflow: visible;
+    }
+    .pos-item-name{
+      font-weight: 650;
+      font-size: 13px;
+      color: var(--text-primary);
+      line-height: 1.2;
+      margin-top: 2px;
+      text-wrap: balance;
+    }
+    .pos-item-price{
+      margin-top: 6px;
+      font-weight: 750;
+      color: var(--primary);
+      font-size: 12px;
+    }
+    .pos-add-fab{ display:none; }
+    .pos-item-btn{
+      margin-top: 10px;
+      width: 100%;
+      border:none;
+      border-radius: 12px;
+      padding: 10px 12px;
+      cursor:pointer;
+      font-weight: 800;
+      background: var(--primary);
+      color: #fff;
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      gap: 10px;
+      letter-spacing: 0.03em;
+      box-shadow: var(--shadow);
+    }
+    .pos-item-btn .pos-item-btn-plus{
+      width: 26px;
+      height: 26px;
+      border-radius: 12px;
+      background: rgba(255,255,255,0.22);
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      font-weight: 900;
+    }
+    .pos-item-btn:disabled{ opacity: 0.6; cursor:not-allowed; }
+    .pos-variant-row{
+      display:flex;
+      gap:6px;
+      flex-wrap:wrap;
+      margin-top:10px;
+      justify-content:center;
+      align-items:stretch;
+    }
+    .pos-variant-chip{
+      padding: 8px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: #EEF2F7;
+      color: #111827;
+      font-weight: 700;
+      font-size: 11px;
+      cursor: pointer;
+      box-shadow: none;
+      line-height: 1.1;
+      white-space: nowrap;
+      flex: 1 1 auto;
+      min-width: 64px;
+      max-width: 100%;
+    }
+    .pos-variant-chip.active{
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+    }
+    .pos-right{ position: sticky; top: 16px; }
+    .pos-today-total{
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      padding: 10px;
+      margin-top: 10px;
+      position: relative;
+    }
+    .pos-today-total .label{ font-size: 11px; color: var(--text-muted); }
+    .pos-today-total .value{ font-size: 16px; font-weight: 700; color: var(--primary); margin-top: 4px; }
+    .pos-today-hover{
+      display:none;
+      position:absolute;
+      right: 10px;
+      top: 10px;
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      padding: 10px 12px;
+      box-shadow: var(--shadow);
+      font-size: 12px;
+      color: var(--text-primary);
+      min-width: 180px;
+      z-index: 5;
+    }
+    .pos-today-total:hover .pos-today-hover{ display:block; }
+
+    /* Pending / preparing tickets */
+    .posTicketsBar{
+      margin-top: 10px;
+      padding: 10px;
+      border-radius: 16px;
+      border: 1px solid var(--border);
+      background: var(--bg-card);
+      box-shadow: var(--shadow);
+    }
+    .posTicketsTop{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap: 10px;
+      margin-bottom: 10px;
+    }
+    .posTicketsTitle{
+      font-size: 12px;
+      font-weight: 800;
+      color: #B45309; /* amber */
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .posTicketsCount{
+      font-size: 12px;
+      font-weight: 900;
+      color: #B91C1C; /* red */
+      background: #FEE2E2;
+      border: 1px solid #FCA5A5;
+      padding: 6px 10px;
+      border-radius: 999px;
+    }
+    .posTicketRow{
+      display:flex;
+      gap: 8px;
+      overflow:auto;
+      padding-bottom: 2px;
+      scrollbar-width: none;
+    }
+    .posTicketRow::-webkit-scrollbar{ display:none; }
+    .posTicket{
+      flex: 0 0 auto;
+      padding: 10px 12px;
+      border-radius: 14px;
+      border: 1px solid #FED7AA;
+      background: #FFFBEB;
+      color: #92400E;
+      font-weight: 800;
+      font-size: 12px;
+      cursor: pointer;
+      display:flex;
+      align-items:center;
+      gap: 8px;
+      box-shadow: none;
+      white-space: nowrap;
+    }
+    .posTicket.preparing{
+      border-color: #FDBA74;
+      background: #FFF7ED;
+    }
+    .posTicket.active{
+      border-color: #FB7185;
+      background: #FFF1F2;
+      color: #9F1239;
+    }
+    .posTicketMeta{
+      opacity: 0.8;
+      font-weight: 800;
+    }
+    .posTicketDot{
+      width: 8px; height: 8px; border-radius: 99px; background:#FB7185;
+    }
+    .posTicket.preparing .posTicketDot{ background:#F59E0B; }
+    .posTicketActions{
+      display:flex;
+      gap: 8px;
+    }
+    .posTicketBtn{
+      padding: 8px 10px;
+      border-radius: 12px;
+      border: 1px solid var(--border);
+      background: var(--bg-secondary);
+      font-weight: 800;
+      font-size: 12px;
+      cursor:pointer;
+      box-shadow:none;
+    }
+
+    /* Celebration overlay */
+    .celebrateOverlay{
+      position: fixed;
+      inset: 0;
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index: 10050;
+      pointer-events:none;
+      background: var(--celebrate-overlay);
+      backdrop-filter: blur(2px);
+    }
+    .celebrateOverlay.show{ display:flex; }
+    .celebrateCard{
+      width: min(520px, calc(100vw - 32px));
+      border-radius: 22px;
+      padding: 22px 22px 18px;
+      background: var(--celebrate-bg);
+      border: 1px solid var(--border);
+      box-shadow: 0 18px 60px rgba(0,0,0,0.16);
+      text-align:center;
+      position: relative;
+      overflow:hidden;
+      transform: scale(.96);
+      animation: popIn .22s cubic-bezier(.2,.9,.2,1) forwards;
+    }
+    @keyframes popIn { to { transform: scale(1); } }
+    .celebrateTitle{ font-size: 18px; font-weight: 800; color: var(--text-primary); }
+    .celebrateSub{ margin-top: 6px; font-size: 13px; color: var(--text-muted); font-weight: 600; }
+    .firework{
+      width: 86px; height: 86px;
+      margin: 10px auto 6px;
+      position: relative;
+      filter: drop-shadow(0 10px 18px rgba(47,133,90,0.20));
+    }
+    .burst{
+      position:absolute;
+      inset: 50% auto auto 50%;
+      width: 10px; height: 10px;
+      margin-left: -5px; margin-top: -5px;
+      border-radius: 999px;
+      background: var(--primary);
+      animation: burstCore .9s ease-out infinite;
+    }
+    @keyframes burstCore{
+      0%{ transform: scale(.4); opacity:.65; }
+      40%{ transform: scale(1.2); opacity:1; }
+      100%{ transform: scale(.6); opacity:.0; }
+    }
+    .spark{
+      position:absolute;
+      inset: 50% auto auto 50%;
+      width: 6px; height: 6px;
+      margin-left:-3px; margin-top:-3px;
+      border-radius: 999px;
+      background: var(--accent-yellow);
+      opacity: 0;
+    }
+    .spark:nth-child(2){ background: #4AA9E9; animation: spark 0.9s ease-out infinite; --a:0deg; }
+    .spark:nth-child(3){ background: #2E97DD; animation: spark 0.9s ease-out infinite; --a:60deg; }
+    .spark:nth-child(4){ background: #F97316; animation: spark 0.9s ease-out infinite; --a:120deg; }
+    .spark:nth-child(5){ background: #F59E0B; animation: spark 0.9s ease-out infinite; --a:180deg; }
+    .spark:nth-child(6){ background: #4AA9E9; animation: spark 0.9s ease-out infinite; --a:240deg; }
+    .spark:nth-child(7){ background: #EF4444; animation: spark 0.9s ease-out infinite; --a:300deg; }
+    @keyframes spark{
+      0%{ transform: rotate(var(--a)) translateX(0px); opacity: 0; }
+      18%{ opacity: 1; }
+      100%{ transform: rotate(var(--a)) translateX(46px); opacity: 0; }
+    }
+    .confetti{
+      position:absolute;
+      inset: -40px 0 auto 0;
+      height: 180px;
+      pointer-events:none;
+      overflow:hidden;
+    }
+    .confetti i{
+      position:absolute;
+      top: -20px;
+      width: 10px; height: 16px;
+      border-radius: 3px;
+      opacity: 0.9;
+      animation: fall 1.35s linear infinite;
+      transform: translateY(-20px) rotate(0deg);
+    }
+    @keyframes fall{
+      to{ transform: translateY(240px) rotate(320deg); opacity: 0.2; }
+    }
+    .pos-cart-list{ display:flex; flex-direction:column; gap: 10px; margin-top: 10px; }
+    .pos-cart-row{
+      border: 1px solid var(--border);
+      border-radius: 14px;
+      padding: 8px;
+      background: var(--bg-card);
+      box-shadow: var(--shadow);
+      overflow: hidden;
+    }
+    .pos-cart-head{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap: 10px;
+    }
+    .pos-cart-meta{
+      margin-top: 8px;
+      display:flex;
+      flex-direction:column;
+      gap: 8px;
+    }
+    .pos-qty{
+      display:flex;
+      align-items:center;
+      gap: 6px;
+      flex-shrink: 0;
+    }
+    .pos-qty button{
+      width: 28px; height: 28px;
+      border-radius: 10px;
+      border: 1px solid var(--border);
+      background: var(--bg-secondary);
+      cursor:pointer;
+      font-weight: 800;
+      color: var(--text-primary);
+      flex: 0 0 28px;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      line-height: 1;
+      padding: 0;
+    }
+    .pos-qty .pill{
+      min-width: 30px;
+      text-align:center;
+      padding: 3px 8px;
+      border-radius: 999px;
+      background: var(--primary-glow);
+      border: 1px solid rgba(74, 169, 233, 0.25);
+      font-weight: 800;
+      color: var(--primary);
+    }
+    .pos-cart-title{
+      flex: 1;
+      min-width: 0;
+      font-weight: 700;
+      font-size: 14px;
+      line-height: 1.2;
+      word-break: break-word;
+    }
+    .pos-cart-sub{ margin-top: 6px; }
+    .pos-prep-row{ margin-top: 8px; display:flex; gap: 8px; flex-wrap:nowrap; }
+    .pos-prep-btn{
+      padding: 7px 10px;
+      border-radius: 999px;
+      border: 1px solid var(--border);
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      font-weight: 600;
+      font-size: 12px;
+      cursor:pointer;
+      box-shadow: none;
+    }
+    .pos-prep-btn.active{
+      background: var(--primary);
+      border-color: var(--primary);
+      color: #fff;
+    }
+    .pos-note{
+      margin-top: 8px;
+      width: 100%;
+      border-radius: 14px;
+      border: 1px solid var(--border);
+      padding: 10px 12px;
+      outline:none;
+      font-size: 13px;
+      background: var(--bg-card);
+    }
+    .pos-pay-row{ display:grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; }
+    .pos-btn{
+      border:none;
+      border-radius: 16px;
+      padding: 12px 14px;
+      font-weight: 900;
+      cursor:pointer;
+    }
+    button.pos-btn{
+      font-family: inherit;
+      font-size: 14px;
+      font-weight: 800;
+    }
+    button.pos-btn:hover{
+      transform: translateY(-1px);
+      opacity: 0.96;
+    }
+    .pos-btn.green{ background: var(--primary); color:#fff; box-shadow: var(--shadow); }
+    .pos-btn.gray{ background: var(--bg-secondary); color: var(--text-primary); border:1px solid var(--border); box-shadow: none; }
+    .pos-btn.hold{ background: var(--accent-yellow-soft); color: var(--text-primary); border:1px solid var(--accent-yellow); box-shadow: none; }
+    .pos-btn.gold{ background: var(--accent-yellow); color: var(--text-primary); border:1px solid rgba(0,0,0,0.06); box-shadow: var(--shadow); }
+    .pos-btn.red{ background: var(--expense); color:#fff; }
+    .pos-small{ font-size: 12px; color: var(--text-muted); }
+    .pos-totals-box{
+      margin-top: 16px;
+      padding: 12px 14px;
+      border-radius: 16px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+    }
+    .pos-total-line{
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      font-size: 14px;
+      color: var(--text-secondary);
+      margin-bottom: 8px;
+    }
+    .pos-total-line b{
+      color: var(--text-primary);
+      font-weight: 800;
+      font-size: 15px;
+    }
+    .pos-total-big{
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-top: 2px;
+      padding-top: 10px;
+      border-top: 2px solid var(--border);
+      font-size: 15px;
+      font-weight: 700;
+      color: var(--text-muted);
+    }
+    .pos-total-big b{
+      font-size: 24px;
+      font-weight: 900;
+      color: var(--primary);
+      letter-spacing: -0.02em;
+    }
+    .pos-cart-empty{
+      padding: 16px 10px;
+      text-align: center;
+      font-size: 14px;
+      color: var(--text-muted);
+      font-style: italic;
+    }
+    .pos-section-label{
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+      color: var(--text-muted);
+      margin: 12px 0 8px;
+    }
+
+    @media (max-width: 1200px){
+      .pos-menu-grid{ grid-template-columns: repeat(3, minmax(0, 1fr)); }
+    }
+    @media (max-width: 980px){
+      .pos-grid{ grid-template-columns: 1fr; }
+      .pos-right{ position: relative; top:auto; }
+      .pos-menu-grid{ grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    }
+
+    /* Print — hide all app chrome; only #printArea */
+    @media print{
+      @page { margin: 12mm; }
+      html, body{
+        background:#fff !important;
+        color:#000 !important;
+        padding:0 !important;
+        margin:0 !important;
+      }
+      body.printing-slip *{ visibility: hidden !important; }
+      body.printing-slip #printArea,
+      body.printing-slip #printArea *{ visibility: visible !important; }
+      .app-topbar,
+      .page,
+      .sidebar,
+      .sidebarBackdrop,
+      .main-content,
+      #toastRoot,
+      #appLoading,
+      #celebrateOverlay,
+      .notif-wrap,
+      .theme-toggle,
+      .kg-user-chip,
+      .topbar-live,
+      .modalOverlay{
+        display:none !important;
+      }
+      #printArea{
+        display:block !important;
+        position: absolute !important;
+        left: 0; top: 0; width: 100%;
+        padding: 8px 12px;
+        font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+        color: #111 !important;
+        background: #fff !important;
+      }
+      /* POS thermal slips */
+      #printArea:not(.salary-doc) .slip{ max-width: 320px; margin: 0 auto; }
+      /* Salary PDF — full page */
+      #printArea.salary-doc .slip{
+        max-width: 100% !important;
+        margin: 0 0 16px !important;
+        border: 1px solid #333 !important;
+        padding: 14px !important;
+        color: #111 !important;
+        background: #fff !important;
+      }
+      #printArea.salary-doc table{
+        width: 100% !important;
+        border-collapse: collapse !important;
+        color: #111 !important;
+      }
+      #printArea.salary-doc td,
+      #printArea.salary-doc th{
+        color: #111 !important;
+        border-color: #999 !important;
+      }
+      #printArea .slip-brand{ text-align:center; font-weight:900; font-size:20px; }
+      #printArea .slip-sub{ text-align:center; font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.06em; }
+      #printArea .slip-meta{ display:grid; grid-template-columns:1fr 1fr; gap:6px; margin-top:10px; font-size:12px; }
+      #printArea .slip-meta span{ display:block; color:#666; font-size:10px; }
+      #printArea .slip-rule{ border-top:1px dashed #999; margin:10px 0; }
+      #printArea .slip-title{ text-align:center; font-weight:800; margin-bottom:8px; }
+      #printArea .slip-line{ display:flex; justify-content:space-between; gap:10px; font-size:13px; margin-bottom:8px; }
+      #printArea .slip-line .name{ font-weight:800; }
+      #printArea .slip-line .prep{ font-size:11px; color:#444; }
+      #printArea .slip-totals .row{ display:flex; justify-content:space-between; gap:10px; font-size:13px; }
+      #printArea .slip-totals .row.big{ font-size:15px; font-weight:900; }
+      #printArea .slip-footer{ text-align:center; margin-top:12px; font-weight:700; font-size:12px; }
+    }
+    #printArea{ display:none; }
+
+    .nav-icon{
+      width: 22px;
+      height: 22px;
+      flex-shrink: 0;
+      display:inline-flex;
+      align-items:center;
+      justify-content:center;
+      border-radius: 999px;
+      background: rgba(92, 42, 31, 0.55);
+      border: 1px solid rgba(253, 232, 216, 0.35);
+      color: #fde8d8;
+    }
+
+    .nav-icon svg{ width: 18px; height: 18px; display:block; color: inherit; stroke: currentColor; }
+    .nav-icon .stroke{ stroke: #fde8d8; }
+    .nav-icon .fill{ fill: #fde8d8; }
+    .nav-icon .accent{ fill: #e87a3a; }
+
+    [data-theme="light"] .nav-icon{
+      background: rgba(232, 122, 58, 0.12);
+      border: 1px solid rgba(232, 122, 58, 0.28);
+      color: #e87a3a;
+    }
+    [data-theme="light"] .nav-icon .stroke{ stroke: #e87a3a; }
+    [data-theme="light"] .nav-icon .fill{ fill: #e87a3a; }
+
+    .nav-item.active .nav-icon{
+      background: rgba(255, 255, 255, 0.2);
+      border-color: rgba(255, 255, 255, 0.35);
+    }
+    .nav-item.active .nav-icon .stroke{ stroke: #fff; }
+    .nav-item.active .nav-icon .fill{ fill: #fff; opacity: 0.9; }
+    .nav-item.active .nav-icon .accent{ fill: #fff; }
+    
+    .nav-item.secondary {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+      box-shadow: none;
+    }
+    
+    .main-content { 
+      flex: 1; 
+      display: grid; 
+      gap: 20px; 
+    }
+
+    /* Sidebar collapse: show icon-only rail (not fully hidden) */
+    body.sidebar-collapsed .sidebar{ display:block; width: 84px; }
+    body.sidebar-collapsed .sidebar .card{ padding: 16px 10px; }
+    body.sidebar-collapsed .sidebar .section-title{ margin-bottom: 14px !important; padding: 8px 0 !important; }
+    body.sidebar-collapsed .sidebar img{ display:none; }
+    body.sidebar-collapsed .nav-list{ padding-bottom: 0; }
+    body.sidebar-collapsed .nav-item{
+      justify-content: center;
+      padding: 12px 10px;
+      gap: 0;
+      margin-bottom: 10px;
+      transform: none;
+    }
+    body.sidebar-collapsed .nav-item:hover{ transform: none; }
+    body.sidebar-collapsed .nav-item span:last-child{ display:none; }
+    body.sidebar-collapsed .nav-icon{ width: 36px; height: 36px; border-radius: 12px; }
+    body.sidebar-collapsed .page{ max-width: 1600px; }
+    
+    .card {
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 16px 18px;
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+      transition: var(--transition);
+    }
+    
+    .card:hover {
+      transform: translateY(-4px);
+      box-shadow: var(--shadow-hover);
+      border-color: rgba(99, 102, 241, 0.22);
+    }
+    
+    /* Dashboard premium layout */
+    .dash-hero{
+      display:flex;
+      justify-content:space-between;
+      align-items:flex-start;
+      gap:20px;
+      padding: 8px 0 16px;
+      animation: dashIn .6s cubic-bezier(.2,.8,.2,1) both;
+    }
+    
+    @keyframes dashIn{
+      from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}
+    }
+    
+    .dash-title{
+      font-size: 32px; 
+      font-weight: 800; 
+      letter-spacing: -0.02em; 
+      color: var(--text-primary);
+    }
+    
+    .dash-sub{
+      margin-top: 8px; 
+      color: var(--text-muted);
+      font-size: 14px;
+      font-weight: 400;
+    }
+    
+    .dash-right{
+      display:flex; 
+      align-items:center; 
+      gap:12px;
+    }
+    
+    .seg{
+      display:flex; 
+      gap:6px; 
+      padding:8px;
+      border-radius: 50px; 
+      background: var(--bg-secondary);
+      border:1px solid var(--border);
+    }
+    
+    .seg button{
+      width:auto; 
+      padding:10px 16px; 
+      border-radius: 50px;
+      background:transparent; 
+      color: var(--text-secondary);
+      font-size: 12px; 
+      font-weight: 600;
+      transition: var(--transition);
+      border: none;
+      cursor: pointer;
+    }
+    
+    .seg button:hover{
+      transform: translateY(-2px); 
+      background: var(--primary-glow); 
+      color: var(--primary);
+    }
+    
+    .seg button.active{
+      background: var(--primary); 
+      color: #ffffff;
+      box-shadow: var(--primary-shadow);
+    }
+    
+    .profile-pill{
+      display:flex; 
+      align-items:center; 
+      gap:12px;
+      padding:10px 14px; 
+      border-radius: 50px;
+      border:1px solid var(--border);
+      background: var(--bg-card);
+      box-shadow: var(--shadow);
+    }
+    
+    .profile-pill img{
+      width:32px;
+      height:32px;
+      border-radius: 50px;
+      object-fit:cover;
+      border: 2px solid var(--primary);
+    }
+    
+    .profile-pill .name{
+      font-weight: 700; 
+      font-size: 13px; 
+      color: var(--text-primary)
+    }
+    
+    .profile-pill .brand{
+      font-size: 11px; 
+      color: var(--text-muted); 
+      margin-top: 2px;
+    }
+
+    .kpi-grid{
+      display:grid;
+      grid-template-columns: repeat(12, minmax(0, 1fr));
+      gap: 12px;
+      margin-top: 16px;
+    }
+    
+    .kpi-card{
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-top: 3px solid var(--primary);
+      border-radius: var(--radius);
+      padding: 18px 20px;
+      box-shadow: var(--shadow);
+      position: relative;
+      overflow: hidden;
+      transition: var(--transition);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      min-height: 128px;
+    }
+    
+    .kpi-card:hover{ 
+      transform: translateY(-4px); 
+      box-shadow: var(--shadow-hover);
+      border-color: rgba(74, 169, 233, 0.15);
+    }
+    
+    .kpi-card::before{
+      display: none;
+    }
+    
+    .kpi-top{
+      display:flex; 
+      align-items:center; 
+      justify-content: flex-start;
+      margin-bottom: 8px;
+      gap: 16px;
+    }
+    
+    .kpi-ic{
+      width:44px;
+      height:44px;
+      border-radius: 14px;
+      display:flex; 
+      align-items:center; 
+      justify-content:center;
+      border:1px solid var(--border);
+      background: var(--primary-glow);
+      font-size: 20px;
+      flex-shrink: 0;
+    }
+    
+    .kpi-meta{
+      display:flex; 
+      flex-direction:column; 
+      gap: 4px;
+      flex: 1;
+      text-align: left;
+    }
+    
+    .kpi-label{
+      color: var(--text-muted); 
+      font-weight: 700; 
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 0.06em;
+    }
+    
+    .kpi-value{
+      font-size: 26px;
+      font-weight: 800;
+      color: var(--text-primary);
+      letter-spacing: -0.02em;
+    }
+    
+    .kpi-hint{
+      display: none;
+    }
+    
+    .trend{
+      display:flex; 
+      align-items:center; 
+      gap:6px; 
+      font-weight: 700; 
+      font-size: 12px;
+    }
+    
+    .trend.up{color: var(--profit)}
+    .trend.down{color: var(--expense)}
+
+    /* KPI Color Classes */
+    .kpi-card.positive .kpi-value { color: var(--profit); }
+    .kpi-card.negative .kpi-value { color: var(--expense); }
+
+    .span-4{grid-column: span 4}
+    .span-3{grid-column: span 3}
+    .span-6{grid-column: span 6}
+    .span-12{grid-column: span 12}
+    
+    @media (max-width: 900px){ 
+      .span-4,.span-3,.span-6{grid-column: span 6} 
+      .span-12{grid-column: span 12} 
+    }
+    
+    @media (max-width: 560px){ 
+      .span-4,.span-3,.span-12{grid-column: span 12} 
+      .dash-hero{flex-direction:column; align-items:flex-start} 
+    }
+
+    .content-grid{
+      display:grid;
+      grid-template-columns: minmax(0, 7fr) minmax(0, 3fr);
+      gap: 16px;
+      margin-top: 20px;
+      align-items:start;
+    }
+    
+    .content-col{display:grid; gap:16px}
+    
+    @media (max-width: 980px){ 
+      .content-grid{grid-template-columns:1fr} 
+    }
+
+    .chart-wrap{
+      background: var(--bg-secondary); 
+      border:1px solid var(--border); 
+      border-radius: var(--radius); 
+      padding:16px; 
+      height: 300px;
+    }
+
+    .pulse-bell{ 
+      position:relative; 
+      display:inline-flex; 
+      align-items:center; 
+      justify-content:center; 
+      width:36px; 
+      height:36px; 
+      border-radius: 50px; 
+      background: var(--primary-glow); 
+      border:1px solid var(--primary); 
+    }
+    
+    .pulse-bell::after{
+      content:""; 
+      position:absolute; 
+      inset:-6px; 
+      border-radius: 50px; 
+      border:2px solid var(--primary); 
+      opacity:0; 
+      animation:pulse 1.6s ease-out infinite; 
+      pointer-events:none;
+    }
+    
+    @keyframes pulse{ 
+      0%{transform:scale(.96);opacity:0} 
+      25%{opacity:1} 
+      100%{transform:scale(1.08);opacity:0} 
+    }
+    
+    .list { 
+      margin-top: 12px; 
+      display: grid; 
+      gap: 8px; 
+      max-height: 260px; 
+      overflow: auto; 
+    }
+    
+    .list .row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 14px;
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius-small);
+      font-size: 14px;
+      transition: var(--transition);
+    }
+    
+    .list .row:hover { 
+      background: var(--primary-glow); 
+      border-color: var(--primary);
+    }
+    
+    .pill {
+      display: inline-block;
+      padding: 6px 10px;
+      border-radius: 20px;
+      font-size: 11px;
+      font-weight: 600;
+      background: var(--primary-glow);
+      color: var(--primary);
+      margin: 0 2px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+    
+    .row { 
+      display: grid; 
+      grid-template-columns: 1fr auto; 
+      gap: 8px; 
+      align-items: center; 
+      background: var(--bg-secondary); 
+      border: 1px solid var(--border); 
+      border-radius: var(--radius-small); 
+      padding: 12px; 
+      color: var(--text-primary); 
+      transition: var(--transition);
+    }
+    
+    .row:hover {
+      background: var(--primary-glow);
+      border-color: var(--primary);
+    }
+    
+    .table-row { 
+      display: grid; 
+      grid-template-columns: 1.3fr 1fr 1fr 1fr; 
+      gap: 8px; 
+      padding: 10px; 
+      border-radius: var(--radius-small); 
+      background: var(--bg-secondary); 
+      border: 1px solid var(--border); 
+    }
+    
+    .table-like { 
+      margin-top: 12px; 
+      display: grid; 
+      gap: 6px; 
+      max-height: 240px; 
+      overflow: auto; 
+    }
+    
+    #appLoading { 
+      position: fixed; 
+      inset: 0; 
+      background: rgba(13, 13, 13, 0.95); 
+      display: none; 
+      align-items: center; 
+      justify-content: center; 
+      z-index: 9998; 
+      backdrop-filter: blur(10px);
+    }
+    
+    #appLoading.active { display: flex; }
+    
+    .spinner { 
+      width: 44px; 
+      height: 44px; 
+      border: 3px solid var(--border); 
+      border-top-color: var(--primary); 
+      border-radius: 50%; 
+      animation: spin 0.8s linear infinite; 
+    }
+    
+    @keyframes spin { to { transform: rotate(360deg); } }
+    
+    #toastRoot { 
+      position: fixed; 
+      top: 84px; 
+      right: 20px; 
+      bottom: auto;
+      left: auto;
+      z-index: 20000; 
+      display: flex; 
+      flex-direction: column; 
+      align-items: flex-end;
+      gap: 8px; 
+      max-width: min(380px, calc(100vw - 32px)); 
+    }
+    
+    .toast { 
+      padding: 14px 16px; 
+      border-radius: var(--radius-small); 
+      background: var(--bg-card); 
+      border: 1px solid var(--border); 
+      font-size: 14px; 
+      color: var(--text-primary); 
+      box-shadow: var(--shadow);
+      backdrop-filter: blur(10px);
+    }
+    
+    .toast-ok { 
+      border-color: var(--profit); 
+      background: rgba(34, 197, 94, 0.1); 
+    }
+    
+    .toast-error { 
+      border-color: var(--expense); 
+      background: rgba(239, 68, 68, 0.1); 
+    }
+    
+    .toast-out { 
+      opacity: 0; 
+      transition: opacity 0.25s; 
+    }
+    
+    .welcome-screen { 
+      position: fixed; 
+      inset: 0; 
+      background: linear-gradient(135deg, var(--bg-main) 0%, var(--bg-secondary) 100%); 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      z-index: 9999; 
+      opacity: 0; 
+      animation: welcomeIn 0.5s ease forwards; 
+    }
+    
+    @keyframes welcomeIn { to { opacity: 1; } }
+    
+    .welcome-content { 
+      text-align: center; 
+      color: var(--text-primary); 
+    }
+    
+    .welcome-title { 
+      font-size: 44px; 
+      font-weight: 800; 
+      margin-bottom: 14px; 
+    }
+    
+    .welcome-subtitle { 
+      font-size: 18px; 
+      opacity: 0.8; 
+    }
+    
+    .welcome-logo { 
+      width: 110px; 
+      height: 110px; 
+      margin: 0 auto 22px; 
+      background: var(--primary-glow); 
+      border-radius: 50%; 
+      display: flex; 
+      align-items: center; 
+      justify-content: center; 
+      font-size: 42px; 
+      border: 2px solid var(--primary);
+    }
+    
+    .dashboard-section { display: none; }
+    .dashboard-section.active { display: block; }
+
+    /* Light theme text defaults (fix white-on-white) */
+    .muted{ color: var(--text-muted) !important; }
+    .card .kpi-value,
+    .card .kpi-label,
+    .card .kpi-hint,
+    .card h2,
+    .card .row,
+    .card .list .row,
+    .table-row,
+    .section-title h2 {
+      color: var(--text-primary) !important;
+    }
+    
+    /* Section Titles */
+    .section-title {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 20px;
+    }
+    
+    .section-title h2 {
+      font-size: 20px;
+      font-weight: 700;
+      color: var(--text-primary);
+      margin: 0;
+    }
+    
+    .section-title .muted {
+      font-size: 13px;
+      color: var(--text-muted);
+      font-weight: 400;
+    }
+
+    /* Form Styles */
+    input, select, button {
+      font-family: 'Plus Jakarta Sans', system-ui, sans-serif;
+      font-size: 14px;
+    }
+    
+    input, select {
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      color: var(--text-primary);
+      padding: 12px 16px;
+      border-radius: var(--radius-small);
+      transition: var(--transition);
+    }
+
+    input::placeholder{ color: rgba(100,116,139,0.85); }
+    
+    input:focus, select:focus {
+      outline: none;
+      border-color: var(--primary);
+      box-shadow: 0 0 0 3px var(--primary-glow);
+    }
+    
+    button {
+      background: var(--primary);
+      color: #FFFFFF;
+      border: none;
+      padding: 12px 20px;
+      border-radius: var(--radius-small);
+      font-weight: 600;
+      cursor: pointer;
+      transition: var(--transition);
+      box-shadow: var(--primary-shadow);
+    }
+    
+    button:hover {
+      transform: translateY(-2px);
+      box-shadow: var(--primary-shadow);
+    }
+    
+    button.secondary {
+      background: var(--bg-secondary);
+      color: var(--text-primary);
+      border: 1px solid var(--border);
+      box-shadow: none;
+    }
+    
+    button.secondary:hover {
+      background: var(--primary-glow);
+      border-color: var(--primary);
+      color: var(--primary) !important;
+    }
+    
+    button.warn {
+      background: var(--expense);
+      color: #FFFFFF;
+      box-shadow: 0 0 12px rgba(239, 68, 68, 0.3);
+    }
+    
+    /* Grid layouts */
+    .grid-2 { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+    .grid-3 { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; }
+    .grid-4 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; }
+    .grid-5 { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr 1fr; gap: 12px; }
+
+    /* Dark scrollbars */
+    ::-webkit-scrollbar{width:10px;height:10px}
+    ::-webkit-scrollbar-thumb{background:rgba(47,133,90,0.55);border-radius:50px;border:3px solid transparent;background-clip:padding-box}
+    ::-webkit-scrollbar-track{background:var(--bg-secondary)}
+
+    /* --- Suppliers UX upgrades --- */
+    .actions{display:flex;gap:10px;align-items:center;justify-content:flex-end}
+    .btn-sm{padding:10px 14px;border-radius:10px;font-size:12px;font-weight:700}
+    .btn-ghost{background:transparent;border:1px solid var(--border);box-shadow:none}
+    .btn-ghost:hover{background:var(--primary-glow);border-color:var(--primary)}
+
+    .tabsBar{
+      display:flex;
+      gap:8px;
+      flex-wrap:wrap;
+      padding:10px;
+      border:1px solid var(--border);
+      border-radius: 999px;
+      background: var(--bg-secondary);
+      margin-bottom: 14px;
+    }
+    .tabBtn{
+      padding:10px 14px;
+      border-radius: 999px;
+      background: transparent;
+      border: 1px solid transparent;
+      color: var(--text-secondary);
+      font-size: 12px;
+      font-weight: 800;
+      cursor: pointer;
+      transition: var(--transition);
+      box-shadow: none;
+    }
+    .tabBtn:hover{ background: var(--primary-glow); border-color: rgba(47,133,90,.35); transform: translateY(-1px); color: var(--primary); }
+    .tabBtn.active{ background: var(--primary); border-color: rgba(47,133,90,.45); color:#fff; }
+
+    /* Legacy "dark" blocks should look like light cards now */
+    .dark{
+      background: var(--bg-card) !important;
+      color: var(--text-primary) !important;
+      border-color: var(--border) !important;
+    }
+    .tabPanel{ display:none; }
+    .tabPanel.active{ display:block; }
+
+    .supplierCard{
+      background: var(--bg-secondary);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px;
+    }
+    .supplierCardHeader{
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      gap:12px;
+      margin-bottom:10px;
+    }
+    .supplierTitle{font-weight:800;color:var(--text-primary)}
+    .supplierMeta{display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end}
+    .supplierEntries{display:grid;gap:8px}
+
+    /* Modal */
+    .modalOverlay{
+      position:fixed; inset:0;
+      background: rgba(0,0,0,.6);
+      display:none;
+      align-items:center;
+      justify-content:center;
+      z-index: 10000;
+      padding: 18px;
+      backdrop-filter: blur(6px);
+    }
+    .modalOverlay.open{display:flex;}
+    .modal{
+      width: min(720px, 100%);
+      background: var(--bg-card);
+      border: 1px solid var(--border);
+      border-radius: 16px;
+      box-shadow: var(--shadow-hover);
+      padding: 16px;
+    }
+    .modalHeader{display:flex;align-items:flex-start;justify-content:space-between;gap:12px;margin-bottom:12px}
+    .modalTitle{font-size:18px;font-weight:900;color:var(--text-primary)}
+    .modalBody{display:grid;gap:12px}
+    .modalFooter{display:flex;gap:10px;justify-content:flex-end;margin-top:12px}
+    .itemGrid{display:grid;grid-template-columns: 1.2fr .8fr auto; gap:10px; align-items:center}
+    .itemGrid input{width:100%}
+    .divider{height:1px;background:var(--border);margin:6px 0}
+
+    /* Logo bouncing animation */
+    .logo-bounce {
+      animation: logoBounce 2.5s ease-in-out infinite;
+    }
+    
+    @keyframes logoBounce {
+      0%, 20%, 50%, 80%, 100% { transform: translateY(0); }
+      40% { transform: translateY(-8px); }
+      60% { transform: translateY(-4px); }
+    }
+    
+    /* Responsive adjustments */
+    @media (max-width: 768px) {
+      .page {
+        flex-direction: column;
+      }
+      .sidebar {
+        width: 100%;
+      }
+      .sidebar .card {
+        height: auto;
+      }
+    }
+
+    /* Staff attendance — date-wise month picker */
+    .att-month-bar{
+      display:flex;
+      flex-wrap:wrap;
+      gap:10px;
+      align-items:center;
+      margin-top:12px;
+    }
+    .att-day-strip{
+      display:flex;
+      flex-wrap:wrap;
+      gap:8px;
+      margin-top:12px;
+    }
+    .att-day{
+      min-width:44px;
+      padding:8px 10px;
+      border-radius:12px;
+      border:1px solid var(--border);
+      background:var(--bg-secondary);
+      color:var(--text-secondary);
+      font-size:13px;
+      font-weight:700;
+      cursor:pointer;
+      text-align:center;
+      line-height:1.2;
+      transition:var(--transition);
+    }
+    .att-day small{
+      display:block;
+      font-size:10px;
+      font-weight:600;
+      opacity:0.75;
+      margin-top:2px;
+    }
+    .att-day:hover{ border-color:rgba(47,133,90,.45); color:var(--primary); }
+    .att-day--selected{
+      background:var(--primary);
+      border-color:var(--primary);
+      color:#fff;
+      box-shadow:var(--primary-shadow);
+    }
+    .att-day--done{ border-color:rgba(47,133,90,.5); background:rgba(47,133,90,.12); color:var(--primary); }
+    .att-day--partial{ border-color:rgba(236,201,75,.65); background:rgba(236,201,75,.18); color:#744210; }
+    .att-day--empty{ opacity:0.85; }
+    .att-status-select{
+      width:100%;
+      max-width:140px;
+      padding:8px 10px;
+      border-radius:10px;
+      border:1px solid var(--border);
+      background:var(--bg-card);
+      font-size:13px;
+      font-weight:600;
+    }
+  </style>
+  <link rel="stylesheet" href="css/premium-theme.css?v=20261123brand1" />
+  <link rel="stylesheet" href="css/saas-premium.css?v=20261123brand1" />
+  <link rel="stylesheet" href="css/app-shell.css?v=20261123brand1" />
+  <link rel="stylesheet" href="css/dash-polish.css?v=20261123brand1" />
+  <link rel="stylesheet" href="css/dashboard-pro.css?v=20261123brand1" />
+  <link rel="stylesheet" href="css/ui-fixes.css?v=20261123brand1" />
+  <link rel="stylesheet" href="css/pos-upgrade.css?v=20261123brand1" />
+  <link rel="stylesheet" href="css/pos-menu-tiles.css?v=20261123brand1" />
+  <link rel="stylesheet" href="css/scheduled.css?v=20261123brand1" />
+</head>
+<body>
+  <div id="appLoading" aria-live="polite" aria-busy="true">
+    <div class="skeleton-loader" role="status">
+      <div class="skeleton-bar wide"></div>
+      <div class="skeleton-bar"></div>
+      <div class="skeleton-bar narrow"></div>
+      <div id="appLoadingText" style="margin-top:8px;font-size:14px;font-weight:600;color:var(--text-muted);text-align:center;">Loading…</div>
+    </div>
+  </div>
+  <div id="toastRoot" aria-live="polite"></div>
+  <div class="sidebarBackdrop" onclick="closeAppSidebar()" aria-hidden="true"></div>
+
+  <!-- POS focus: small menu button (sidebar hidden until opened) -->
+  <button type="button" id="kgPosNavFab" class="kg-pos-nav-fab" onclick="toggleAppSidebar()" aria-label="Open menu" title="Menu">
+    <span aria-hidden="true">☰</span>
+  </button>
+
+  <div class="app-topbar">
+    <button type="button" class="appNavToggle" onclick="toggleAppSidebar()" aria-label="Open navigation menu" title="Menu">
+      <span aria-hidden="true">☰</span><span>Menu</span>
+    </button>
+    <div class="app-topbar-title">The Kilogram</div>
+    <div class="app-topbar-spacer"></div>
+    <div class="topbar-live" id="topbarLive" aria-label="Time and weather">
+      <div class="topbar-clock" id="topbarClock">--:--</div>
+      <div class="topbar-weather" id="topbarWeather" title="Local weather">--°C</div>
+    </div>
+    <div class="notif-wrap">
+      <button type="button" class="notif-bell" id="notifBellBtn" onclick="toggleNotifPanel(event)" aria-label="Reminders" title="Reminders">
+        <svg class="notif-bell-icon" xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9"/>
+          <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0"/>
+        </svg>
+        <span class="notif-badge" id="notifBadge" hidden>0</span>
+      </button>
+      <div class="notif-panel" id="notifPanel" hidden role="dialog" aria-label="Reminders">
+        <div class="notif-panel-head">
+          <strong>Reminders &amp; alerts</strong>
+          <button type="button" class="btn btn-secondary" style="padding:6px 10px;font-size:12px;" onclick="showSection('reminders');closeNotifPanel();">Open</button>
+        </div>
+        <div id="notifList"></div>
+      </div>
+    </div>
+    <div class="kg-user-chip" id="kgUserChip" hidden>
+      <div class="kg-user-text">
+        <span class="kg-user-name" id="kgUserName">—</span>
+        <span class="kg-user-role" id="kgUserRole">—</span>
+      </div>
+      <button type="button" class="btn btn-secondary kg-logout-btn" onclick="KgAuth.logout()" title="Sign out">Sign out</button>
+    </div>
+    <div class="theme-toggle" role="group" aria-label="Color theme">
+      <button type="button" class="theme-chip" data-theme-pref="light" onclick="setThemePreference('light')" aria-label="Light theme" title="Light">
+        <i data-lucide="sun"></i>
+      </button>
+      <button type="button" class="theme-chip" data-theme-pref="dark" onclick="setThemePreference('dark')" aria-label="Dark theme" title="Dark">
+        <i data-lucide="moon"></i>
+      </button>
+      <button type="button" class="theme-chip" data-theme-pref="system" onclick="setThemePreference('system')" aria-label="System theme" title="System">
+        <i data-lucide="monitor"></i>
+      </button>
+    </div>
+  </div>
+
+  <div class="page">
+    <div class="sidebar">
+      <div class="card dark">
+        <div class="sidebar-brand">
+          <div class="sidebar-brand-text">
+            <strong>The Kilogram</strong>
+            <span>Restaurant ERP</span>
+          </div>
+        </div>
+        <div class="nav-list">
+          <div class="nav-item active" data-section="dashboard" onclick="showSection('dashboard')">
+            <span class="nav-icon" aria-hidden="true"><i data-lucide="layout-dashboard"></i></span>
+            <span>Dashboard</span>
+          </div>
+          <div class="nav-item" data-section="sales" onclick="showSection('sales')">
+            <span class="nav-icon" aria-hidden="true"><i data-lucide="trending-up"></i></span>
+            <span>Sales</span>
+          </div>
+          <div class="nav-item" data-section="supplier" onclick="showSection('supplier')">
+            <span class="nav-icon" aria-hidden="true"><i data-lucide="package"></i></span>
+            <span>Suppliers</span>
+          </div>
+          <div class="nav-item" data-section="expenses" onclick="showSection('expenses')">
+            <span class="nav-icon" aria-hidden="true"><i data-lucide="receipt"></i></span>
+            <span>Expenses</span>
+          </div>
+          <div class="nav-item" data-section="reminders" onclick="showSection('reminders')">
+            <span class="nav-icon" aria-hidden="true"><i data-lucide="bell-ring"></i></span>
+            <span>Reminders</span>
+          </div>
+          <div class="nav-item" data-section="daily-closing" onclick="showSection('daily-closing')" hidden aria-hidden="true" style="display:none !important">
+            <span class="nav-icon" aria-hidden="true"><i data-lucide="clock-3"></i></span>
+            <span>Daily Closing</span>
+          </div>
+          <div class="nav-item" data-section="staff" onclick="showSection('staff')">
+            <span class="nav-icon" aria-hidden="true"><i data-lucide="users"></i></span>
+            <span>Manage Staff</span>
+          </div>
+          <div class="nav-item" data-section="analytics" onclick="showSection('analytics')">
+            <span class="nav-icon" aria-hidden="true"><i data-lucide="bar-chart-3"></i></span>
+            <span>Analytics</span>
+          </div>
+          <div class="nav-item" data-section="profit-analysis" onclick="showSection('profit-analysis')">
+            <span class="nav-icon" aria-hidden="true"><i data-lucide="trending-up"></i></span>
+            <span>Profit Analysis</span>
+          </div>
+          <div class="nav-item" data-section="menu" onclick="showSection('menu')">
+            <span class="nav-icon" aria-hidden="true"><i data-lucide="utensils-crossed"></i></span>
+            <span>Menu</span>
+          </div>
+          <div class="nav-item" data-section="pos" onclick="showSection('pos')">
+            <span class="nav-icon" aria-hidden="true"><i data-lucide="monitor-smartphone"></i></span>
+            <span>POS Billing</span>
+          </div>
+          <div class="nav-item" data-section="scheduled" onclick="showSection('scheduled')">
+            <span class="nav-icon" aria-hidden="true"><i data-lucide="calendar-clock"></i></span>
+            <span>Scheduled Orders</span>
+          </div>
+          <div class="nav-item" data-section="kds" onclick="showSection('kds')">
+            <span class="nav-icon" aria-hidden="true"><i data-lucide="chef-hat"></i></span>
+            <span>Kitchen (KDS)</span>
+          </div>
+          <div class="nav-item" data-section="inventory" onclick="showSection('inventory')">
+            <span class="nav-icon" aria-hidden="true"><i data-lucide="boxes"></i></span>
+            <span>Inventory</span>
+          </div>
+          <div class="nav-item" data-section="documents" onclick="showSection('documents')">
+            <span class="nav-icon" aria-hidden="true"><i data-lucide="folder-open"></i></span>
+            <span>Documents</span>
+          </div>
+          <div class="nav-item" data-section="balance-transfer" onclick="showSection('balance-transfer')">
+            <span class="nav-icon" aria-hidden="true"><i data-lucide="arrow-left-right"></i></span>
+            <span>Balance Transfer</span>
+          </div>
+          <div class="nav-item" data-section="investments" onclick="showSection('investments')">
+            <span class="nav-icon" aria-hidden="true"><i data-lucide="landmark"></i></span>
+            <span>Investments</span>
+          </div>
+          <div class="nav-item" data-section="backup" onclick="showSection('backup')">
+            <span class="nav-icon" aria-hidden="true"><i data-lucide="hard-drive"></i></span>
+            <span>Backup</span>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="main-content">
+      <div id="dashboard-section" class="dashboard-section active dashboard-pro">
+        <header class="dpro-hero">
+          <div class="dpro-hero-main">
+            <p class="dpro-eyebrow" id="todayLabel"></p>
+            <h1 class="dpro-title">Business overview</h1>
+            <p class="dpro-sub muted" id="dashboardPeriodLabel">Select a period to refresh metrics</p>
+            <div class="period-filter dpro-periods" id="dashboardPeriodFilter" role="tablist" aria-label="Dashboard period">
+              <button type="button" class="period-chip active" data-period="d7" onclick="setDashboardPeriod('d7')">7 days</button>
+              <button type="button" class="period-chip" data-period="w2" onclick="setDashboardPeriod('w2')">2 weeks</button>
+              <button type="button" class="period-chip" data-period="w3" onclick="setDashboardPeriod('w3')">3 weeks</button>
+              <button type="button" class="period-chip" data-period="month" onclick="setDashboardPeriod('month')">1 month</button>
+              <button type="button" class="period-chip" data-period="m3" onclick="setDashboardPeriod('m3')">3 months</button>
+              <button type="button" class="period-chip" data-period="m6" onclick="setDashboardPeriod('m6')">6 months</button>
+              <button type="button" class="period-chip" data-period="year" onclick="setDashboardPeriod('year')">1 year</button>
+            </div>
+          </div>
+        </header>
+
+        <section class="kg-live-wrap" aria-label="Today's live sales">
+          <div class="kg-live-card kg-live-card--main kg-live-card--compact">
+            <div class="kg-live-head">
+              <div>
+                <h2 style="margin:0;font-size:16px;">Today's live sales</h2>
+                <div class="muted" id="kgLiveUpdated">Waiting…</div>
+              </div>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <input type="date" id="kgLiveDate" aria-label="Business date" />
+                <span class="kg-live-badge" id="kgLiveBadge">LIVE</span>
+                <button type="button" class="btn btn-secondary" id="kgRebuildSummaries">Rebuild</button>
+              </div>
+            </div>
+            <div class="kg-live-kpis">
+              <div class="kg-live-kpi"><div class="label">Total sales</div><div class="value" id="kgLiveTotalSales">₹0</div></div>
+              <div class="kg-live-kpi"><div class="label">Bills</div><div class="value" id="kgLiveBillCount">0</div></div>
+              <div class="kg-live-kpi"><div class="label">Avg bill</div><div class="value" id="kgLiveAov">₹0</div></div>
+              <div class="kg-live-kpi"><div class="label">Cash</div><div class="value" id="kgLiveCashSales">₹0</div><div class="muted" id="kgLiveCashCount">0 bills</div></div>
+              <div class="kg-live-kpi"><div class="label">Shop UPI</div><div class="value" id="kgLiveOnlineSales">₹0</div><div class="muted" id="kgLiveOnlineCount">0 bills</div></div>
+              <div class="kg-live-kpi"><div class="label">Swiggy / Zomato</div>
+                <div class="kg-live-chips"><span>Swiggy <b id="kgLiveSwiggy">₹0</b></span><span>Zomato <b id="kgLiveZomato">₹0</b></span></div>
+              </div>
+            </div>
+            <div class="muted" id="kgLiveEmpty" style="display:none;margin-top:8px;">No sales yet today</div>
+          </div>
+        </section>
+
+        <section class="dpro-charts-row dpro-charts-row--full" aria-label="Sales pulse">
+          <div class="card dpro-panel dpro-panel-analytics">
+            <div class="section-title">
+              <div>
+                <h2>Sales pulse</h2>
+                <div class="muted" id="dashTrendChartNote">Cash · UPI · Swiggy · Zomato · expenses · ₹10k target</div>
+              </div>
+            </div>
+            <div class="chart-wrap dpro-chart-hero dpro-chart-stage">
+              <canvas id="salesExpenseTrendChart"></canvas>
+            </div>
+          </div>
+        </section>
+
+        <section class="dpro-kpi-grid" aria-label="Key metrics">
+          <article class="dpro-kpi" data-tone="cyan">
+            <div class="dpro-kpi-strip"></div>
+            <div class="dpro-kpi-head">
+              <div class="dpro-kpi-icon"><i data-lucide="trending-up"></i></div>
+            </div>
+            <div class="dpro-kpi-label">Sales this period</div>
+            <div class="dpro-kpi-value" id="kpiTotalRevenue">Rs 0</div>
+            <canvas class="dpro-spark" id="sparkSales" width="120" height="36" aria-hidden="true"></canvas>
+          </article>
+          <article class="dpro-kpi" data-tone="rose">
+            <div class="dpro-kpi-strip"></div>
+            <div class="dpro-kpi-head">
+              <div class="dpro-kpi-icon"><i data-lucide="receipt"></i></div>
+            </div>
+            <div class="dpro-kpi-label">Total expenses</div>
+            <div class="dpro-kpi-value" id="kpiTotalExpenses">Rs 0</div>
+            <canvas class="dpro-spark" id="sparkExpenses" width="120" height="36" aria-hidden="true"></canvas>
+          </article>
+          <article class="dpro-kpi" data-tone="amber">
+            <div class="dpro-kpi-strip"></div>
+            <div class="dpro-kpi-head">
+              <div class="dpro-kpi-icon"><i data-lucide="file-warning"></i></div>
+            </div>
+            <div class="dpro-kpi-label">Pending payments</div>
+            <div class="dpro-kpi-value" id="kpiPendingBills">Rs 0</div>
+          </article>
+          <article class="dpro-kpi" data-tone="cyan">
+            <div class="dpro-kpi-strip"></div>
+            <div class="dpro-kpi-head">
+              <div class="dpro-kpi-icon"><i data-lucide="wallet"></i></div>
+            </div>
+            <div class="dpro-kpi-label">Cash in hand</div>
+            <div class="dpro-kpi-value" id="kpiCashBalance">Rs 0</div>
+          </article>
+          <article class="dpro-kpi" data-tone="blue">
+            <div class="dpro-kpi-strip"></div>
+            <div class="dpro-kpi-head">
+              <div class="dpro-kpi-icon"><i data-lucide="landmark"></i></div>
+            </div>
+            <div class="dpro-kpi-label">Online / Bank</div>
+            <div class="dpro-kpi-value" id="kpiBankBalance">Rs 0</div>
+          </article>
+          <article class="dpro-kpi" data-tone="violet" id="netPositionCard">
+            <div class="dpro-kpi-strip"></div>
+            <div class="dpro-kpi-head">
+              <div class="dpro-kpi-icon"><i data-lucide="scale"></i></div>
+            </div>
+            <div class="dpro-kpi-label">Total balance</div>
+            <div class="dpro-kpi-value" id="kpiTotalBalance">Rs 0</div>
+          </article>
+          <article class="dpro-kpi" data-tone="violet">
+            <div class="dpro-kpi-strip"></div>
+            <div class="dpro-kpi-head">
+              <div class="dpro-kpi-icon"><i data-lucide="smartphone"></i></div>
+            </div>
+            <div class="dpro-kpi-label">Shop UPI sales</div>
+            <div class="dpro-kpi-value" id="kpiUpiOnline">Rs 0</div>
+          </article>
+        </section>
+        <div class="sr-only" aria-hidden="true">
+          <span id="kpiNetProfit">Rs 0</span>
+          <span id="kpiGrossHint"></span>
+          <span id="kpiCashHint"></span>
+          <span id="kpiBankHint"></span>
+          <span id="kpiTotalBalanceHint"></span>
+          <span id="kpiOnlineHint"></span>
+          <span id="kpiPendingHint"></span>
+          <span id="kpiOnlineSales">Rs 0</span>
+          <span id="kpiRetailSales">Rs 0</span>
+          <span id="kpiMarginPct">0%</span>
+          <span id="kpiMarginHint"></span>
+          <span id="kpiOrdersAov">0</span>
+          <span id="kpiStaffPresent">0</span>
+        </div>
+
+        <section class="dpro-insight-row" aria-label="Cash, margin, sellers, expenses">
+          <div class="card dpro-panel kg-live-card">
+            <div class="section-title"><h2>Cash vs Online</h2></div>
+            <div class="chart-wrap dpro-chart-sm"><canvas id="kgLiveDonutChart"></canvas></div>
+          </div>
+          <div id="kgNetMarginBox" class="card dpro-panel kg-margin-box" aria-label="Net margin">
+            <div class="kg-margin-label">Net Margin</div>
+            <div class="muted">Loading…</div>
+          </div>
+          <div class="card dpro-panel">
+            <div class="section-title"><h2>Best sellers</h2></div>
+            <div id="dashBestSellers" class="dpro-list dpro-sellers"></div>
+          </div>
+          <div class="card dpro-panel">
+            <div class="section-title"><h2>Expense summary</h2></div>
+            <div class="chart-wrap dpro-chart-sm"><canvas id="expenseBreakdownChart"></canvas></div>
+          </div>
+        </section>
+
+        <section class="dpro-widgets">
+          <div class="card dpro-panel">
+            <div class="section-title">
+              <h2>Inventory &amp; expiry</h2>
+              <button type="button" class="btn-ghost" onclick="showSection('inventory')">Open</button>
+            </div>
+            <div id="dashStockAlertsList" class="dpro-list"></div>
+          </div>
+          <div class="card dpro-panel">
+            <div class="section-title">
+              <h2>Reminders</h2>
+              <button type="button" class="btn-ghost" onclick="showSection('reminders')">Open</button>
+            </div>
+            <div class="dpro-rem-stats" id="dashReminderStats"></div>
+            <div id="dashRemindersList" class="dpro-list"></div>
+          </div>
+          <div class="card dpro-panel">
+            <div class="section-title">
+              <h2>Staff snapshot</h2>
+              <button type="button" class="btn-ghost" onclick="showSection('staff')">Open</button>
+            </div>
+            <div id="dashStaffSnapshot" class="dpro-list"></div>
+          </div>
+          <div class="card dpro-panel">
+            <div class="section-title"><h2>Recent activity</h2></div>
+            <div id="recentTransactionsList" class="dpro-timeline"></div>
+          </div>
+        </section>
+
+        <!-- Legacy chart hooks (hidden) -->
+        <canvas id="kgLiveHourlyChart" hidden width="1" height="1"></canvas>
+        <canvas id="onlinePayoutTrendChart" hidden width="1" height="1"></canvas>
+        <span id="onlinePayoutChartNote" class="sr-only" hidden></span>
+        <canvas id="paymentMixChart" hidden width="1" height="1"></canvas>
+        <span id="paymentMixNote" class="sr-only" hidden></span>
+        <canvas id="cashOnlineMonthlyChart" hidden width="1" height="1"></canvas>
+        <span id="cashOnlineMonthlyNote" class="sr-only" hidden></span>
+        <canvas id="salesOverviewChart" hidden width="1" height="1"></canvas>
+        <div id="upcomingPaymentsList" class="sr-only" hidden></div>
+      </div>
+
+      <div id="sales-section" class="dashboard-section">
+        <div class="card">
+          <div class="section-title">
+            <div>
+              <h2>Add Daily Sales</h2>
+              <div class="kg-sales-banner" role="status" style="margin-top:8px;">
+                POS bills are added automatically. Use this only for sales not billed in POS.
+              </div>
+              <div class="muted" id="salesListPeriodLabel">Showing this month</div>
+            </div>
+            <div class="period-filter" id="salesListPeriodFilter" role="tablist" aria-label="Sales list period">
+              <button type="button" class="period-chip active" data-period="month" onclick="setListPeriod('sales','month')">Month</button>
+              <button type="button" class="period-chip" data-period="m2" onclick="setListPeriod('sales','m2')">2M</button>
+              <button type="button" class="period-chip" data-period="m3" onclick="setListPeriod('sales','m3')">3M</button>
+              <button type="button" class="period-chip" data-period="m6" onclick="setListPeriod('sales','m6')">6M</button>
+              <button type="button" class="period-chip" data-period="year" onclick="setListPeriod('sales','year')">Year</button>
+            </div>
+          </div>
+          <div class="sales-form">
+            <div class="sales-field">
+              <label for="saleDate">Date</label>
+              <input id="saleDate" type="date" />
+            </div>
+            <div class="sales-field">
+              <label for="saleCashAmount">Cash</label>
+              <input id="saleCashAmount" type="number" min="0" step="1" placeholder="0" />
+            </div>
+            <div class="sales-field">
+              <label for="saleSwiggyAmount">Swiggy</label>
+              <input id="saleSwiggyAmount" type="number" min="0" step="1" placeholder="0" />
+            </div>
+            <div class="sales-field">
+              <label for="saleZomatoAmount">Zomato</label>
+              <input id="saleZomatoAmount" type="number" min="0" step="1" placeholder="0" />
+            </div>
+            <div class="sales-field">
+              <label for="saleOtherOnlineAmount">Online / UPI</label>
+              <input id="saleOtherOnlineAmount" type="number" min="0" step="1" placeholder="0" />
+            </div>
+            <div class="sales-field sales-field-wide">
+              <label for="saleNote">Notes</label>
+              <input id="saleNote" placeholder="Optional" />
+            </div>
+            <div class="sales-field sales-field-action">
+              <label aria-hidden="true">&nbsp;</label>
+              <button type="button" onclick="addSale()">Save Sale</button>
+            </div>
+          </div>
+          <div id="salesList" class="list"></div>
+        </div>
+      </div>
+
+      <div id="supplier-section" class="dashboard-section">
+        <div class="tabsBar" role="tablist" aria-label="Suppliers tabs">
+          <button type="button" class="tabBtn active" data-sup-tab="manage" onclick="showSupplierTab('manage')">Add supplier</button>
+          <button type="button" class="tabBtn" data-sup-tab="bills" onclick="showSupplierTab('bills')">Add bills</button>
+          <button type="button" class="tabBtn" data-sup-tab="pay" onclick="showSupplierTab('pay')">Pay bills</button>
+          <button type="button" class="tabBtn" data-sup-tab="history" onclick="showSupplierTab('history')">History</button>
+        </div>
+
+        <div id="supplierTab-manage" class="tabPanel active">
+        <div class="card">
+          <div class="section-title"><h2>Supplier Management</h2><button class="secondary" type="button" onclick="toggleAddSupplier()">+ Add Supplier</button></div>
+          <div id="addSupplierBox" style="display:none;">
+            <div class="grid-2">
+              <input id="newSupplierName" placeholder="Supplier name" />
+              <button onclick="addSupplier()">Add Supplier</button>
+            </div>
+            <div class="grid-3" style="margin-top: 10px;">
+              <input id="newSupplierItemName" placeholder="Supplier item (e.g., Milk)" />
+              <input id="newSupplierItemRate" type="number" placeholder="Rate (optional)" />
+              <button class="secondary" type="button" onclick="addTempSupplierItem()">Add Item</button>
+            </div>
+            <div id="tempSupplierItems" class="list"></div>
+          </div>
+          <div id="supplierList" class="list"></div>
+        </div>
+        </div>
+
+        <div id="supplierTab-bills" class="tabPanel">
+        <div class="card">
+          <div class="section-title"><h2>Supplier Bills</h2></div>
+          <div class="purchase-form">
+            <div class="sales-field">
+              <label for="purchaseDate">Date</label>
+              <input id="purchaseDate" type="date" />
+            </div>
+            <div class="sales-field">
+              <label for="purchaseSellerSelect">Supplier name</label>
+              <select id="purchaseSellerSelect" onchange="fillItemSelectForSupplier()"></select>
+            </div>
+            <div class="sales-field">
+              <label for="purchaseItemSelect">Supplier item</label>
+              <select id="purchaseItemSelect" onchange="onPurchaseItemChanged()"></select>
+            </div>
+            <div class="sales-field">
+              <label for="purchaseRate">Price</label>
+              <input id="purchaseRate" type="number" min="0" step="1" placeholder="0" oninput="recalcPurchaseAmount()" />
+            </div>
+            <div class="sales-field">
+              <label for="purchaseQty">Quantity</label>
+              <input id="purchaseQty" type="number" min="0" step="any" placeholder="0" oninput="recalcPurchaseAmount()" />
+            </div>
+            <div class="sales-field">
+              <label for="purchasePrice">Amount</label>
+              <input id="purchasePrice" type="number" min="0" step="1" placeholder="Auto = price × qty" readonly />
+            </div>
+            <div class="sales-field">
+              <label for="purchaseExpiry">Expiry (milk/paneer)</label>
+              <input id="purchaseExpiry" type="date" />
+            </div>
+            <div class="sales-field">
+              <label for="purchasePaidStatus">Status</label>
+              <select id="purchasePaidStatus" onchange="onPurchasePaidStatusChanged()">
+                <option value="unpaid" selected>Unpaid</option>
+                <option value="paid">Paid</option>
+              </select>
+            </div>
+            <div class="sales-field" id="purchasePayMethodWrap" style="display:none">
+              <label for="purchasePaymentMethod">Payment</label>
+              <select id="purchasePaymentMethod">
+                <option value="cash">Cash</option>
+                <option value="online">Online</option>
+              </select>
+            </div>
+            <div class="sales-field sales-field-action">
+              <label aria-hidden="true">&nbsp;</label>
+              <button type="button" class="secondary" onclick="addTempPurchaseItem()">+ Add item</button>
+            </div>
+            <div class="sales-field">
+              <label for="purchaseTotalAmount">Bill total</label>
+              <input id="purchaseTotalAmount" type="number" min="0" step="1" placeholder="0" readonly />
+            </div>
+            <div class="sales-field sales-field-action">
+              <label aria-hidden="true">&nbsp;</label>
+              <button type="button" onclick="addPurchase()">Save Bill</button>
+            </div>
+          </div>
+          <div class="card" style="padding:14px;margin-top:12px;">
+            <div class="section-title"><h2 style="font-size:14px;">Selected items</h2></div>
+            <div id="tempPurchaseItems" class="list"></div>
+          </div>
+          <div id="purchaseList" class="list"></div>
+        </div>
+        </div>
+
+        <div id="supplierTab-pay" class="tabPanel">
+        <div class="card">
+          <div class="section-title">
+            <h2>Supplier Remaining</h2>
+            <button type="button" class="secondary" onclick="openPaySupplier()">Record Payment</button>
+          </div>
+          <div id="supplierRemainingList" class="list" style="margin-top:12px;"></div>
+        </div>
+        </div>
+
+        <div id="supplierTab-history" class="tabPanel">
+        <div class="card">
+          <div class="section-title">
+            <h2>Supplier History</h2>
+            <div class="grid-3" style="gap:10px; align-items:center;">
+              <select id="supplierHistoryRange" onchange="renderSupplierHistory()">
+                <option value="week">This week</option>
+                <option value="month" selected>This month</option>
+                <option value="year">This year</option>
+                <option value="all">All time</option>
+              </select>
+              <select id="supplierHistorySupplier" onchange="renderSupplierHistory()">
+                <option value="">All suppliers</option>
+              </select>
+              <button type="button" class="secondary" onclick="renderSupplierHistory()">Refresh</button>
+            </div>
+          </div>
+          <div id="supplierHistoryCards" class="list" style="margin-top:12px;"></div>
+        </div>
+        </div>
+      </div>
+
+      <!-- Edit Supplier Modal -->
+      <div id="editSupplierOverlay" class="modalOverlay" role="dialog" aria-modal="true" aria-label="Edit Supplier">
+        <div class="modal">
+          <div class="modalHeader">
+            <div>
+              <div class="modalTitle">Edit supplier</div>
+            </div>
+            <button type="button" class="secondary btn-sm" onclick="closeEditSupplier()">Close</button>
+          </div>
+          <div class="modalBody">
+            <input id="editSupplierName" placeholder="Supplier name" />
+            <div class="divider"></div>
+            <div class="section-title" style="margin-bottom:6px;">
+              <h2 style="font-size:14px;">Items</h2>
+              <button type="button" class="secondary btn-sm" onclick="editSupplierAddItem()">+ Add item</button>
+            </div>
+            <div id="editSupplierItems"></div>
+          </div>
+          <div class="modalFooter">
+            <button type="button" class="btn-ghost btn-sm" onclick="closeEditSupplier()">Cancel</button>
+            <button type="button" class="btn-sm" onclick="saveEditSupplier()">Save changes</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Pay Supplier Modal -->
+      <div id="paySupplierOverlay" class="modalOverlay" role="dialog" aria-modal="true" aria-label="Record Supplier Payment">
+        <div class="modal">
+          <div class="modalHeader">
+            <div>
+              <div class="modalTitle">Record payment</div>
+            </div>
+            <button type="button" class="secondary btn-sm" onclick="closePaySupplier()">Close</button>
+          </div>
+          <div class="modalBody">
+            <div class="grid-3">
+              <input id="paySupplierDate" type="date" />
+              <select id="paySupplierName"></select>
+              <input id="paySupplierAmount" type="number" placeholder="Amount paid" />
+            </div>
+            <div class="grid-2">
+              <select id="paySupplierMethod">
+                <option value="cash">Cash</option>
+                <option value="online">Online</option>
+              </select>
+              <input id="paySupplierNote" placeholder="Note (optional)" />
+            </div>
+          </div>
+          <div class="modalFooter">
+            <button type="button" class="btn-ghost btn-sm" onclick="closePaySupplier()">Cancel</button>
+            <button type="button" class="btn-sm" onclick="savePaySupplier()">Save payment</button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Salary Slip PDF picker -->
+      <div id="salaryPdfOverlay" class="modalOverlay" role="dialog" aria-modal="true" aria-label="Download salary slip PDF">
+        <div class="modal" style="width:min(440px,100%)">
+          <div class="modalHeader">
+            <div>
+              <div class="modalTitle">वेतन पर्ची PDF</div>
+              <div class="muted" style="font-size:12px;margin-top:4px;">कर्मचारी और महीना चुनें, फिर Save as PDF</div>
+            </div>
+            <button type="button" class="secondary btn-sm" onclick="closeSalaryPdfModal()">बंद करें</button>
+          </div>
+          <div class="modalBody">
+            <label for="salaryPdfStaff" class="muted" style="font-size:12px;font-weight:700;">कर्मचारी</label>
+            <select id="salaryPdfStaff" aria-label="Select employee"></select>
+            <label for="salaryPdfMonth" class="muted" style="font-size:12px;font-weight:700;">महीना</label>
+            <input id="salaryPdfMonth" type="month" aria-label="Salary month" />
+          </div>
+          <div class="modalFooter">
+            <button type="button" class="secondary" onclick="closeSalaryPdfModal()">रद्द करें</button>
+            <button type="button" onclick="confirmSalaryPdfDownload()">PDF डाउनलोड</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="expenses-section" class="dashboard-section">
+        <div class="card">
+          <div class="section-title">
+            <div>
+              <h2>Daily Expenses</h2>
+              <div class="muted" id="expensesListPeriodLabel">Showing this month</div>
+            </div>
+            <div class="period-filter" id="expensesListPeriodFilter" role="tablist" aria-label="Expenses list period">
+              <button type="button" class="period-chip active" data-period="month" onclick="setListPeriod('expenses','month')">Month</button>
+              <button type="button" class="period-chip" data-period="m2" onclick="setListPeriod('expenses','m2')">2M</button>
+              <button type="button" class="period-chip" data-period="m3" onclick="setListPeriod('expenses','m3')">3M</button>
+              <button type="button" class="period-chip" data-period="m6" onclick="setListPeriod('expenses','m6')">6M</button>
+              <button type="button" class="period-chip" data-period="year" onclick="setListPeriod('expenses','year')">Year</button>
+            </div>
+          </div>
+          <div class="purchase-form" style="margin-top:4px;">
+            <div class="sales-field">
+              <label for="billExpenseGroup">Type</label>
+              <select id="billExpenseGroup" onchange="onExpenseGroupChanged()">
+                <option value="kitchen" selected>Kitchen / grocery</option>
+                <option value="fixed">Fixed costs</option>
+              </select>
+            </div>
+            <div class="sales-field">
+              <label for="billType">Category</label>
+              <select id="billType"></select>
+            </div>
+            <div class="sales-field sales-field-action">
+              <label aria-hidden="true">&nbsp;</label>
+              <button type="button" class="secondary" onclick="addCustomExpenseCategory()">+ Add category</button>
+            </div>
+            <div class="sales-field">
+              <label for="billDate">Date</label>
+              <input id="billDate" type="date" />
+            </div>
+            <div class="sales-field">
+              <label for="billAmount">Amount</label>
+              <input id="billAmount" type="number" min="0" step="1" placeholder="0" />
+            </div>
+            <div class="sales-field">
+              <label for="billStatus">Status</label>
+              <select id="billStatus" onchange="onBillPaidStatusChanged()">
+                <option value="paid" selected>Paid</option>
+                <option value="unpaid">Unpaid</option>
+              </select>
+            </div>
+            <div class="sales-field" id="billPayMethodWrap">
+              <label for="billPaymentMethod">Payment</label>
+              <select id="billPaymentMethod">
+                <option value="cash" selected>Cash</option>
+                <option value="online">Online</option>
+              </select>
+            </div>
+            <div class="sales-field sales-field-wide">
+              <label for="billNote">Note</label>
+              <input id="billNote" placeholder="Optional note" />
+            </div>
+            <div class="sales-field sales-field-wide">
+              <label for="billAttachment">Bill photo / PDF</label>
+              <input id="billAttachment" type="file" accept="image/*,application/pdf" />
+            </div>
+            <div class="sales-field sales-field-action">
+              <label aria-hidden="true">&nbsp;</label>
+              <button type="button" onclick="addBill()">Save Expense</button>
+            </div>
+          </div>
+          <div id="billsList" class="list" style="margin-top:14px;"></div>
+        </div>
+        <div class="card" style="margin-top:16px;">
+          <div class="section-title"><h2>Recurring expenses</h2></div>
+          <div class="purchase-form">
+            <div class="sales-field">
+              <label for="recTitle">Title</label>
+              <input id="recTitle" placeholder="Shop rent" />
+            </div>
+            <div class="sales-field">
+              <label for="recCategory">Category</label>
+              <select id="recCategory">
+                <option value="shop_rent">Shop rent</option>
+                <option value="maintenance">Maintenance</option>
+                <option value="limbu_marcha">Limbu marcha bill</option>
+                <option value="light_bill">Light bill</option>
+                <option value="water_bill">Water bill</option>
+                <option value="misc">Other</option>
+              </select>
+            </div>
+            <div class="sales-field">
+              <label for="recAmount">Amount</label>
+              <input id="recAmount" type="number" min="0" step="1" placeholder="0" />
+            </div>
+            <div class="sales-field">
+              <label for="recDay">Day of month</label>
+              <input id="recDay" type="number" min="1" max="28" value="1" />
+            </div>
+            <div class="sales-field">
+              <label for="recPaymentMethod">Payment</label>
+              <select id="recPaymentMethod">
+                <option value="cash">Cash</option>
+                <option value="online" selected>Online</option>
+              </select>
+            </div>
+            <div class="sales-field sales-field-action">
+              <label aria-hidden="true">&nbsp;</label>
+              <button type="button" onclick="addRecurringExpense()">Add recurring</button>
+            </div>
+          </div>
+          <div id="recurringExpensesList" class="list" style="margin-top:14px;"></div>
+        </div>
+
+        <div class="card" style="margin-top:16px;">
+          <div class="section-title" style="display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap;align-items:flex-start;">
+            <div>
+              <h2>Item-wise spend analytics</h2>
+              <div class="muted" id="expenseAnalyticsNote">Where money goes by category</div>
+            </div>
+            <div class="period-filter" id="expenseAnalyticsPeriod" role="tablist" aria-label="Expense analytics period">
+              <button type="button" class="period-chip" data-period="week" onclick="setExpenseAnalyticsPeriod('week')">Weekly</button>
+              <button type="button" class="period-chip active" data-period="month" onclick="setExpenseAnalyticsPeriod('month')">Monthly</button>
+              <button type="button" class="period-chip" data-period="year" onclick="setExpenseAnalyticsPeriod('year')">Yearly</button>
+            </div>
+          </div>
+          <div class="expense-analytics-grid">
+            <div class="chart-wrap dpro-chart-md"><canvas id="expenseItemMixChart"></canvas></div>
+            <div class="chart-wrap dpro-chart-md"><canvas id="expenseItemTrendChart"></canvas></div>
+          </div>
+          <div id="expenseItemRankList" class="list" style="margin-top:14px;"></div>
+        </div>
+      </div>
+
+      <div id="documents-section" class="dashboard-section">
+        <div class="card">
+          <div class="section-title">
+            <div>
+              <h2>Documents vault</h2>
+              <div class="muted">FSSAI, stickers, licenses, photos &amp; PDFs — save with a clear name to find later</div>
+            </div>
+          </div>
+          <div class="purchase-form">
+            <div class="sales-field">
+              <label for="docName">Display name</label>
+              <input id="docName" placeholder="e.g. FSSAI license 2026" />
+            </div>
+            <div class="sales-field">
+              <label for="docCategory">Type</label>
+              <select id="docCategory">
+                <option value="fssai">FSSAI / license</option>
+                <option value="sticker">Sticker / label</option>
+                <option value="certificate">Certificate</option>
+                <option value="photo">Photo</option>
+                <option value="invoice">Invoice / bill scan</option>
+                <option value="other">Other</option>
+              </select>
+            </div>
+            <div class="sales-field sales-field-wide">
+              <label for="docNotes">Notes</label>
+              <input id="docNotes" placeholder="Optional note" />
+            </div>
+            <div class="sales-field sales-field-wide">
+              <label for="docFile">File (PDF / image)</label>
+              <input id="docFile" type="file" accept="image/*,application/pdf" />
+            </div>
+            <div class="sales-field sales-field-action">
+              <label aria-hidden="true">&nbsp;</label>
+              <button type="button" onclick="uploadDocument()">Save document</button>
+            </div>
+          </div>
+          <div class="muted" style="margin-top:8px;font-size:12px;">Tip: keep files under ~650KB (compress large PDFs/photos). Images are auto-compressed.</div>
+          <div class="docs-toolbar" style="margin-top:14px;display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+            <input id="docSearch" placeholder="Search by name…" oninput="renderDocuments()" style="flex:1;min-width:180px;" />
+            <select id="docFilterCategory" onchange="renderDocuments()" aria-label="Filter documents">
+              <option value="">All types</option>
+              <option value="fssai">FSSAI / license</option>
+              <option value="sticker">Sticker / label</option>
+              <option value="certificate">Certificate</option>
+              <option value="photo">Photo</option>
+              <option value="invoice">Invoice / bill scan</option>
+              <option value="other">Other</option>
+            </select>
+          </div>
+          <div id="documentsList" class="docs-grid" style="margin-top:14px;"></div>
+        </div>
+      </div>
+
+      <div id="balance-transfer-section" class="dashboard-section">
+        <div class="card">
+          <div class="section-title">
+            <h2>Balance Transfer</h2>
+          </div>
+          <div class="grid-2" style="margin-bottom:12px;">
+            <div class="kpi-card span-12 positive" style="margin:0;">
+              <div class="kpi-meta"><div class="kpi-label">Available Cash</div><div class="kpi-value" id="btAvailCash">Rs 0</div></div>
+            </div>
+            <div class="kpi-card span-12 positive" style="margin:0;">
+              <div class="kpi-meta"><div class="kpi-label">Available Bank</div><div class="kpi-value" id="btAvailBank">Rs 0</div></div>
+            </div>
+          </div>
+          <div class="grid-5">
+            <select id="btFromAccount" onchange="onBtAccountChange()" aria-label="Transfer from">
+              <option value="cash">Cash</option>
+              <option value="bank">Bank</option>
+            </select>
+            <select id="btToAccount" onchange="onBtAccountChange()" aria-label="Transfer to">
+              <option value="bank">Bank</option>
+              <option value="cash">Cash</option>
+            </select>
+            <input id="btAmount" type="number" min="0" step="1" placeholder="Amount" />
+            <input id="btDate" type="date" aria-label="Transfer date" />
+            <input id="btNotes" placeholder="Notes (optional)" />
+          </div>
+          <button type="button" onclick="addBalanceTransfer()" style="margin-top:12px;">Transfer</button>
+        </div>
+        <div class="card" style="margin-top:14px;">
+          <div class="section-title">
+            <h2>Transfer History</h2>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;">
+              <select id="btHistoryRange" onchange="renderBalanceTransferHistory()">
+                <option value="today">Today</option>
+                <option value="week">This Week</option>
+                <option value="month" selected>This Month</option>
+                <option value="custom">Custom</option>
+              </select>
+              <input id="btHistoryFrom" type="date" style="display:none;" onchange="renderBalanceTransferHistory()" />
+              <input id="btHistoryTo" type="date" style="display:none;" onchange="renderBalanceTransferHistory()" />
+            </div>
+          </div>
+          <div id="btHistoryTable" class="table-like"></div>
+        </div>
+      </div>
+
+      <div id="investments-section" class="dashboard-section">
+        <div class="card">
+          <div class="section-title">
+            <h2>Investments &amp; Take Profit</h2>
+          </div>
+          <p class="muted" style="margin:0 0 14px;">Track how much you put into The Kilogram and how much profit you take out. This stays off the dashboard.</p>
+          <div class="grid-3" style="margin-bottom:14px;">
+            <div class="kpi-card span-12 positive" style="margin:0;">
+              <div class="kpi-meta"><div class="kpi-label">Total invested</div><div class="kpi-value" id="invTotalInvested">₹0</div></div>
+            </div>
+            <div class="kpi-card span-12" style="margin:0;">
+              <div class="kpi-meta"><div class="kpi-label">Total take profit</div><div class="kpi-value" id="invTotalTaken">₹0</div></div>
+            </div>
+            <div class="kpi-card span-12 positive" style="margin:0;">
+              <div class="kpi-meta"><div class="kpi-label">Net capital (invested − taken)</div><div class="kpi-value" id="invNetCapital">₹0</div></div>
+            </div>
+          </div>
+          <div class="grid-2" style="margin-bottom:14px;">
+            <div class="kpi-card span-12" style="margin:0;">
+              <div class="kpi-meta"><div class="kpi-label">Available Cash</div><div class="kpi-value" id="invAvailCash">₹0</div></div>
+            </div>
+            <div class="kpi-card span-12" style="margin:0;">
+              <div class="kpi-meta"><div class="kpi-label">Available Online</div><div class="kpi-value" id="invAvailOnline">₹0</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:14px;">
+          <div class="section-title"><h2>Add investment</h2></div>
+          <p class="muted" style="margin:0 0 10px;">Capital you add into the shop, or new shop items you buy (counted as investment).</p>
+          <div class="grid-5">
+            <input id="invDate" type="date" aria-label="Investment date" />
+            <select id="invKind" aria-label="Investment type">
+              <option value="capital_in">Capital added to shop</option>
+              <option value="shop_purchase">Shop purchase / new item</option>
+            </select>
+            <select id="invAccount" aria-label="Account">
+              <option value="cash">Cash</option>
+              <option value="online">Online</option>
+              <option value="personal">Personal (no balance change)</option>
+            </select>
+            <input id="invAmount" type="number" min="0" step="1" placeholder="Amount ₹" />
+            <input id="invTitle" placeholder="Item / description" />
+          </div>
+          <input id="invNotes" placeholder="Notes (optional)" style="margin-top:10px;width:100%;" />
+          <button type="button" id="invAddBtn" style="margin-top:12px;">Save investment</button>
+          <div id="invList" class="table-like" style="margin-top:16px;"></div>
+        </div>
+
+        <div class="card" style="margin-top:14px;">
+          <div class="section-title"><h2>Take profit</h2></div>
+          <p class="muted" style="margin:0 0 10px;">Withdraw earnings from Cash or Online — amount is deducted from that account.</p>
+          <div class="grid-4">
+            <input id="invWdDate" type="date" aria-label="Withdrawal date" />
+            <select id="invWdAccount" aria-label="From account">
+              <option value="cash">From Cash</option>
+              <option value="online">From Online</option>
+            </select>
+            <input id="invWdAmount" type="number" min="0" step="1" placeholder="Amount ₹" />
+            <input id="invWdNotes" placeholder="Notes (optional)" />
+          </div>
+          <button type="button" id="invWdAddBtn" style="margin-top:12px;">Take profit</button>
+          <div id="invWdList" class="table-like" style="margin-top:16px;"></div>
+        </div>
+      </div>
+
+      <div id="kds-section" class="dashboard-section">
+        <div class="card">
+          <div class="section-title">
+            <h2>Kitchen Display (KDS)</h2>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button type="button" class="secondary" id="kdsMgrLangBtn">English</button>
+              <button type="button" class="secondary" id="kdsOpenTablet">Open tablet KDS</button>
+            </div>
+          </div>
+          <p class="muted" style="margin:0 0 12px;">Live kitchen orders. Tablet runs <code>kds.html</code> full-screen; this page is the phone-friendly manager view.</p>
+          <div id="kdsMgrBoard"></div>
+        </div>
+
+        <div class="card" style="margin-top:14px;" data-kds-manage>
+          <div class="section-title"><h2>New Order (manual)</h2></div>
+          <p class="muted" style="margin:0 0 10px;">Use when POS is offline or not integrated yet.</p>
+          <div class="grid-4">
+            <input id="kdsNewOrderId" placeholder="Order ID (optional)" />
+            <input id="kdsNewTable" placeholder="Table no." />
+            <select id="kdsNewType" aria-label="Order type">
+              <option value="Takeaway">Takeaway</option>
+              <option value="Dine-in">Dine-in</option>
+              <option value="Delivery">Delivery</option>
+            </select>
+            <input id="kdsNewWaiter" placeholder="Waiter / cashier" />
+          </div>
+          <div class="grid-4" style="margin-top:10px;">
+            <select id="kdsNewItemPick" aria-label="Menu item"></select>
+            <input id="kdsNewQty" type="number" min="1" value="1" placeholder="Qty" />
+            <input id="kdsNewVariant" placeholder="Variant (1/2 Kg…)" />
+            <input id="kdsNewItemNote" placeholder="Item note" />
+          </div>
+          <input id="kdsNewNote" placeholder="Order note (कम तीखा, जल्दी…)" style="margin-top:10px;width:100%;" />
+          <button type="button" id="kdsNewOrderBtn" style="margin-top:12px;">Send to kitchen</button>
+        </div>
+
+        <div class="card" style="margin-top:14px;" data-kds-manage>
+          <div class="section-title"><h2>KDS menu master</h2></div>
+          <p class="muted" style="margin:0 0 10px;">English + Hindi names for kitchen cards.</p>
+          <div class="grid-3">
+            <input id="kdsMenuEn" placeholder="Name (English)" />
+            <input id="kdsMenuHi" placeholder="नाम (हिंदी)" />
+            <input id="kdsMenuCat" placeholder="Category" />
+          </div>
+          <button type="button" id="kdsMenuSaveBtn" style="margin-top:12px;">Save item</button>
+          <div id="kdsMenuList" class="table-like" style="margin-top:14px;"></div>
+        </div>
+
+        <div class="card" style="margin-top:14px;">
+          <div class="section-title"><h2>Reports</h2></div>
+          <div id="kdsMgrReports"></div>
+        </div>
+
+        <div class="card" style="margin-top:14px;" data-kds-manage>
+          <div class="section-title"><h2>POS API settings</h2></div>
+          <p class="muted" style="margin:0 0 10px;">API key for external POS. Leave blank to push KDS orders via Firestore from this app.</p>
+          <div class="grid-2">
+            <input id="kdsApiUrl" placeholder="https://your-api.example.com/api/kds" />
+            <input id="kdsApiKey" type="password" placeholder="API key" autocomplete="off" />
+          </div>
+          <button type="button" id="kdsApiSaveBtn" style="margin-top:12px;">Save API settings</button>
+        </div>
+      </div>
+
+      <div id="daily-closing-section" class="dashboard-section" hidden aria-hidden="true">
+        <div class="card">
+          <div class="section-title">
+            <h2>Daily Closing</h2>
+          </div>
+          <div class="grid-3" style="margin-bottom:14px;">
+            <input id="dcDate" type="date" onchange="refreshDailyClosingPreview()" aria-label="Closing date" />
+            <input id="dcOpeningCash" type="number" min="0" step="1" placeholder="Opening cash" oninput="refreshDailyClosingPreview()" />
+            <div style="display:flex;align-items:flex-end;">
+              <button type="button" class="secondary" onclick="refreshDailyClosingPreview()">Recalculate</button>
+            </div>
+          </div>
+          <div class="table-like" id="dcPreviewTable">
+            <div class="table-row"><div>Opening Cash</div><div id="dcPreviewOpening">Rs 0</div></div>
+            <div class="table-row"><div>Cash Sales</div><div id="dcPreviewSales">Rs 0</div></div>
+            <div class="table-row"><div>Cash Expenses</div><div id="dcPreviewExpenses">Rs 0</div></div>
+            <div class="table-row"><div>Cash Deposited to Bank</div><div id="dcPreviewDeposited">Rs 0</div></div>
+            <div class="table-row"><div>Cash Received from Bank</div><div id="dcPreviewFromBank">Rs 0</div></div>
+            <div class="table-row"><div><strong>Expected Cash</strong></div><div><strong id="dcPreviewExpected">Rs 0</strong></div></div>
+          </div>
+          <div class="grid-3" style="margin-top:14px;">
+            <input id="dcActualCash" type="number" min="0" step="1" placeholder="Actual cash counted" oninput="refreshDailyClosingPreview()" />
+            <input id="dcDifference" type="text" readonly style="font-weight:800;" aria-label="Difference" />
+            <input id="dcReason" placeholder="Reason (if difference)" />
+          </div>
+          <button type="button" onclick="closeDay()" style="margin-top:12px;">Close Day</button>
+        </div>
+        <div class="card" style="margin-top:14px;">
+          <div class="section-title"><h2>Closing History</h2></div>
+          <div id="dcHistoryList" class="list"></div>
+        </div>
+      </div>
+
+      <div id="staff-section" class="dashboard-section">
+        <div class="tabsBar" role="tablist" aria-label="Staff tabs">
+          <button type="button" class="tabBtn active" data-staff-tab="add" onclick="showStaffTab('add')">Add Staff</button>
+          <button type="button" class="tabBtn" data-staff-tab="attendance" onclick="showStaffTab('attendance')">Attendance</button>
+          <button type="button" class="tabBtn" data-staff-tab="salary" onclick="showStaffTab('salary')">Salary</button>
+        </div>
+
+        <div id="staffTab-add" class="tabPanel active">
+          <div class="card">
+          <div class="section-title">
+            <h2>Manage Staff</h2>
+            <button type="button" class="secondary" onclick="toggleAddStaff()" style="max-width:56px;border-radius:14px;font-size:18px;font-weight:900;">+</button>
+          </div>
+
+          <div id="addStaffBox" style="display:none;">
+            <div class="grid-3">
+              <input id="newStaffName" placeholder="Employee name" />
+              <input id="newStaffSalary" type="number" placeholder="Monthly salary" />
+              <button onclick="addStaff()">Add Employee</button>
+            </div>
+          </div>
+
+          <div id="staffList" class="list"></div>
+        </div>
+        <div class="card">
+          <div class="section-title"><h2>Fixed Salary Setup</h2></div>
+          <div class="grid-3">
+            <select id="fixedSalaryStaff"></select>
+            <input id="fixedSalaryAmount" type="number" placeholder="Monthly Salary" />
+            <button onclick="setFixedSalary()">Set Fixed Salary</button>
+          </div>
+          <div id="fixedSalaryList" class="list"></div>
+        </div>
+        </div>
+
+        <div id="staffTab-attendance" class="tabPanel">
+          <div class="card">
+          <div class="section-title">
+            <h2>Date-wise Attendance</h2>
+          </div>
+          <div class="att-month-bar">
+            <input id="attMonth" type="month" onchange="onAttMonthChange()" aria-label="Month" />
+            <input id="attDate" type="date" onchange="onAttDateChange()" aria-label="Date" />
+            <button type="button" class="secondary" onclick="shiftAttendanceDate(-1)" title="Previous day">← Prev</button>
+            <button type="button" class="secondary" onclick="shiftAttendanceDate(1)" title="Next day">Next →</button>
+            <button type="button" class="secondary" onclick="selectAttendanceDate(todayISO())">Today</button>
+          </div>
+          <div id="attDayStrip" class="att-day-strip" aria-label="Days in month"></div>
+          <div id="attMonthSummary" class="muted" style="margin-top:10px;"></div>
+          <div class="section-title" style="margin-top:16px;">
+            <h2>Staff for selected date</h2>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button type="button" class="secondary" onclick="markAllAttendance('present')">All Present</button>
+              <button type="button" class="secondary" onclick="markAllAttendance('half-day')">All Half day</button>
+              <button type="button" class="secondary" onclick="markAllAttendance('absent')">All Absent</button>
+              <button type="button" class="secondary" onclick="markAllAttendance('')">Clear row</button>
+              <button type="button" class="secondary" onclick="copyAttendanceFromPrevDay()">Copy previous day</button>
+            </div>
+          </div>
+          <div id="attendanceChecklist" class="list" style="margin-top:10px;"></div>
+          <button style="margin-top:10px;" onclick="saveBulkAttendance()">Save attendance for this date</button>
+          <div class="section-title" style="margin-top:14px;"><h2>Attendance History</h2></div>
+          <div id="attendanceList" class="list"></div>
+        </div>
+        </div>
+
+        <div id="staffTab-salary" class="tabPanel">
+          <div class="card">
+          <div class="section-title"><h2>Salary & Advances</h2></div>
+          <div class="grid-2">
+            <input id="salMonth" type="month" onchange="renderSalaryOverview()" aria-label="Month" />
+            <button class="secondary" type="button" onclick="renderSalaryOverview()">Refresh Summary</button>
+          </div>
+
+          <div class="section-title" style="margin-top:14px;"><h2>All Employees</h2></div>
+          <div id="salaryOverviewList" class="table-like"></div>
+
+          <div class="kpi-grid" id="salaryMonthEndSummary" style="margin-top:16px;">
+            <div class="kpi-card span-4">
+              <div class="kpi-meta">
+                <div class="kpi-label">Total monthly salary</div>
+                <div class="kpi-value" id="salTotalEarned">Rs 0</div>
+              </div>
+            </div>
+            <div class="kpi-card span-4">
+              <div class="kpi-meta">
+                <div class="kpi-label">Total advances given</div>
+                <div class="kpi-value" id="salTotalAdvance">Rs 0</div>
+              </div>
+            </div>
+            <div class="kpi-card span-4 positive" id="salPayableCard">
+              <div class="kpi-meta">
+                <div class="kpi-label">To pay at month end</div>
+                <div class="kpi-value" id="salTotalPayable">Rs 0</div>
+              </div>
+            </div>
+          </div>
+          <p class="muted" id="salMonthEndHint" style="margin-top:8px;font-size:12px;">Payable = (present days × daily rate) − advances. Daily rate = monthly ÷ 30. Unmarked days are not paid yet.</p>
+
+          <div class="section-title" style="margin-top:14px;"><h2>Add Staff Advance / Pay Full Salary</h2></div>
+          <div class="grid-5" style="margin-top: 10px;">
+            <input id="advDate" type="date" />
+            <input id="advMonth" type="month" onchange="onAdvKindChanged()" />
+            <select id="advStaff" onchange="onAdvKindChanged()"></select>
+            <select id="advKind" onchange="onAdvKindChanged()">
+              <option value="advance" selected>Advance</option>
+              <option value="full_salary">Full Salary (close month)</option>
+            </select>
+            <select id="advMethod">
+              <option value="cash">Cash</option>
+              <option value="online">Online</option>
+            </select>
+          </div>
+          <div class="grid-2" style="margin-top:10px;max-width:420px;">
+            <input id="advAmount" type="number" placeholder="Advance amount" />
+            <button type="button" class="secondary" id="advSubmitBtn" onclick="addAdvance()">Add Staff Advance</button>
+          </div>
+          <p class="muted" style="margin-top:8px;font-size:12px;">Pay salary pays remaining attendance-based earned − advances and closes the month. Excess advance auto-carries to next month until closed.</p>
+          <div class="section-title" style="margin-top:14px;">
+            <h2>Advances History</h2>
+            <div style="display:flex;gap:10px;align-items:center;justify-content:flex-end;flex-wrap:wrap;">
+              <button type="button" class="secondary" onclick="exportStaffMonthPdf()">Download salary slip PDF</button>
+              <select id="advancesFilterStaff" onchange="renderAdvances()">
+                <option value="">All staff</option>
+              </select>
+            </div>
+          </div>
+          <div id="advancesList" class="list"></div>
+
+          <div class="section-title" style="margin-top:14px;"><h2>Salary Payments</h2></div>
+          <div id="salaryList" class="list"></div>
+          </div>
+        </div>
+      </div>
+
+      <div id="analytics-section" class="dashboard-section">
+        <div class="card dark">
+          <div class="section-title">
+            <div>
+              <h2>Restaurant Analytics</h2>
+              <div class="muted period-range-label" id="analyticsPeriodLabel"></div>
+            </div>
+            <div class="analytics-filter-bar">
+              <div class="period-filter" id="analyticsPeriodFilter" role="tablist" aria-label="Analytics period">
+                <button type="button" class="period-chip" data-period="today" onclick="setAnalyticsPeriod('today')">Today</button>
+                <button type="button" class="period-chip" data-period="week" onclick="setAnalyticsPeriod('week')">This Week</button>
+                <button type="button" class="period-chip active" data-period="month" onclick="setAnalyticsPeriod('month')">This Month</button>
+              </div>
+              <div class="grid-4" style="gap:10px;align-items:center;">
+                <select id="analyticsRange" onchange="renderAnalytics()">
+                  <option value="today">Today</option>
+                  <option value="week">This Week</option>
+                  <option value="month" selected>This Month</option>
+                  <option value="daily">Last 14 Days (trend)</option>
+                  <option value="weekly">Last 8 Weeks (trend)</option>
+                  <option value="monthly">Last 6 Months (trend)</option>
+                  <option value="3m">Last 3 Months</option>
+                  <option value="6m">Last 6 Months</option>
+                  <option value="yearly">Year to Date</option>
+                  <option value="custom">Custom Range</option>
+                </select>
+                <input id="analyticsFrom" type="date" style="display:none" onchange="renderAnalytics()" />
+                <input id="analyticsTo" type="date" style="display:none" onchange="renderAnalytics()" />
+                <button type="button" class="secondary" onclick="renderAnalytics()">Apply</button>
+              </div>
+            </div>
+          </div>
+
+          <div class="kpi-grid" style="margin-top:10px;">
+            <div class="kpi-card span-3 positive"><div class="kpi-meta"><div class="kpi-label">Total Revenue</div><div class="kpi-value" id="anKpiRevenue">Rs 0</div></div></div>
+            <div class="kpi-card span-3"><div class="kpi-meta"><div class="kpi-label">Total Expenses</div><div class="kpi-value" id="anKpiExpenses">Rs 0</div></div></div>
+            <div class="kpi-card span-3"><div class="kpi-meta"><div class="kpi-label">Net Profit</div><div class="kpi-value" id="anKpiProfit">Rs 0</div></div></div>
+            <div class="kpi-card span-3"><div class="kpi-meta"><div class="kpi-label">Salary Paid</div><div class="kpi-value" id="anKpiSalaryPaid">Rs 0</div></div></div>
+            <div class="kpi-card span-3"><div class="kpi-meta"><div class="kpi-label">Supplier Payments</div><div class="kpi-value" id="anKpiSupplierPaid">Rs 0</div></div></div>
+            <div class="kpi-card span-3"><div class="kpi-meta"><div class="kpi-label">Grocery Expenses</div><div class="kpi-value" id="anKpiGrocery">Rs 0</div></div></div>
+          </div>
+
+          <div class="grid-3" style="margin-top:14px;">
+            <div class="card dark" style="padding: 14px;">
+              <div class="chart-wrap"><canvas id="anLineRevExpProfit"></canvas></div>
+            </div>
+            <div class="card dark" style="padding: 14px;">
+              <div class="chart-wrap"><canvas id="anPieExpenseBreakdown"></canvas></div>
+            </div>
+            <div class="card dark" style="padding: 14px;">
+              <div class="chart-wrap"><canvas id="anBarSalesBreakdown"></canvas></div>
+            </div>
+          </div>
+
+          <div class="grid-3" style="margin-top:12px;">
+            <div class="card dark" style="padding: 14px;">
+              <div class="chart-wrap"><canvas id="anBarSalaryMonthly"></canvas></div>
+            </div>
+            <div class="card dark" style="padding: 14px;">
+              <div class="chart-wrap"><canvas id="anLineSupplierPayments"></canvas></div>
+            </div>
+            <div class="card dark" style="padding: 14px;">
+              <div class="chart-wrap"><canvas id="anLineProfitTrend"></canvas></div>
+            </div>
+          </div>
+
+          <div class="card dark" style="margin-top:12px;padding:14px;">
+            <div class="section-title"><h2>Insights</h2></div>
+            <div class="grid-3">
+              <div class="card dark" style="padding:14px;"><div class="muted">Highest expense category</div><div style="font-weight:900;margin-top:6px;" id="anInsightHighestExpense">—</div></div>
+              <div class="card dark" style="padding:14px;"><div class="muted">Most profitable day</div><div style="font-weight:900;margin-top:6px;" id="anInsightBestDay">—</div></div>
+              <div class="card dark" style="padding:14px;"><div class="muted">Loss days</div><div style="font-weight:900;margin-top:6px;" id="anInsightLossDays">—</div></div>
+            </div>
+          </div>
+          <div class="card" style="margin-top:14px;">
+            <div class="section-title">
+              <h2>Reports</h2>
+              <div style="display:flex;gap:10px;flex-wrap:wrap;">
+                <button type="button" class="btn" onclick="exportReportExcel()">Download Excel (CSV)</button>
+                <button type="button" class="btn btn-secondary" onclick="exportReportPdf()">Download / Print PDF</button>
+              </div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="section-title"><h2>Staff Payable (Salary - Advances)</h2></div>
+          <div id="staffPayableTable" class="table-like"></div>
+        </div>
+        <div class="card">
+          <div class="section-title"><h2>Stock alerts</h2></div>
+          <div id="anStockAlertsList" class="list-stack"></div>
+        </div>
+        <div class="card" style="margin-top:14px;">
+          <div class="section-title">
+            <h2>Balance Transfer History</h2>
+            <div style="display:flex;gap:10px;flex-wrap:wrap;align-items:center;margin-top:8px;">
+              <select id="anBtRange" onchange="renderAnalyticsTransferHistory()">
+                <option value="today">Today</option>
+                <option value="week">This Week</option>
+                <option value="month" selected>This Month</option>
+                <option value="custom">Custom</option>
+              </select>
+              <input id="anBtFrom" type="date" style="display:none;" onchange="renderAnalyticsTransferHistory()" />
+              <input id="anBtTo" type="date" style="display:none;" onchange="renderAnalyticsTransferHistory()" />
+            </div>
+          </div>
+          <div id="anBtHistoryTable" class="table-like"></div>
+        </div>
+      </div>
+
+      <!-- ===== PROFIT ANALYSIS SECTION ===== -->
+      <div id="profit-analysis-section" class="dashboard-section">
+        <div class="dash-hero" style="margin-bottom:16px;">
+          <div>
+            <div class="dash-title" style="font-size:1.35rem;">Profit Analysis</div>
+            <div class="muted">Total sales vs all costs — weekly, monthly &amp; daily average</div>
+          </div>
+          <div style="display:flex;gap:8px;flex-wrap:wrap;align-items:center;">
+            <button type="button" class="period-chip active" id="paPeriodWeek" onclick="setPAPeriod('week')">This Week</button>
+            <button type="button" class="period-chip" id="paPeriodMonth" onclick="setPAPeriod('month')">This Month</button>
+            <button type="button" class="period-chip" id="paPeriodCustom" onclick="setPAPeriod('custom')">Custom</button>
+          </div>
+        </div>
+
+        <!-- Custom date range (hidden by default) -->
+        <div id="paCustomRange" class="card" style="display:none;margin-bottom:16px;padding:14px;">
+          <div class="grid-2" style="gap:12px;max-width:420px;">
+            <div><label class="label">From</label><input type="date" id="paFrom" class="input" /></div>
+            <div><label class="label">To</label><input type="date" id="paTo" class="input" /></div>
+          </div>
+          <button type="button" class="btn" style="margin-top:10px;" onclick="renderProfitAnalysis()">Apply</button>
+        </div>
+
+        <!-- KPI cards row -->
+        <div class="grid-4" id="paKpiRow" style="margin-bottom:16px;gap:12px;">
+          <div class="card dark" style="text-align:center;padding:18px 12px;">
+            <div class="muted" style="font-size:12px;margin-bottom:4px;">Total Sales</div>
+            <div id="paTotalSales" style="font-size:1.5rem;font-weight:700;color:#16C784;">₹0</div>
+          </div>
+          <div class="card dark" style="text-align:center;padding:18px 12px;">
+            <div class="muted" style="font-size:12px;margin-bottom:4px;">Total Costs</div>
+            <div id="paTotalCosts" style="font-size:1.5rem;font-weight:700;color:#EF4444;">₹0</div>
+          </div>
+          <div class="card dark" style="text-align:center;padding:18px 12px;">
+            <div class="muted" style="font-size:12px;margin-bottom:4px;">Net Profit</div>
+            <div id="paNetProfit" style="font-size:1.5rem;font-weight:700;">₹0</div>
+          </div>
+          <div class="card dark" style="text-align:center;padding:18px 12px;">
+            <div class="muted" style="font-size:12px;margin-bottom:4px;">Profit Margin</div>
+            <div id="paProfitMargin" style="font-size:1.5rem;font-weight:700;">0%</div>
+          </div>
+        </div>
+
+        <!-- Daily average row -->
+        <div class="grid-3" style="margin-bottom:16px;gap:12px;">
+          <div class="card dark" style="text-align:center;padding:16px 12px;">
+            <div class="muted" style="font-size:12px;margin-bottom:4px;">Avg Daily Sales</div>
+            <div id="paAvgDailySales" style="font-size:1.2rem;font-weight:700;color:#E87A3A;">₹0</div>
+          </div>
+          <div class="card dark" style="text-align:center;padding:16px 12px;">
+            <div class="muted" style="font-size:12px;margin-bottom:4px;">Avg Daily Cost</div>
+            <div id="paAvgDailyCost" style="font-size:1.2rem;font-weight:700;color:#F59E0B;">₹0</div>
+          </div>
+          <div class="card dark" style="text-align:center;padding:16px 12px;">
+            <div class="muted" style="font-size:12px;margin-bottom:4px;">Avg Daily Profit</div>
+            <div id="paAvgDailyProfit" style="font-size:1.2rem;font-weight:700;">₹0</div>
+          </div>
+        </div>
+
+        <!-- Expense category breakdown -->
+        <div class="content-grid" style="grid-template-columns:1fr 1fr;gap:16px;margin-bottom:16px;">
+          <div class="card">
+            <div class="section-title"><h2>Cost Breakdown</h2></div>
+            <div id="paCostBreakdown" class="list-stack"></div>
+          </div>
+          <div class="card" style="display:flex;flex-direction:column;align-items:center;">
+            <div class="section-title" style="width:100%;"><h2>Cost Ratio</h2></div>
+            <div style="position:relative;width:100%;max-width:280px;height:240px;">
+              <canvas id="paPieChart"></canvas>
+            </div>
+          </div>
+        </div>
+
+        <!-- Pending bills table -->
+        <div class="card" style="margin-bottom:16px;">
+          <div class="section-title"><h2>Pending &amp; Upcoming Bills</h2></div>
+          <div id="paPendingBills" class="list-stack"></div>
+        </div>
+
+        <!-- Weekly breakdown table -->
+        <div class="card">
+          <div class="section-title"><h2>Weekly Breakdown</h2></div>
+          <div id="paWeeklyTable" style="overflow-x:auto;"></div>
+        </div>
+      </div>
+      <!-- ===== END PROFIT ANALYSIS ===== -->
+
+      <div id="scheduled-section" class="dashboard-section">
+        <div class="so-top">
+          <div>
+            <h2>Scheduled &amp; bulk orders</h2>
+            <p class="muted" style="margin:4px 0 0;font-size:13px;">Future bookings · advances in today's cash/online · full sale only on fulfillment</p>
+          </div>
+          <div class="so-top-actions">
+            <button type="button" class="btn" id="soNewBtn">+ Book order</button>
+            <button type="button" class="btn btn-secondary" id="soRefreshBtn">Refresh</button>
+            <button type="button" class="btn btn-secondary" id="soNotifyBtn">Enable alerts</button>
+            <button type="button" class="btn btn-secondary" id="soSettingsBtn">Reminder settings</button>
+          </div>
+        </div>
+        <div class="so-summary" id="soSummary"></div>
+        <div class="so-filters">
+          <input class="input" id="soSearch" placeholder="Search name, phone, order #" />
+          <select class="input" id="soFilterRange">
+            <option value="upcoming7">Next 7 days</option>
+            <option value="today">Today</option>
+            <option value="tomorrow">Tomorrow</option>
+            <option value="all">All</option>
+            <option value="custom">Custom range</option>
+          </select>
+          <div id="soCustomRange">
+            <input class="input" id="soFrom" type="date" />
+            <input class="input" id="soTo" type="date" />
+          </div>
+          <select class="input" id="soFilterFul">
+            <option value="all">Pickup + Delivery</option>
+            <option value="pickup">Pickup</option>
+            <option value="delivery">Delivery</option>
+          </select>
+          <select class="input" id="soFilterPay">
+            <option value="all">Any payment</option>
+            <option value="unpaid">Unpaid</option>
+            <option value="partial">Partially paid</option>
+            <option value="paid">Fully paid</option>
+            <option value="refund_pending">Refund pending</option>
+          </select>
+          <select class="input" id="soFilterStatus">
+            <option value="all">Any status</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="prep_pending">Prep pending</option>
+            <option value="preparing">Preparing</option>
+            <option value="ready">Ready</option>
+            <option value="out_for_delivery">Out for delivery</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+        <div class="so-layout">
+          <div class="so-list" id="soList"></div>
+          <div class="so-detail" id="soDetail"><div class="muted">Select an order</div></div>
+        </div>
+        <div class="so-cal-wrap">
+          <div id="soCalendar"></div>
+        </div>
+      </div>
+
+      <div id="backup-section" class="dashboard-section">
+        <div class="card">
+          <div class="section-title"><h2>Backup</h2></div>
+          <div class="grid-3">
+            <button onclick="exportData()">Export JSON</button>
+            <label class="backup-import-card">
+              <input type="file" accept="application/json" onchange="restoreData(event)" />
+            </label>
+            <button class="warn" onclick="resetAll()">Reset All Data</button>
+          </div>
+        </div>
+      </div>
+
+      <div id="inventory-section" class="dashboard-section">
+        <div class="dash-hero" style="margin-bottom:16px;">
+          <div>
+            <div class="dash-title" style="font-size:1.35rem;">Inventory</div>
+            <div class="muted">Stock on hand, kitchen usage, lots &amp; expiry</div>
+          </div>
+        </div>
+        <div class="card" id="stockAlertsCard" style="margin-bottom:16px;border-color:rgba(239,68,68,.35);">
+          <div class="section-title"><h2>Alerts</h2></div>
+          <div id="stockAlertsList" class="list-stack"></div>
+        </div>
+        <div class="content-grid inv-layout">
+          <div class="card">
+            <div class="section-title"><h2>Add item</h2></div>
+            <div class="grid-2 inv-form">
+              <div>
+                <label class="label">Item</label>
+                <input id="invItem" class="input" placeholder="e.g. Paneer" />
+              </div>
+              <div>
+                <label class="label">Unit</label>
+                <input id="invUnit" class="input" placeholder="kg / litre / pcs" />
+              </div>
+              <div>
+                <label class="label">Opening qty</label>
+                <input id="invQty" class="input" type="number" min="0" step="0.01" placeholder="0" />
+              </div>
+              <div>
+                <label class="label">Low-stock alert</label>
+                <input id="invThreshold" class="input" type="number" min="0" step="0.01" placeholder="e.g. 2" />
+              </div>
+            </div>
+            <button type="button" class="btn" style="margin-top:14px;" onclick="addInventory()">Save item</button>
+          </div>
+          <div class="card">
+            <div class="section-title"><h2>Stock in / out / waste</h2></div>
+            <div class="grid-2 inv-form">
+              <div>
+                <label class="label">Item</label>
+                <select id="invMoveItem" class="input"></select>
+              </div>
+              <div>
+                <label class="label">Type</label>
+                <select id="invMoveType" class="input" onchange="onInvMoveTypeChanged()">
+                  <option value="in">Stock in</option>
+                  <option value="out">Daily kitchen usage</option>
+                  <option value="waste">Waste / spoilage</option>
+                </select>
+              </div>
+              <div>
+                <label class="label">Quantity</label>
+                <input id="invMoveQty" class="input" type="number" min="0.01" step="0.01" placeholder="0" />
+              </div>
+              <div>
+                <label class="label">Reason / note</label>
+                <input id="invMoveReason" class="input" placeholder="Purchase / daily kitchen / spoilage" />
+              </div>
+              <div id="invLotFields" class="sales-field-wide" style="display:none;grid-column:1/-1;">
+                <div class="grid-2 inv-form">
+                  <div>
+                    <label class="label">Supplier (optional)</label>
+                    <input id="invLotSupplier" class="input" placeholder="e.g. Dairy supplier" />
+                  </div>
+                  <div>
+                    <label class="label">Expiry date</label>
+                    <input id="invLotExpiry" class="input" type="date" />
+                  </div>
+                </div>
+              </div>
+            </div>
+            <button type="button" class="btn" style="margin-top:14px;" onclick="adjustInventoryStock()">Record movement</button>
+          </div>
+        </div>
+        <div class="card" style="margin-top:16px;">
+          <div class="section-title"><h2>Current stock</h2></div>
+          <div id="inventoryList" class="list-stack"></div>
+        </div>
+        <div class="card" style="margin-top:16px;">
+          <div class="section-title"><h2>Stock lots (FIFO / expiry)</h2></div>
+          <div id="stockLotsList" class="list-stack"></div>
+        </div>
+        <div class="card" style="margin-top:16px;">
+          <div class="section-title"><h2>Recent movements</h2></div>
+          <div id="inventoryMovementsList" class="list-stack"></div>
+        </div>
+      </div>
+
+      <div id="reminders-section" class="dashboard-section">
+        <div class="dash-hero" style="margin-bottom:16px;">
+          <div>
+            <div class="dash-title" style="font-size:1.35rem;">Reminders</div>
+            <div class="muted">Rent, bills, supplier dues — get notified before due date</div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="section-title"><h2>New reminder</h2></div>
+          <div class="grid-3 rem-form">
+            <div>
+              <label class="label">Title</label>
+              <input id="remTitle" class="input" placeholder="e.g. Shop rent" />
+            </div>
+            <div>
+              <label class="label">Due date</label>
+              <input id="remDueDate" class="input" type="date" />
+            </div>
+            <div>
+              <label class="label">Notify before (days)</label>
+              <input id="remNotifyBeforeDays" class="input" type="number" min="0" step="1" value="5" />
+            </div>
+          </div>
+          <button type="button" class="btn" style="margin-top:14px;" onclick="addReminder()">Save reminder</button>
+        </div>
+        <div class="card" style="margin-top:16px;">
+          <div class="section-title"><h2>Upcoming</h2></div>
+          <div id="reminderList" class="list-stack"></div>
+        </div>
+      </div>
+
+      <div id="menu-section" class="dashboard-section">
+        <div class="card">
+          <div class="section-title">
+            <h2>Menu Management</h2>
+          </div>
+
+          <div class="content-grid" style="grid-template-columns: 1fr; gap: 14px;">
+            <div class="card dark" style="padding: 14px;">
+              <div style="display:flex; gap: 12px; flex-wrap: wrap; align-items:flex-end;">
+                <div style="flex: 1; min-width: 180px;">
+                  <label class="label">Name</label>
+                  <input id="menuName" class="input" placeholder="e.g. Paneer Tikka" />
+                </div>
+                <div style="flex: 1; min-width: 180px;">
+                  <label class="label">Hindi name</label>
+                  <input id="menuNameHi" class="input" placeholder="Filled from English on save, or click Fill" />
+                </div>
+                <div style="width: 160px;">
+                  <label class="label">Price</label>
+                  <input id="menuPrice" class="input" type="number" min="0" step="1" placeholder="e.g. 180" />
+                </div>
+                <div style="width: 200px;">
+                  <label class="label">Category</label>
+                  <input id="menuCategory" class="input" placeholder="e.g. Starters" />
+                </div>
+                <div style="flex: 1; min-width: 240px;">
+                  <label class="label">Image (upload)</label>
+                  <input id="menuImageFile" type="file" accept="image/*" class="input" onchange="onMenuImagePicked(event)" />
+                </div>
+                <div style="width: 84px;">
+                  <label class="label">Preview</label>
+                  <img id="menuImagePreview" src="assets/the-kilogram-logo.png" alt="preview" style="width:84px;height:48px;border-radius:12px;object-fit:cover;border:1px solid rgba(255,255,255,0.08);" />
+                </div>
+                <div style="width: 170px;">
+                  <label class="label">Available</label>
+                  <select id="menuAvailable" class="input">
+                    <option value="true">Yes</option>
+                    <option value="false">No</option>
+                  </select>
+                </div>
+                <div style="flex: 1 1 100%;">
+                  <label class="label">Recipe stock deduct (item:qty per plate, comma-separated)</label>
+                  <input id="menuRecipe" class="input" placeholder="e.g. Paneer:0.15, Butter:0.02, Oil:0.01" />
+                </div>
+                <button class="btn" onclick="saveMenuItem()">Save Item</button>
+                <button class="btn btn-secondary" type="button" onclick="menuAutoFillHindiFromEnglish()">Fill Hindi</button>
+                <button class="btn btn-secondary" onclick="resetMenuForm()">Clear</button>
+              </div>
+              <div style="display:flex; gap: 10px; flex-wrap: wrap; align-items:center; margin-top: 10px;">
+                <input id="menuExcelFile" type="file" accept=".xlsx,.xls,.csv" class="input" style="max-width: 340px;" />
+                <button class="btn btn-secondary" onclick="importMenuExcel()">Import Excel / CSV</button>
+                <button class="btn" type="button" onclick="loadKilogramOfficialMenu()">Load Kilogram Menu (website)</button>
+                <button class="btn btn-secondary" onclick="refreshMenu()">Refresh</button>
+                <button class="btn btn-secondary" type="button" onclick="backfillAllMenuHindi()">Fill all missing Hindi</button>
+                <button class="warn" type="button" onclick="clearAllMenuItems()">Clear entire menu</button>
+              </div>
+            </div>
+
+            <div class="card dark" style="padding: 14px;">
+              <div style="display:flex; gap: 12px; flex-wrap: wrap; align-items:flex-end;">
+                <div style="flex: 1; min-width: 240px;">
+                  <label class="label">Search</label>
+                  <input id="menuSearch" class="input" placeholder="Search by name..." oninput="renderMenuList()" />
+                </div>
+                <div style="width: 240px;">
+                  <label class="label">Filter category</label>
+                  <select id="menuCategoryFilter" class="input" onchange="renderMenuList()">
+                    <option value="">All</option>
+                  </select>
+                </div>
+              </div>
+
+              <div id="menuList" class="list" style="margin-top: 12px;"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div id="pos-section" class="dashboard-section">
+        <div id="kgPosRoot" class="kg-pos-root">
+          <div class="kg-pos-top kg-pos-top-compact">
+            <button type="button" class="kg-pos-menu-btn" onclick="toggleAppSidebar()" aria-label="Open menu" title="Menu">☰</button>
+            <div class="kg-pos-ordertypes" aria-label="Order type">
+              <button type="button" class="kg-pos-channel active" data-channel="takeaway">Takeaway</button>
+              <button type="button" class="kg-pos-channel" data-channel="swiggy">Swiggy</button>
+              <button type="button" class="kg-pos-channel" data-channel="zomato">Zomato</button>
+            </div>
+            <div class="kg-pos-meta">
+              <span id="kgPosClock" class="kg-pos-clock">—</span>
+              <span class="kg-pos-meta-quiet">· <b id="kgPosCashier">—</b></span>
+              <span class="kg-pos-sync ok" id="kgPosSync" style="display:none;" aria-hidden="true"></span>
+              <input id="kgPosPlatformNo" class="kg-pos-cust" placeholder="Platform #" style="display:none;" />
+              <input id="kgPosCustomerName" class="kg-pos-cust" placeholder="Name" autocomplete="name" />
+              <input id="kgPosCustomerPhone" class="kg-pos-cust kg-pos-cust-phone" placeholder="Phone" inputmode="tel" autocomplete="tel" />
+              <details class="kg-pos-more">
+                <summary>More</summary>
+                <div class="kg-pos-more-panel">
+                  <span class="kg-pos-meta-quiet">Ticket <b id="kgPosBillPreview">—</b></span>
+                  <button type="button" data-pos-action="void">Void last</button>
+                  <button type="button" data-pos-action="settings">Printer</button>
+                  <button type="button" onclick="toggleSidebar()"><span id="posSidebarBtnText">Sidebar</span></button>
+                  <button type="button" onclick="posShowHistory()">History</button>
+                </div>
+              </details>
+            </div>
+          </div>
+          <div id="kgPosAggHint" class="kg-pos-agg-hint" style="display:none;">Swiggy/Zomato → kitchen with tag + # · ₹0 in POS sales</div>
+          <div id="kgPosKdsLive" class="kg-kds-live kg-kds-live-strip" aria-live="polite">
+            <div class="kg-kds-live-head">
+              <button type="button" class="kg-kds-live-bar kg-kds-live-toggle" id="kgPosKdsToggle" aria-expanded="true" title="Show / hide live orders">
+                <span class="kg-live-dot" aria-hidden="true"></span>
+                <span class="kg-kds-live-title">LIVE</span>
+                <span class="kg-kds-chevron" aria-hidden="true">▸</span>
+              </button>
+              <div class="kg-kds-stats" aria-label="Live order counts">
+                <div class="kg-kds-stat wait" title="Waiting"><span class="kg-kds-stat-n" id="kgPosKdsWaitN" data-n="0">0</span><span class="kg-kds-stat-l">Wait</span></div>
+                <div class="kg-kds-stat prep" title="Preparing"><span class="kg-kds-stat-n" id="kgPosKdsPrepN" data-n="0">0</span><span class="kg-kds-stat-l">Prep</span></div>
+                <div class="kg-kds-stat ready" title="Ready"><span class="kg-kds-stat-n" id="kgPosKdsReadyN" data-n="0">0</span><span class="kg-kds-stat-l">Ready</span></div>
+                <div class="kg-kds-stat run" title="Running"><span class="kg-kds-stat-n" id="kgPosKdsRunningN">0</span><span class="kg-kds-stat-l">All</span></div>
+                <div class="kg-kds-stat unpaid" title="Pay later pending"><span class="kg-kds-stat-n" id="kgPosKdsUnpaidN" data-n="0">0</span><span class="kg-kds-stat-l">Due</span></div>
+              </div>
+            </div>
+            <div id="kgPosKdsPending" class="kg-kds-pending" style="display:none;" aria-label="Pending payment orders"></div>
+            <div id="kgPosKdsList" class="kg-kds-list kg-kds-list-scroll">
+              <div class="kg-kds-empty">No live kitchen orders</div>
+            </div>
+          </div>
+          <div class="kg-pos-tables" id="kgPosTables" style="display:none;"></div>
+          <div id="kgPosHeld" class="kg-pos-held" style="display:none;"></div>
+          <div class="kg-pos-body kg-pos-body-v2">
+            <section class="kg-pos-center">
+              <div class="kg-pos-center-toolbar">
+                <div class="kg-pos-cats kg-pos-cats-pills" id="kgPosCats" aria-label="Categories"></div>
+                <input id="kgPosSearch" class="kg-pos-search" placeholder="Search menu…" autocomplete="off" />
+              </div>
+              <div id="kgPosMenuGrid" class="kg-pos-menu-grid"></div>
+              <div id="posMenuGrid" hidden></div>
+              <div id="posCategoryChips" hidden></div>
+              <input id="posSearch" hidden />
+            </section>
+            <aside class="kg-pos-cart">
+              <div class="kg-pos-cart-head">
+                <div>
+                  <div class="kg-pos-cart-title">Current order</div>
+                  <div class="kg-pos-cart-sub" id="kgPosCartChannelLabel">Takeaway</div>
+                </div>
+                <div class="muted" id="kgPosCartCount">0 items</div>
+                <div class="pos-small" id="posCartCount" hidden>0 items</div>
+              </div>
+              <div id="kgPosCartList" class="kg-pos-cart-list"></div>
+              <div id="posCartList" hidden></div>
+              <div class="kg-pos-cart-foot">
+                <div class="kg-pos-cart-tools">
+                  <button type="button" class="kg-pos-add-note" data-pos-action="custom">+ Custom item</button>
+                </div>
+                <div class="kg-pos-totals kg-pos-totals-simple">
+                  <div class="kg-pos-disc-hint" id="kgPosDiscHint" hidden></div>
+                  <div class="kg-pos-grand"><span>Total</span><b id="kgPosGrand">₹0</b></div>
+                  <span id="kgPosSubtotal" hidden></span>
+                  <span id="kgPosDiscount" hidden></span>
+                  <span id="kgPosCharges" hidden></span>
+                  <span id="kgPosGst" hidden></span>
+                  <span id="posSubtotal" hidden></span><span id="posTotal" hidden></span>
+                </div>
+                <button type="button" class="kg-pos-place" data-pos-action="settle">Place order</button>
+                <button type="button" class="kg-pos-wa-btn" data-pos-action="whatsapp" title="Share last bill on WhatsApp">WhatsApp bill</button>
+                <div class="kg-pos-actions kg-pos-actions-stack">
+                  <div class="kg-pos-actions-row">
+                    <button type="button" data-pos-action="hold">Hold</button>
+                    <button type="button" id="kgPosBookScheduled" onclick="openScheduledBooking()" title="Book advance / party / bulk order">Book advance order</button>
+                    <button type="button" data-pos-action="clear">Clear</button>
+                    <button type="button" data-pos-action="discount">Discount</button>
+                  </div>
+                  <div class="kg-pos-actions-row kg-pos-actions-row-kot">
+                    <button type="button" data-pos-action="kot">KOT</button>
+                    <button type="button" data-pos-action="reprint">Reprint</button>
+                  </div>
+                </div>
+              </div>
+              <div id="posTicketsBar" hidden><div id="posTicketsRow"></div><span id="posTicketsCount">0</span></div>
+              <span id="posTodaySalesMeta" hidden></span><span id="posTodaySalesTotal" hidden></span>
+              <span id="posTodaySalesCash" hidden></span><span id="posTodaySalesOnline" hidden></span>
+              <span id="thermalPrinterStatus" hidden></span>
+              <button id="thermalPrinterConnectBtn" type="button" hidden></button>
+              <select id="posPayMode" hidden><option value="cash">Cash</option></select>
+              <input id="posOrderNote" hidden /><input id="posAdjust" hidden value="0" />
+              <div id="posPaySplit" hidden><input id="posPayCash" /><input id="posPayOnline" /><span id="posPayHint"></span></div>
+            </aside>
+          </div>
+        </div>
+      </div>
+
+
+  <div id="soWizardOverlay" hidden>
+    <div class="so-wizard" role="dialog" aria-modal="true" aria-labelledby="soWizardTitle">
+      <div class="so-wizard-head">
+        <h3 id="soWizardTitle">Book advance order</h3>
+        <button type="button" class="btn-ghost" id="soWizardClose" aria-label="Close">✕</button>
+      </div>
+      <div class="so-wizard-body" id="soWizardBody"></div>
+      <div class="so-wizard-foot">
+        <button type="button" class="btn btn-secondary" id="soWizardBack">Back</button>
+        <button type="button" class="btn" id="soWizardNext">Next</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="kgPosSettleOverlay" class="kg-pos-overlay" style="display:none;">
+    <div class="kg-pos-modal" role="dialog" aria-modal="true" aria-label="Settle payment">
+      <h3>Settle · <span id="kgPosSettleTotal">₹0</span></h3>
+      <label>Payment mode
+        <select id="kgPosSettleMode">
+          <option value="cash">Cash</option>
+          <option value="online">Online (UPI/Card)</option>
+          <option value="paylater">Pay later (when ready)</option>
+        </select>
+      </label>
+      <p id="kgPosPayLaterHint" class="muted" style="display:none;margin:6px 0 0;font-size:13px;">
+        Sends to kitchen now · collect Cash/Online from LIVE orders when ready
+      </p>
+      <div id="kgPosSettleCashBox">
+        <label>Amount received <input id="kgPosReceived" type="number" min="0" step="1" /></label>
+        <div class="kg-pos-quick">
+          <button type="button" data-quick-cash="exact">Exact</button>
+          <button type="button" data-quick-cash="100">₹100</button>
+          <button type="button" data-quick-cash="200">₹200</button>
+          <button type="button" data-quick-cash="500">₹500</button>
+        </div>
+        <div>Change due: <b id="kgPosChange">₹0</b></div>
+      </div>
+      <div id="kgPosSettleSplit" style="display:none;grid-template-columns:1fr 1fr;gap:8px;">
+        <input id="kgPosPayCash" type="number" placeholder="Cash" />
+        <input id="kgPosPayOnline" type="number" placeholder="Online" />
+        <input id="kgPosPaySwiggy" type="number" placeholder="Swiggy" />
+        <input id="kgPosPayZomato" type="number" placeholder="Zomato" />
+      </div>
+      <label id="kgPosWaShareRow" class="kg-pos-wa-share-row" style="display:none;margin-top:10px;">
+        <input type="checkbox" id="kgPosWaShare" checked />
+        Share bill on WhatsApp (opens chat — you tap Send)
+      </label>
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+        <button type="button" class="btn" id="kgPosSettleConfirm">Settle → Kitchen</button>
+        <button type="button" class="btn btn-secondary" id="kgPosSettlePrint" title="Only prints if USB/Serial/Bluetooth printer is connected">Settle + Print (if printer)</button>
+        <button type="button" class="btn btn-secondary" id="kgPosSettleCancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="kgPosSettingsOverlay" class="kg-pos-overlay" style="display:none;">
+    <div class="kg-pos-modal" role="dialog" aria-modal="true">
+      <h3>Printer &amp; POS settings</h3>
+      <div style="display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px;">
+        <button type="button" id="kgPosConnectUsb">Connect USB printer</button>
+        <button type="button" id="kgPosConnectSerial">Connect Serial printer</button>
+        <button type="button" id="kgPosConnectBle">Connect Bluetooth</button>
+        <button type="button" id="kgPosUseSystemPrinter">Use system printer</button>
+        <button type="button" id="kgPosTestPrint">Test print</button>
+      </div>
+      <label>Paper width
+        <select id="kgPosPaperWidth"><option value="58">58 mm</option><option value="80" selected>80 mm</option></select>
+      </label>
+      <label>Baud rate
+        <select id="kgPosBaud">
+          <option value="9600" selected>9600</option>
+          <option value="19200">19200</option>
+          <option value="38400">38400</option>
+          <option value="115200">115200</option>
+        </select>
+      </label>
+      <label><input type="checkbox" id="kgPosAutoCut" checked /> Auto-cut</label>
+      <label><input type="checkbox" id="kgPosDrawer" /> Cash drawer kick</label>
+      <label>KOT printer
+        <select id="kgPosKotTransport">
+          <option value="auto">Auto (connected)</option>
+          <option value="usb">USB</option>
+          <option value="serial">Serial</option>
+          <option value="bluetooth">Bluetooth</option>
+          <option value="browser">System printer</option>
+        </select>
+      </label>
+      <label>Bill printer
+        <select id="kgPosBillTransport">
+          <option value="auto">Auto (connected)</option>
+          <option value="usb">USB</option>
+          <option value="serial">Serial</option>
+          <option value="bluetooth">Bluetooth</option>
+          <option value="browser">System printer</option>
+        </select>
+      </label>
+      <hr/>
+      <label class="kg-pos-gst-settings" hidden><input type="checkbox" id="kgPosGstOn" /> GST enabled</label>
+      <label class="kg-pos-gst-settings" hidden>GST % <input id="kgPosGstPct" type="number" value="0" min="0" step="0.5" /></label>
+      <label>Shop name <input id="kgPosShopName" placeholder="The Kilogram" /></label>
+      <label>Address <input id="kgPosAddress" placeholder="Full shop address for WhatsApp bill" /></label>
+      <label class="kg-pos-gst-settings" hidden>GSTIN <input id="kgPosGstin" /></label>
+      <label>Shop phone <input id="kgPosPhone" placeholder="Shown on WhatsApp bill" /></label>
+      <label>UPI ID <input id="kgPosUpi" /></label>
+      <label>Google ratings / review link <input id="kgPosRatingsUrl" placeholder="https://g.page/r/… or maps review URL" /></label>
+      <label><input type="checkbox" id="kgPosWaDefault" checked /> Auto-offer WhatsApp share after takeaway settle</label>
+      <div style="display:flex;gap:8px;margin-top:12px;">
+        <button type="button" id="kgPosSaveSettings">Save</button>
+        <button type="button" id="kgPosSettingsClose">Close</button>
+      </div>
+    </div>
+  </div>
+
+  
+  <div id="kgPosInputOverlay" class="kg-pos-overlay" style="display:none;">
+    <div class="kg-pos-modal" role="dialog" aria-modal="true">
+      <h3 id="kgPosInputTitle">Input</h3>
+      <p class="muted" id="kgPosInputHint"></p>
+      <input id="kgPosInputValue" />
+      <div style="display:flex;gap:8px;margin-top:12px;">
+        <button type="button" id="kgPosInputOk">OK</button>
+        <button type="button" id="kgPosInputCancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="kgPosCustomOverlay" class="kg-pos-overlay" style="display:none;">
+    <div class="kg-pos-modal" role="dialog" aria-modal="true" aria-label="Custom item">
+      <h3 style="margin:0 0 8px;">Custom item / variety</h3>
+      <p class="muted" style="margin:0 0 10px;">Type any name and price — adds to this bill only</p>
+      <label>Name <input id="kgPosCustomName" placeholder="e.g. Extra gravy / Special thali" autocomplete="off" /></label>
+      <label style="margin-top:8px;display:block;">Price ₹ <input id="kgPosCustomPrice" type="number" min="0" step="1" placeholder="0" /></label>
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+        <button type="button" class="btn" id="kgPosCustomAdd">Add to bill</button>
+        <button type="button" class="btn btn-secondary" id="kgPosCustomCancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="kgPosVariantOverlay" class="kg-pos-overlay" style="display:none;">
+    <div class="kg-pos-modal" role="dialog" aria-modal="true" style="width:min(520px,100%);">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <h3 style="margin:0;" id="kgPosVariantTitle">Choose size</h3>
+        <button type="button" id="kgPosVariantClose">Close</button>
+      </div>
+      <div id="kgPosVariantList" class="kg-pos-variant-list"></div>
+      <div class="kg-pos-section-label" style="margin-top:12px;font-weight:800;">Add-ons</div>
+      <div id="kgPosAddonList" class="kg-pos-addon-list"></div>
+      <button type="button" id="kgPosVariantAdd" class="primary" style="width:100%;margin-top:12px;min-height:44px;">Add to cart</button>
+    </div>
+  </div>
+
+  <div id="kgPosVoidOverlay" class="kg-pos-overlay" style="display:none;">
+    <div class="kg-pos-modal" role="dialog" aria-modal="true">
+      <h3>Void bill</h3>
+      <p class="muted">Owner/manager only. Creates a reversal — does not delete sales history.</p>
+      <label>Bill ID / Bill no <input id="kgPosVoidBillId" placeholder="bill id or KG-YYYYMMDD-0001" /></label>
+      <label>Reason <input id="kgPosVoidReason" placeholder="Wrong payment / cancelled order" /></label>
+      <div style="display:flex;gap:8px;margin-top:12px;">
+        <button type="button" id="kgPosVoidConfirm">Void bill</button>
+        <button type="button" id="kgPosVoidCancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+<div id="kgMarginOverlay" class="kg-pos-overlay" style="display:none;">
+    <div class="kg-pos-modal" style="width:min(720px,100%);" role="dialog" aria-modal="true">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <h3 style="margin:0;">Net margin breakdown</h3>
+        <button type="button" id="kgMarginClose">Close</button>
+      </div>
+      <div id="kgMarginBody"></div>
+    </div>
+  </div>
+
+  <div id="kgFixedCostsOverlay" class="kg-pos-overlay" style="display:none;">
+    <div class="kg-pos-modal" role="dialog" aria-modal="true">
+      <div style="display:flex;justify-content:space-between;align-items:center;">
+        <h3 style="margin:0;">Fixed costs (rent, light, etc.)</h3>
+        <button type="button" id="kgFixedCostsClose">Close</button>
+      </div>
+      <div id="kgFixedCostsList"></div>
+      <label>Name <input id="kgFixedCostName" placeholder="Rent / Electricity" /></label>
+      <label>Amount ₹/month <input id="kgFixedCostAmount" type="number" min="0" /></label>
+      <label><input type="checkbox" id="kgFixedCostRecurring" checked /> Recurring monthly</label>
+      <button type="button" id="kgFixedCostSave">Save fixed cost</button>
+    </div>
+  </div>
+
+<div id="printArea"></div>
+
+  <div id="celebrateOverlay" class="celebrateOverlay" aria-hidden="true">
+    <div class="celebrateCard">
+      <div class="confetti" id="confettiWrap"></div>
+      <div class="firework" aria-hidden="true">
+        <div class="burst"></div>
+        <div class="spark"></div>
+        <div class="spark"></div>
+        <div class="spark"></div>
+        <div class="spark"></div>
+        <div class="spark"></div>
+        <div class="spark"></div>
+      </div>
+      <div class="celebrateTitle">Order completed</div>
+      <div class="celebrateSub" id="celebrateSub">Saved successfully</div>
+    </div>
+  </div>
+
+  <div id="orderHistoryOverlay" class="modalOverlay kg-history-overlay" role="dialog" aria-modal="true" aria-label="Order history">
+    <div class="modal kg-history-modal">
+      <div class="modalHeader kg-history-head">
+        <div class="modalTitle">Order history</div>
+        <button class="btn btn-secondary" type="button" onclick="posCloseHistory()">Close</button>
+      </div>
+      <div class="modalBody kg-history-body" id="orderHistoryBody"></div>
+    </div>
+  </div>
+
+  <div id="kgPosLiveOrderOverlay" class="kg-pos-overlay" style="display:none;" role="dialog" aria-modal="true" aria-label="Live order">
+    <div class="kg-pos-modal" style="width:min(420px,94vw);">
+      <h3 id="kgPosLiveOrderTitle" style="margin:0 0 8px;">Order</h3>
+      <div id="kgPosLiveOrderBody"></div>
+    </div>
+  </div>
+
+  <div id="kgPosPickupOverlay" class="kg-pos-overlay kg-pos-pickup-overlay" style="display:none;" role="dialog" aria-modal="true" aria-label="Delivery pickup">
+    <div class="kg-pos-modal kg-pos-pickup-modal">
+      <div class="kg-pos-pickup-brand" id="kgPosPickupBrand">Zomato</div>
+      <div class="kg-pos-pickup-label">Delivery boy pickup</div>
+      <div class="kg-pos-pickup-no" id="kgPosPickupNo">#—</div>
+      <div class="kg-pos-pickup-sub" id="kgPosPickupSub">Order ready — hand over when driver arrives</div>
+      <div class="kg-pos-pickup-actions">
+        <button type="button" class="btn" id="kgPosPickupClear">Clear highlight</button>
+        <button type="button" class="btn btn-secondary" id="kgPosPickupKeep">Keep highlighted</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Firebase SDKs -->
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+    <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
+    <script src="js/theme.js?v=20260710g"></script>
+    <script src="js/config.js"></script>
+    <script src="js/balanceMath.js?v=20261123brand1"></script>
+    <script src="js/investments.js?v=20261116a"></script>
+    <script src="js/kds/kdsStore.js?v=20261119fast1"></script>
+    <script src="js/kds/kdsClient.js?v=20261119fast1"></script>
+    <script src="js/kds/manager.js?v=20261117d"></script>
+    <script src="js/firebase.js?v=20260820bt1"></script>
+    <script src="js/auth.js?v=20261123brand1"></script>
+    <script src="js/api.js?v=20261123brand1"></script>
+    <script src="js/opsPhase2.js?v=20260810p2"></script>
+    <script src="constants/kilogramMenuSeed.js?v=20261119fast1"></script>
+    <script src="js/thermalPrinter.js"></script>
+    <script src="js/pos/money.js?v=20261116b"></script>
+    <script src="js/pos/offlineQueue.js?v=20261116b"></script>
+    <script src="js/pos/upiQr.js?v=20261116b"></script>
+    <script src="js/pos/posState.js?v=20261119fast1"></script>
+    <script src="js/pos/posMenu.js?v=20261123brand1"></script>
+    <script src="js/pos/posFavourites.js?v=20261119fast1"></script>
+    <script src="js/pos/salesBridge.js?v=20261123brand1"></script>
+    <script src="js/pos/posCheckout.js?v=20261119fast1"></script>
+    <script src="js/pos/whatsappBill.js?v=20261119fast1"></script>
+    <script src="js/pos/posKdsLive.js?v=20261123brand1"></script>
+    <script src="js/printing/escpos.js?v=20261116"></script>
+    <script src="js/printing/rasterText.js?v=20261116"></script>
+    <script src="js/printing/transports/webSerial.js?v=20261116"></script>
+    <script src="js/printing/transports/webUsb.js?v=20261116"></script>
+    <script src="js/printing/transports/browserPrint.js?v=20261116"></script>
+    <script src="js/printing/transports/bluetooth.js?v=20261116"></script>
+    <script src="js/printing/printerManager.js?v=20261117fix1"></script>
+    <script src="js/pos/posUI.js?v=20261119cat1"></script>
+    <script src="js/finance/netMargin.js?v=20261120layout1"></script>
+    <script src="js/dashboard/liveSales.js?v=20261123brand1"></script>
+    <script src="js/scheduled/scheduledStore.js?v=20261123brand1"></script>
+    <script src="js/scheduled/scheduledReminders.js?v=20261123brand1"></script>
+    <script src="js/scheduled/scheduledPosBridge.js?v=20261123brand1"></script>
+    <script src="js/scheduled/scheduledUI.js?v=20261123brand1"></script>
+    <script src="js/app.js?v=20261123brand1"></script>
+    <script>
+      if (window.lucide && typeof lucide.createIcons === "function") lucide.createIcons();
+    </script>
+</body>
+</html>

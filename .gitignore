@@ -1,0 +1,17 @@
+node_modules/
+dist/
+build/
+.vite/
+coverage/
+.env
+.env.*
+!.env.example
+.DS_Store
+*.log
+secrets/
+*-firebase-adminsdk*.json
+.firebase/
+firepit-log.txt
+*.local
+.cursor/
+assets/image-*.png
