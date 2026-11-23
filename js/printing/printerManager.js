@@ -43,24 +43,38 @@
     return root.KG && root.KG.transports ? root.KG.transports : {};
   }
 
+  function hardwareTransports() {
+    const t = transports();
+    return [t.webUsb, t.webSerial, t.bluetooth].filter(Boolean);
+  }
+
+  /** True when a real USB / Serial / Bluetooth printer is connected. */
+  function hasHardwarePrinter() {
+    if (mockTransport) return true;
+    return hardwareTransports().some((tr) => tr.isConnected && tr.isConnected());
+  }
+
   function pickConnected(preferred) {
     if (mockTransport) return mockTransport;
     const t = transports();
+    // Never auto-pick browser/system print — it opens the PDF dialog.
+    // Only use it when the user explicitly chooses "browser".
     const order =
       preferred === "usb"
-        ? ["webUsb", "webSerial", "bluetooth", "browserPrint"]
+        ? ["webUsb", "webSerial", "bluetooth"]
         : preferred === "serial"
-          ? ["webSerial", "webUsb", "bluetooth", "browserPrint"]
+          ? ["webSerial", "webUsb", "bluetooth"]
           : preferred === "bluetooth"
-            ? ["bluetooth", "webSerial", "webUsb", "browserPrint"]
+            ? ["bluetooth", "webSerial", "webUsb"]
             : preferred === "browser"
               ? ["browserPrint"]
-              : ["webUsb", "webSerial", "bluetooth", "browserPrint"];
+              : ["webUsb", "webSerial", "bluetooth"];
     for (const name of order) {
       const tr = t[name];
       if (tr && tr.isConnected && tr.isConnected()) return tr;
     }
-    return t.browserPrint || null;
+    if (preferred === "browser") return t.browserPrint || null;
+    return null;
   }
 
   async function writeRaw(uint8, preferred) {
@@ -70,29 +84,78 @@
     await tr.write(uint8, p.chunkSize || 512);
   }
 
+  function looksLatin(s) {
+    return /[A-Za-z]/.test(String(s || "")) && !/[\u0900-\u097F]/.test(String(s || ""));
+  }
+
+  function cleanVar(v) {
+    const s = String(v || "").trim();
+    return !s || /^default$/i.test(s) ? "" : s;
+  }
+
+  function stripTrailingSize(n) {
+    return String(n || "")
+      .replace(/\s*[·\-–—]\s*Default\s*$/i, "")
+      .replace(/\s*\(\s*Default\s*\)\s*$/i, "")
+      .replace(/\s*\(\s*\d+(?:\.\d+)?\s*(?:kg|g|gm|gms)\s*\)\s*$/i, "")
+      .replace(/\s+/g, " ")
+      .trim();
+  }
+
+  function sizeSuffix(name, variantLabel) {
+    const v = cleanVar(variantLabel);
+    if (!v) return "";
+    const compact = (x) =>
+      String(x || "")
+        .toLowerCase()
+        .replace(/\s+/g, "")
+        .replace(/gms?/g, "g");
+    if (compact(name).includes(compact(v))) return "";
+    return v;
+  }
+
+  async function hindiTitle(it, helpers) {
+    let hi = stripTrailingSize(it.nameHi || "");
+    if (hi && !looksLatin(hi)) return hi;
+    const en = stripTrailingSize(it.name || "");
+    const translate = helpers && helpers.translateEnToHi;
+    if (en && typeof translate === "function") {
+      try {
+        const t = await translate(en);
+        if (t && String(t).trim()) return stripTrailingSize(t);
+      } catch (_) {}
+    }
+    return hi || en;
+  }
+
   async function buildKotBytes(ticket) {
     const escpos = root.KG.escpos;
     const raster = root.KG.rasterText;
     const width = raster.dotsForWidthMm(prefs().paperWidthMm || 80);
+    const helpers = ticket.helpers || {};
     const lines = [];
     lines.push({ text: "THE KILOGRAM", align: "center", font: "title" });
-    lines.push({ text: "किचन ऑर्डर टिकट (KOT)", align: "center", font: "title" });
-    lines.push({ text: `No: ${ticket.kotNo || ticket.billNo || ""}`, align: "center", font: "small" });
+    lines.push({ text: "किचन ऑर्डर टिकट", align: "center", font: "title" });
+    lines.push({ text: `नंबर: ${ticket.kotNo || ticket.billNo || ""}`, align: "center", font: "small" });
     lines.push({
-      text: `${ticket.orderType || ""} ${ticket.tableId ? "· " + ticket.tableId : ""}`,
+      text: "टेकअवे",
       align: "center",
       font: "small"
     });
     lines.push({
-      text: new Date(ticket.at || Date.now()).toLocaleString("en-IN"),
+      text: new Date(ticket.at || Date.now()).toLocaleString("hi-IN"),
       align: "center",
       font: "small"
     });
-    (ticket.items || []).forEach((it, i) => {
-      const title = String(it.nameHi || it.name || "").trim();
-      lines.push({ text: `${i + 1}. ${title}  ×${it.qty || 1}`, font: "main" });
+    const items = ticket.items || [];
+    for (let i = 0; i < items.length; i++) {
+      const it = items[i];
+      const title = await hindiTitle(it, helpers);
+      const sz = sizeSuffix(title, it.variantLabel || it.variant);
+      const size = sz ? ` (${sz})` : "";
+      lines.push({ text: `${i + 1}. ${title}${size}  ×${it.qty || 1}`, font: "main" });
       if (it.note) lines.push({ text: `   नोट: ${it.note}`, font: "small" });
-    });
+    }
     lines.push({ text: "तत्काल तैयार करें", align: "center", font: "main" });
 
     const parts = [escpos.init(), escpos.align("left")];
@@ -122,21 +185,23 @@
     });
     (bill.items || []).forEach((it) => {
       const amt = (Number(it.price) || 0) * (Number(it.qty) || 1);
+      const en = stripTrailingSize(it.name || "");
+      const sz = sizeSuffix(en, it.variantLabel || it.variant);
+      const size = sz ? ` (${sz})` : "";
       lines.push({
-        text: `${it.name || ""} x${it.qty}  ${money ? money.formatINR(amt) : amt}`,
+        text: `${en}${size} x${it.qty}  ${money ? money.formatINR(amt) : amt}`,
         font: "small"
       });
     });
     lines.push({ text: `Subtotal: ${money.formatINR(bill.subtotal || 0)}`, font: "small" });
     if (bill.discount) lines.push({ text: `Discount: ${money.formatINR(bill.discount)}`, font: "small" });
-    if (bill.gst) lines.push({ text: `GST: ${money.formatINR(bill.gst)}`, font: "small" });
     lines.push({ text: `TOTAL: ${money.formatINR(bill.grandTotal || bill.total || 0)}`, font: "title" });
     lines.push({ text: `Paid: ${bill.paymentLabel || ""}`, font: "small" });
     if (settings.upiId) {
       lines.push({ text: `UPI: ${settings.upiId}`, align: "center", font: "small" });
-      lines.push({ text: "Scan UPI QR (see receipt / display)", align: "center", font: "small" });
+      lines.push({ text: "Scan UPI QR", align: "center", font: "small" });
     }
-    lines.push({ text: "धन्यवाद · Thank you", align: "center", font: "main" });
+    lines.push({ text: "Thank you", align: "center", font: "main" });
 
     const parts = [escpos.init()];
     const rasterOut = await raster.renderLinesToRaster(lines, width);
@@ -177,20 +242,26 @@
     const rows = (bill.items || [])
       .map((it) => {
         const amt = (Number(it.price) || 0) * (Number(it.qty) || 1);
-        return `<div class="row"><span>${esc(it.name)} ×${it.qty}</span><span>${esc(
+        const en = stripTrailingSize(it.name || "");
+        const sz = sizeSuffix(en, it.variantLabel || it.variant);
+        const size = sz ? ` (${esc(sz)})` : "";
+        return `<div class="row"><span>${esc(en)}${size} ×${it.qty}</span><span>${esc(
           money.formatINR(amt)
         )}</span></div>`;
       })
       .join("");
     return `<div class="c lg">THE KILOGRAM</div>
       <div class="c">${esc(settings.address || "")}</div>
-      <div class="c">${settings.gstin ? "GSTIN: " + esc(settings.gstin) : ""}</div>
       <hr/>
       <div class="c b">Bill ${esc(bill.billNo || "")}</div>
       <div class="c">${esc(new Date(bill.at || Date.now()).toLocaleString("en-IN"))}</div>
       <hr/>${rows}<hr/>
       <div class="row"><span>Subtotal</span><span>${esc(money.formatINR(bill.subtotal || 0))}</span></div>
-      <div class="row"><span>GST</span><span>${esc(money.formatINR(bill.gst || 0))}</span></div>
+      ${
+        bill.discount
+          ? `<div class="row"><span>Discount</span><span>${esc(money.formatINR(bill.discount))}</span></div>`
+          : ""
+      }
       <div class="row lg"><span>TOTAL</span><span>${esc(
         money.formatINR(bill.grandTotal || bill.total || 0)
       )}</span></div>
@@ -209,24 +280,29 @@
           upi.qrImageUrl(uri, 140)
         )}"/><div style="font-size:10px;word-break:break-all;">${esc(settings.upiId)}</div></div>`;
       })()}
-      <div class="c">धन्यवाद</div>`;
+      <div class="c">Thank you</div>`;
   }
 
-  function kotHtml(ticket) {
+  async function kotHtml(ticket) {
     const bp = transports().browserPrint;
     const esc = bp ? bp.escapeHtml.bind(bp) : (s) => s;
-    const rows = (ticket.items || [])
-      .map(
-        (it) =>
-          `<div class="lg">${esc(it.nameHi || it.name)} ×${it.qty}</div>${
-            it.note ? `<div>${esc(it.note)}</div>` : ""
-          }`
-      )
-      .join("");
+    const helpers = ticket.helpers || {};
+    const parts = [];
+    for (const it of ticket.items || []) {
+      const title = await hindiTitle(it, helpers);
+      const sz = sizeSuffix(title, it.variantLabel || it.variant);
+      const size = sz ? ` (${sz})` : "";
+      parts.push(
+        `<div class="lg">${esc(title)}${esc(size)} ×${it.qty}</div>${
+          it.note ? `<div>नोट: ${esc(it.note)}</div>` : ""
+        }`
+      );
+    }
     return `<div class="c lg">THE KILOGRAM</div>
-      <div class="c b">KOT ${esc(ticket.kotNo || ticket.billNo || "")}</div>
-      <div class="c">${esc(ticket.orderType || "")} ${esc(ticket.tableId || "")}</div>
-      <hr/>${rows}<hr/><div class="c">तत्काल तैयार करें</div>`;
+      <div class="c b">किचन ऑर्डर टिकट</div>
+      <div class="c">नंबर ${esc(ticket.kotNo || ticket.billNo || "")}</div>
+      <div class="c">टेकअवे</div>
+      <hr/>${parts.join("")}<hr/><div class="c">तत्काल तैयार करें</div>`;
   }
 
   async function processQueue() {
@@ -262,8 +338,12 @@
   async function printKOT(ticket) {
     lastKOT = ticket;
     const p = prefs();
+    // Skip when no hardware — avoid system PDF popup
+    if (p.kotTransport !== "browser" && !hasHardwarePrinter()) {
+      console.info("KOT skipped — no hardware printer connected");
+      return;
+    }
     enqueue(async () => {
-      // Prefer BLE cart path for Hindi when available
       const ble = transports().bluetooth;
       if (ble && ble.isConnected && ble.isConnected() && ticket.cart && ble.printKOTFromCart) {
         await ble.printKOTFromCart(ticket.cart, ticket.helpers || {});
@@ -273,9 +353,12 @@
         const bytes = await buildKotBytes(ticket);
         await writeRaw(bytes, p.kotTransport);
       } catch (e) {
-        const bp = transports().browserPrint;
-        if (!bp) throw e;
-        await bp.printHtml(kotHtml(ticket), { paperWidthMm: p.paperWidthMm });
+        if (p.kotTransport === "browser") {
+          const bp = transports().browserPrint;
+          if (bp) await bp.printHtml(await kotHtml(ticket), { paperWidthMm: p.paperWidthMm });
+          return;
+        }
+        console.warn("KOT print failed (no browser fallback)", e);
       }
     }, { type: "kot" });
   }
@@ -283,14 +366,21 @@
   async function printBill(bill) {
     lastBill = bill;
     const p = prefs();
+    if (p.billTransport !== "browser" && !hasHardwarePrinter()) {
+      console.info("Bill print skipped — no hardware printer connected");
+      return;
+    }
     enqueue(async () => {
       try {
         const bytes = await buildBillBytes(bill);
         await writeRaw(bytes, p.billTransport);
       } catch (e) {
-        const bp = transports().browserPrint;
-        if (!bp) throw e;
-        await bp.printHtml(billHtml(bill), { paperWidthMm: p.paperWidthMm });
+        if (p.billTransport === "browser") {
+          const bp = transports().browserPrint;
+          if (bp) await bp.printHtml(billHtml(bill), { paperWidthMm: p.paperWidthMm });
+          return;
+        }
+        console.warn("Bill print failed (no browser fallback)", e);
       }
     }, { type: "bill" });
   }
@@ -328,6 +418,7 @@
   const api = {
     prefs,
     savePrefs,
+    hasHardwarePrinter,
     printKOT,
     printBill,
     testPrint,

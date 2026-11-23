@@ -279,6 +279,26 @@ function loadMenuData() {
   return ctx.menuData;
 }
 
+function resolveImageUrl(imagePath) {
+  if (!imagePath) return "";
+  try {
+    const map = JSON.parse(
+      fs.readFileSync(path.join(root, "data/menu-image-filename-map.json"), "utf8")
+    );
+    const key = String(imagePath).replace(/^\.\//, "");
+    const file = map[key] || map[path.basename(key)] || map["new images/" + path.basename(key)];
+    if (file) return `assets/menu/${file}`;
+  } catch (_) {}
+  // Fallback: sanitize original path into assets/menu/
+  const base = path.basename(String(imagePath));
+  const safe = base
+    .replace(/\.[^.]+$/, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, "-")
+    .replace(/^-|-$/g, "");
+  return safe ? `assets/menu/${safe}.jpg` : "";
+}
+
 function build() {
   const menuData = loadMenuData();
   const items = [];
@@ -288,6 +308,7 @@ function build() {
     const category = CATEGORY_MAP[key] || "General";
     for (const item of list) {
       const variants = parsePrices(item);
+      const imageUrl = resolveImageUrl(item.image);
       for (const v of variants) {
         const name = `${itemBaseName(item)}${v.suffix}`;
         items.push({
@@ -295,7 +316,7 @@ function build() {
           nameHi: toHindiName(name),
           price: v.price,
           category,
-          imageUrl: "",
+          imageUrl,
           available: true,
           sort: sortKey++,
           sourceId: item.id,

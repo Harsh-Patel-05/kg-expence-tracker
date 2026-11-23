@@ -30,6 +30,70 @@
     else console.log("[POS]", msg);
   }
 
+  function cleanVar(label) {
+    return root.KG.posMenu?.cleanVariantLabel?.(label) || "";
+  }
+
+  function stripSize(name) {
+    return root.KG.posMenu?.stripTrailingSize?.(name) || String(name || "").trim();
+  }
+
+  function sizeFor(name, variant) {
+    return root.KG.posMenu?.sizeSuffix?.(name, variant) || "";
+  }
+
+  /** Build cart line payload without Default / double size. */
+  function lineFromItem(item, overrides) {
+    const base = item.__base || item.name;
+    const variantLabel = cleanVar(item.__variantLabel || overrides?.variantLabel || "");
+    return {
+      ...item,
+      name: base,
+      nameHi: stripSize(item.nameHi || ""),
+      menuItemId: item.id || item.menuItemId,
+      variantLabel,
+      ...(overrides || {})
+    };
+  }
+
+  /** Hinglish / English kitchen notes → Hindi for KDS. */
+  async function toKitchenNoteHi(raw) {
+    const q0 = String(raw || "").trim();
+    if (!q0) return "";
+    if (/[\u0900-\u097F]/.test(q0) && !/[A-Za-z]/.test(q0)) return q0;
+
+    const phrases = [
+      [/bilkul\s*hi\s*light\s*bhaji\s*krni\s*hai/gi, "बिल्कुल लाइट भाजी करनी है"],
+      [/bilkul\s*hi\s*light\s*bhaji/gi, "बिल्कुल लाइट भाजी"],
+      [/bilkul\s*(hi\s*)?light/gi, "बिल्कुल लाइट"],
+      [/kam\s*teekh[ai]|kam\s*tikh[ai]|less\s*spicy/gi, "कम तीखा"],
+      [/zyada\s*teekh[ai]|extra\s*spicy|more\s*spicy/gi, "ज़्यादा तीखा"],
+      [/no\s*onion|bina\s*pyaz|without\s*onion/gi, "बिना प्याज"],
+      [/no\s*garlic|bina\s*lehsun/gi, "बिना लहसुन"],
+      [/extra\s*butter|zyada\s*butter/gi, "एक्स्ट्रा बटर"],
+      [/extra\s*cheese/gi, "एक्स्ट्रा चीज़"],
+      [/extra\s*pau|extra\s*pav/gi, "एक्स्ट्रा पाव"],
+      [/jain\s*please|jain/gi, "जैन"],
+      [/swaminarayan/gi, "स्वामिनारायण"],
+      [/light\s*bhaji/gi, "लाइट भाजी"],
+      [/dry\s*bhaji/gi, "ड्राई भाजी"],
+      [/with\s*butter/gi, "बटर के साथ"],
+      [/urgent|jaldi/gi, "जल्दी"]
+    ];
+    let out = q0;
+    phrases.forEach(([re, hi]) => {
+      out = out.replace(re, hi);
+    });
+    // If still mostly Latin, try online translate
+    if (/[A-Za-z]{3,}/.test(out) && typeof root.translateEnToHi === "function") {
+      try {
+        const t = await root.translateEnToHi(out);
+        if (t && String(t).trim()) out = String(t).trim();
+      } catch (_) {}
+    }
+    return out || q0;
+  }
+
   function openInputModal({ title, hint, value, type }) {
     return new Promise((resolve) => {
       inputResolver = resolve;
@@ -43,6 +107,35 @@
     });
   }
 
+  function openCustomItemModal() {
+    const ov = $("kgPosCustomOverlay");
+    if (!ov) return;
+    if ($("kgPosCustomName")) $("kgPosCustomName").value = "";
+    if ($("kgPosCustomPrice")) $("kgPosCustomPrice").value = "";
+    ov.style.display = "flex";
+    setTimeout(() => $("kgPosCustomName")?.focus(), 30);
+  }
+
+  function addCustomItemFromModal() {
+    const name = String($("kgPosCustomName")?.value || "").trim();
+    const price = Number($("kgPosCustomPrice")?.value);
+    if (!name) return toast("Enter item / variety name", "error");
+    if (!Number.isFinite(price) || price < 0) return toast("Enter a valid price", "error");
+    root.KG.posState.addLine({
+      menuItemId: "custom_" + Date.now().toString(36),
+      name,
+      nameHi: name,
+      price,
+      qty: 1,
+      variantLabel: "",
+      prep: "regular"
+    });
+    const ov = $("kgPosCustomOverlay");
+    if (ov) ov.style.display = "none";
+    renderCart();
+    toast(`Added ${name}`, "success");
+  }
+
   function closeInputModal(result) {
     $("kgPosInputOverlay").style.display = "none";
     const r = inputResolver;
@@ -53,9 +146,38 @@
   function syncIndicator() {
     const el = $("kgPosSync");
     if (!el) return;
-    const n = root.KG.posState.getState().syncPending;
-    el.className = "kg-pos-sync " + (n ? "pending" : "ok");
-    el.textContent = n ? `Sync pending (${n})` : "Synced";
+    let pendingKds = 0;
+    let queueN = 0;
+    try {
+      const bills = JSON.parse(localStorage.getItem("kg_pos_bills_local_v1") || "[]");
+      pendingKds = (bills || []).filter(
+        (b) =>
+          b &&
+          b.kdsSynced !== true &&
+          b.status !== "cancelled" &&
+          b.status !== "void" &&
+          (b.items || []).length
+      ).length;
+    } catch (_) {}
+    try {
+      queueN = root.KG.posState?.peekQueue?.()?.length || 0;
+    } catch (_) {}
+    const online = navigator.onLine !== false;
+    const need = !online || pendingKds > 0 || queueN > 0;
+    if (!need) {
+      el.style.display = "none";
+      el.setAttribute("aria-hidden", "true");
+      return;
+    }
+    el.style.display = "";
+    el.removeAttribute("hidden");
+    el.setAttribute("aria-hidden", "false");
+    el.className = "kg-pos-sync " + (online ? "warn" : "bad");
+    el.textContent = !online
+      ? "Weak/Offline · working locally"
+      : pendingKds
+        ? `Kitchen pending ${pendingKds}`
+        : `Sync queue ${queueN}`;
   }
 
   function syncCustomerFromInputs() {
@@ -66,9 +188,24 @@
     const el = $("kgPosCats");
     if (!el) return;
     const cats = root.KG.posMenu.categories();
-    const active = root.KG.posState.getState().activeCategory;
-    const allCount = root.KG.posMenu.getGroups().length;
+    const stCat = root.KG.posState.getState();
+    if (String(stCat.activeCategory || "").toLowerCase() === "general") {
+      stCat.activeCategory = "__favs";
+    }
+    const active = stCat.activeCategory;
+    const allCount = root.KG.posMenu.getGroups().filter((g) => {
+      const n = String(g.category || "").toLowerCase();
+      return n !== "snacks" && n !== "general";
+    }).length;
+    const favN = root.KG.posFavourites?.getFavourites?.(24)?.length || 0;
+    const hotN = root.KG.posFavourites?.getHotshots?.(16)?.length || 0;
     el.innerHTML =
+      `<button type="button" class="kg-pos-cat kg-pos-cat-special${
+        active === "__favs" ? " active" : ""
+      }" data-cat="__favs">Favourites <span>${favN}</span></button>` +
+      `<button type="button" class="kg-pos-cat kg-pos-cat-special${
+        active === "__hot" ? " active" : ""
+      }" data-cat="__hot">Hotshots <span>${hotN}</span></button>` +
       `<button type="button" class="kg-pos-cat${active === "all" ? " active" : ""}" data-cat="all">All <span>${allCount}</span></button>` +
       cats
         .map(
@@ -80,12 +217,46 @@
         .join("");
   }
 
-  function renderMenu() {
+  let menuRenderTimer = null;
+  let lastMenuSig = "";
+
+  function menuSignature(list, st) {
+    const ids = (list || [])
+      .slice(0, 40)
+      .map((g) => g.key || g.id || g.baseName || "")
+      .join("|");
+    return `${st.activeCategory}|${st.searchQuery || ""}|${(list || []).length}|${ids}`;
+  }
+
+  function renderMenu(force) {
     const st = root.KG.posState.getState();
     menuListCache = root.KG.posMenu.search(st.searchQuery, st.activeCategory);
-    root.KG.posMenu.renderGrid($("kgPosMenuGrid"), menuListCache, {
-      pageSize: menuListCache.length > 200 ? 100 : 500
+    const grid = $("kgPosMenuGrid");
+    if (!grid) return;
+    if (
+      (st.activeCategory === "__favs" || st.activeCategory === "__hot") &&
+      !menuListCache.length &&
+      !(st.searchQuery || "").trim()
+    ) {
+      const empty = `<div class="kg-pos-empty">No ${
+        st.activeCategory === "__hot" ? "hotshots" : "favourites"
+      } yet — they fill as you bill.</div>`;
+      if (grid.innerHTML !== empty) grid.innerHTML = empty;
+      lastMenuSig = "empty:" + st.activeCategory;
+      return;
+    }
+    const sig = menuSignature(menuListCache, st);
+    if (!force && sig === lastMenuSig) return;
+    lastMenuSig = sig;
+    root.KG.posMenu.renderGrid(grid, menuListCache, {
+      pageSize: menuListCache.length > 200 ? 100 : 500,
+      showUnfav: st.activeCategory === "__favs" || st.activeCategory === "__hot"
     });
+  }
+
+  function scheduleRenderMenu() {
+    if (menuRenderTimer) clearTimeout(menuRenderTimer);
+    menuRenderTimer = setTimeout(() => renderMenu(false), 80);
   }
 
   function renderCart() {
@@ -98,23 +269,27 @@
     } else {
       list.innerHTML = st.cart
         .map((l) => {
-          const lineTotal = (Number(l.price) || 0) * (Number(l.qty) || 0);
-          const variant = l.variantLabel ? ` · ${esc(l.variantLabel)}` : "";
-          return `<div class="kg-pos-line" data-line="${esc(l.lineId)}">
+          const isW = !!l.isWeightMerge;
+          const lineTotal = isW
+            ? Number(l.price) || 0
+            : (Number(l.price) || 0) * (Number(l.qty) || 0);
+          const size = sizeFor(l.name, l.variantLabel);
+          const variant = size ? ` · ${esc(size)}` : "";
+          const qtyLabel = isW ? esc(l.variantLabel || size || "—") : String(l.qty);
+          return `<div class="kg-pos-line" data-line="${esc(l.lineId)}" data-weight="${isW ? "1" : "0"}">
             <div class="kg-pos-line-main">
-              <div class="kg-pos-line-name">${esc(l.nameHi || l.name)}${variant}</div>
-              <div class="kg-pos-line-en">${l.nameHi ? esc(l.name) : ""}${
-            l.note ? ` · ${esc(l.note)}` : ""
-          }</div>
+              <div class="kg-pos-line-name">${esc(stripSize(l.name))}${isW ? "" : variant}</div>
+              <div class="kg-pos-line-en">${l.note ? esc(l.note) : ""}</div>
               <button type="button" class="kg-pos-line-note-btn" data-act="note">Note</button>
             </div>
-            <div class="kg-pos-line-qty">
-              <button type="button" data-act="dec" aria-label="Decrease">−</button>
-              <span data-act="setqty">${l.qty}</span>
-              <button type="button" data-act="inc" aria-label="Increase">+</button>
-            </div>
-            <div class="kg-pos-line-amt">${esc(m.formatINR(lineTotal))}
-              <button type="button" class="kg-pos-line-x" data-act="rm" aria-label="Remove">×</button>
+            <div class="kg-pos-line-side">
+              <div class="kg-pos-line-amt">${esc(m.formatINR(lineTotal))}</div>
+              <div class="kg-pos-line-qty">
+                <button type="button" data-act="dec" aria-label="Decrease">−</button>
+                <span data-act="${isW ? "weight" : "setqty"}">${qtyLabel}</span>
+                <button type="button" data-act="inc" aria-label="Increase">+</button>
+                <button type="button" class="kg-pos-line-x" data-act="rm" aria-label="Remove">×</button>
+              </div>
             </div>
           </div>`;
         })
@@ -129,8 +304,32 @@
     set("kgPosDiscount", m.formatINR(totals.discount));
     set("kgPosCharges", m.formatINR(totals.charges));
     set("kgPosGst", m.formatINR(totals.gst));
+    const discHint = $("kgPosDiscHint");
+    if (discHint) {
+      const d = Number(totals.discount) || 0;
+      if (d > 0) {
+        const stNow = root.KG.posState.getState();
+        const how =
+          stNow.discountPercent > 0
+            ? `${stNow.discountPercent}% (−${m.formatINR(d)})`
+            : `−${m.formatINR(d)}`;
+        discHint.textContent = `Discount ${how}`;
+        discHint.hidden = false;
+      } else {
+        discHint.textContent = "";
+        discHint.hidden = true;
+      }
+    }
     set("kgPosGrand", m.formatINR(totals.grandTotal));
-    set("kgPosCartCount", `${st.cart.reduce((s, l) => s + l.qty, 0)} items`);
+    const itemN = st.cart.reduce(
+      (s, l) => s + (l.isWeightMerge ? 1 : Number(l.qty) || 0),
+      0
+    );
+    set("kgPosCartCount", `${itemN} items`);
+    const chLabel = $("kgPosCartChannelLabel");
+    if (chLabel && st.amend?.label) {
+      chLabel.textContent = `Add to #${st.amend.label} (delta only)`;
+    }
     const billEl = $("kgPosBillPreview");
     if (billEl) billEl.textContent = st.lastBillId || st.billNoPreview || "—";
   }
@@ -144,9 +343,9 @@
       el.style.display = "none";
       return;
     }
-    el.style.display = "block";
+    el.style.display = "flex";
     el.innerHTML =
-      `<div class="kg-pos-held-title">Held bills (${held.length})</div>` +
+      `<span class="kg-pos-held-title">Held (${held.length})</span>` +
       held
         .map(
           (h) =>
@@ -160,24 +359,42 @@
   function renderTables() {
     const el = $("kgPosTables");
     if (!el) return;
-    const st = root.KG.posState.getState();
-    const show = st.orderType === "dinein";
-    el.style.display = show ? "flex" : "none";
-    if (!show) return;
-    el.innerHTML = Object.values(st.tables)
-      .map(
-        (t) =>
-          `<button type="button" class="kg-pos-table ${esc(t.status)}${
-            st.tableId === t.id ? " selected" : ""
-          }" data-table="${esc(t.id)}">${esc(t.label)}</button>`
-      )
-      .join("");
+    // Takeaway-only POS — no dine-in table picker
+    el.style.display = "none";
+    el.innerHTML = "";
   }
 
-  function setOrderTypeUi(type) {
-    document.querySelectorAll("[data-order-type]").forEach((btn) => {
-      btn.classList.toggle("active", btn.getAttribute("data-order-type") === type);
-    });
+  function setOrderTypeUi() {
+    const wrap = document.querySelector(".kg-pos-ordertypes");
+    if (!wrap) return;
+    const st = root.KG.posState.getState();
+    const cur = st.orderType || "takeaway";
+    wrap.innerHTML = ["takeaway", "swiggy", "zomato"]
+      .map((t) => {
+        const label = t === "takeaway" ? "Takeaway" : t === "swiggy" ? "Swiggy" : "Zomato";
+        return `<button type="button" class="kg-pos-channel${cur === t ? " active" : ""}" data-channel="${t}">${label}</button>`;
+      })
+      .join("");
+    const plat = $("kgPosPlatformNo");
+    if (plat) {
+      plat.style.display = cur === "swiggy" || cur === "zomato" ? "" : "none";
+      plat.placeholder = cur === "swiggy" ? "Swiggy order #" : cur === "zomato" ? "Zomato order #" : "";
+      plat.value = st.platformOrderNo || "";
+    }
+    const grandHint = $("kgPosAggHint");
+    if (grandHint) {
+      grandHint.style.display = cur === "swiggy" || cur === "zomato" ? "" : "none";
+    }
+    const chLabel = $("kgPosCartChannelLabel");
+    if (chLabel) {
+      const amend = root.KG.posState.getState().amend;
+      if (amend?.label) {
+        chLabel.textContent = `Add to #${amend.label} (delta only)`;
+      } else {
+        chLabel.textContent =
+          cur === "swiggy" ? "Swiggy · ₹0 POS" : cur === "zomato" ? "Zomato · ₹0 POS" : "Takeaway";
+      }
+    }
     renderTables();
   }
 
@@ -191,24 +408,30 @@
     list.innerHTML = group.variants
       .map((v) => {
         const id = String(v.id || v.menuItemId);
+        const sizeLabel = cleanVar(v.__variantLabel) || v.__base || v.name;
         return `<button type="button" class="kg-pos-variant-btn${
           id === selectedVariantId ? " active" : ""
         }" data-variant-id="${esc(id)}">
-          <b>${esc(v.__variantLabel || "Default")}</b>
+          <span><b>${esc(sizeLabel)}</b></span>
           <span>${esc(m.formatINR(v.price))}</span>
-          <div class="muted">${esc(v.nameHi || v.name)}</div>
         </button>`;
       })
       .join("");
-    const addons = group.addons || root.KG.posMenu.DEFAULT_ADDONS;
-    $("kgPosAddonList").innerHTML = addons
-      .map(
-        (a) =>
-          `<label class="kg-pos-addon"><input type="checkbox" data-addon-id="${esc(
-            a.id
-          )}" /> ${esc(a.nameHi || a.name)} · ${esc(m.formatINR(a.price))}</label>`
-      )
-      .join("");
+    const addons = Array.isArray(group.addons) ? group.addons : [];
+    const addonEl = $("kgPosAddonList");
+    if (addonEl) {
+      addonEl.innerHTML = addons.length
+        ? addons
+            .map(
+              (a) =>
+                `<label class="kg-pos-addon"><input type="checkbox" data-addon-id="${esc(
+                  a.id
+                )}" /> <span>${esc(a.name)} · ${esc(m.formatINR(a.price))}</span></label>`
+            )
+            .join("")
+        : "";
+      addonEl.style.display = addons.length ? "" : "none";
+    }
     $("kgPosVariantOverlay").style.display = "flex";
   }
 
@@ -218,12 +441,12 @@
       (v) => String(v.id || v.menuItemId) === selectedVariantId
     );
     if (!item) return toast("Pick a size", "error");
-    root.KG.posState.addLine({
-      ...item,
-      menuItemId: item.id || item.menuItemId,
-      variantLabel: item.__variantLabel || ""
-    });
-    const addons = pendingVariantGroup.addons || root.KG.posMenu.DEFAULT_ADDONS;
+    root.KG.posState.addLine(
+      lineFromItem(item, {
+        name: item.__base || pendingVariantGroup.baseName || item.name
+      })
+    );
+    const addons = Array.isArray(pendingVariantGroup.addons) ? pendingVariantGroup.addons : [];
     selectedAddons.forEach((aid) => {
       const a = addons.find((x) => x.id === aid);
       if (a) {
@@ -247,16 +470,62 @@
     const totals = root.KG.posState.computeTotals();
     const ov = $("kgPosSettleOverlay");
     if (!ov) return;
-    ov.style.display = "flex";
-    $("kgPosSettleTotal").textContent = money().formatINR(totals.grandTotal);
     const st = root.KG.posState.getState();
-    const mode = $("kgPosSettleMode");
-    if (mode) {
-      if (st.orderType === "swiggy") mode.value = "swiggy";
-      else if (st.orderType === "zomato") mode.value = "zomato";
-      else mode.value = "cash";
+    const isAgg = st.orderType === "swiggy" || st.orderType === "zomato";
+    if (isAgg && !String(st.platformOrderNo || "").trim()) {
+      return toast("Enter " + (st.orderType === "swiggy" ? "Swiggy" : "Zomato") + " order number first", "error");
     }
+    ov.style.display = "flex";
+    if (isAgg) {
+      $("kgPosSettleTotal").textContent = "₹0 (aggregator — kitchen only)";
+    } else {
+      $("kgPosSettleTotal").textContent = money().formatINR(totals.grandTotal);
+    }
+    const mode = $("kgPosSettleMode");
+    if (mode) mode.value = "cash";
+    // Hide payment UI for aggregator
+    ["kgPosSettleMode", "kgPosSettleCashBox", "kgPosSettleSplit"].forEach((id) => {
+      const el = $(id);
+      if (!el) return;
+      const box = id === "kgPosSettleMode" ? el.closest("label") || el : el;
+      box.style.display = isAgg ? "none" : "";
+    });
+    const conf = $("kgPosSettleConfirm");
+    if (conf) conf.textContent = isAgg ? "Send to kitchen (₹0)" : "Settle → Kitchen";
+    // WhatsApp share option for takeaway when mobile is filled
+    const waRow = $("kgPosWaShareRow");
+    const waChk = $("kgPosWaShare");
+    const phoneOk = !!root.KG.whatsappBill?.normalizePhone?.(st.customerPhone);
+    const wantWa = st.settings.whatsappShareDefault !== false;
+    if (waRow) waRow.style.display = !isAgg && phoneOk ? "" : "none";
+    if (waChk) waChk.checked = !isAgg && phoneOk && wantWa;
     applySettleMode();
+  }
+
+  function shareBillOnWhatsApp(bill, opts) {
+    const wa = root.KG.whatsappBill;
+    if (!wa) {
+      toast("WhatsApp helper missing — hard-refresh POS", "error");
+      return false;
+    }
+    const st = root.KG.posState.getState();
+    const payload = bill || st.lastBillPayload;
+    if (!payload) {
+      toast("No bill to share yet — settle first", "error");
+      return false;
+    }
+    const phone = opts?.phone || payload.customerPhone || st.customerPhone || $("kgPosCustomerPhone")?.value;
+    const result = wa.shareBill(
+      { ...payload, customerPhone: phone || payload.customerPhone },
+      { phone, settings: st.settings }
+    );
+    if (!result.ok) {
+      toast(result.error || "Cannot open WhatsApp", "error");
+      return false;
+    }
+    if (result.blocked) toast("Allow pop-ups, then try WhatsApp bill again", "info");
+    else toast("WhatsApp opened — tap Send", "success");
+    return true;
   }
 
   function applySettleMode() {
@@ -264,8 +533,19 @@
     const totals = root.KG.posState.computeTotals();
     const split = $("kgPosSettleSplit");
     const cashBox = $("kgPosSettleCashBox");
+    const laterHint = $("kgPosPayLaterHint");
+    const conf = $("kgPosSettleConfirm");
     if (split) split.style.display = mode === "split" ? "grid" : "none";
     if (cashBox) cashBox.style.display = mode === "cash" ? "block" : "none";
+    if (laterHint) laterHint.style.display = mode === "paylater" ? "" : "none";
+    const waRow = $("kgPosWaShareRow");
+    if (waRow && mode === "paylater") waRow.style.display = "none";
+    if (conf && mode === "paylater") conf.textContent = "Send to kitchen · Pay later";
+    else if (conf) {
+      const st = root.KG.posState.getState();
+      const isAgg = st.orderType === "swiggy" || st.orderType === "zomato";
+      conf.textContent = isAgg ? "Send to kitchen (₹0)" : "Settle → Kitchen";
+    }
     if (mode === "cash" && $("kgPosReceived")) {
       $("kgPosReceived").value = String(totals.grandTotal);
       updateChange();
@@ -282,6 +562,7 @@
   function paymentFromModal() {
     const mode = $("kgPosSettleMode")?.value || "cash";
     const t = root.KG.posState.computeTotals().grandTotal;
+    if (mode === "paylater") return { cash: 0, online: 0, swiggy: 0, zomato: 0, payLater: true };
     if (mode === "cash") return { cash: t, online: 0, swiggy: 0, zomato: 0 };
     if (mode === "online") return { cash: 0, online: t, swiggy: 0, zomato: 0 };
     if (mode === "swiggy") return { cash: 0, online: 0, swiggy: t, zomato: 0 };
@@ -294,28 +575,68 @@
     };
   }
 
-  async function doSettle(printBill) {
+  function setBusy(on, label) {
+    let el = $("kgPosBusy");
+    if (!el) {
+      el = document.createElement("div");
+      el.id = "kgPosBusy";
+      el.className = "kg-pos-busy";
+      el.innerHTML = `<div class="kg-pos-busy-card"><div class="kg-pos-busy-spin"></div><div class="kg-pos-busy-txt" id="kgPosBusyTxt">Working…</div></div>`;
+      document.body.appendChild(el);
+    }
+    const txt = $("kgPosBusyTxt");
+    if (txt) txt.textContent = label || "Working…";
+    el.style.display = on ? "flex" : "none";
+    el.setAttribute("aria-hidden", on ? "false" : "true");
+  }
+
+  async function doSettle(wantPrint) {
     syncCustomerFromInputs();
     const payment = paymentFromModal();
+    const isPayLater = !!payment.payLater;
+    const wantWa =
+      !isPayLater &&
+      !!$("kgPosWaShare")?.checked &&
+      $("kgPosWaShareRow")?.style.display !== "none";
     const ov = $("kgPosSettleOverlay");
     if (ov) ov.style.display = "none";
-    await root.KG.posCheckout.settle(payment, { printBill: !!printBill, printKOT: true });
+    const canPrint = !!root.KG.print?.hasHardwarePrinter?.();
+    const doPrint = !!wantPrint && canPrint && !isPayLater;
+    setBusy(true, isPayLater ? "Pay later…" : "Sending to kitchen…");
+    let bill = null;
+    try {
+      bill = await root.KG.posCheckout.settle(payment, {
+        printBill: doPrint,
+        printKOT: doPrint
+      });
+    } finally {
+      setBusy(false);
+    }
     renderCart();
     renderHeld();
+    renderCategories();
+    if (["__favs", "__hot"].includes(root.KG.posState.getState().activeCategory)) renderMenu();
     syncIndicator();
+    if (bill && wantWa) {
+      setTimeout(() => shareBillOnWhatsApp(bill), 250);
+    }
   }
 
   async function handleAction(a) {
     const st = root.KG.posState.getState();
     if (a === "hold") {
       syncCustomerFromInputs();
+      if (!st.cart.length) return toast("Cart empty", "error");
       root.KG.posState.holdCurrent();
       renderCart();
       renderHeld();
-      toast("Bill held", "success");
+      toast("Held", "success");
     }
     if (a === "kot" || a === "kotprint") {
       if (!st.cart.length) return toast("Cart empty", "error");
+      if (!root.KG.print?.hasHardwarePrinter?.()) {
+        return toast("Printer not connected — order will go to kitchen on Settle", "info");
+      }
       root.KG.print.printKOT({
         items: st.cart,
         cart: st.cart,
@@ -328,42 +649,47 @@
         }
       });
     }
-    if (a === "bill") {
-      if (!st.cart.length) return toast("Cart empty", "error");
-      const totals = root.KG.posState.computeTotals();
-      root.KG.print.printBill({
-        billNo: "PREVIEW",
-        items: st.cart,
-        subtotal: totals.subtotal,
-        discount: totals.discount,
-        gst: totals.gst,
-        grandTotal: totals.grandTotal,
-        paymentLabel: "UNPAID"
-      });
-    }
     if (a === "settle" || a === "settleprint") openSettleModal();
+    if (a === "reprint" || a === "reprint-bill") {
+      root.KG.print.reprintLastBill();
+      return;
+    }
     if (a === "discount") {
-      const pct = await openInputModal({
-        title: "Discount %",
-        hint: "Employee max may apply",
-        value: st.discountPercent || 0,
-        type: "number"
+      const mny = money();
+      const current =
+        st.discountPercent > 0
+          ? String(st.discountPercent) + "%"
+          : st.discountPaise > 0
+            ? String(mny.fromPaise(st.discountPaise))
+            : "";
+      const raw = await openInputModal({
+        title: "Discount",
+        hint: "₹ amount (e.g. 50) or percent (e.g. 10%)",
+        value: current,
+        type: "text"
       });
-      if (pct == null) return;
-      st.discountPercent = Math.max(0, Number(pct) || 0);
-      st.discountPaise = 0;
+      if (raw == null) return;
+      const s = String(raw).trim().replace(/,/g, "");
+      if (!s || s === "0") {
+        st.discountPercent = 0;
+        st.discountPaise = 0;
+      } else if (/%\s*$/.test(s)) {
+        const pct = Math.max(0, Math.min(100, Number(s.replace(/%/g, "").trim()) || 0));
+        st.discountPercent = pct;
+        st.discountPaise = 0;
+      } else {
+        const amt = Math.max(0, Number(s.replace(/[₹Rs.\s]/gi, "")) || 0);
+        st.discountPercent = 0;
+        st.discountPaise = mny.toPaise(amt);
+      }
       renderCart();
     }
     if (a === "charges") {
-      const v = await openInputModal({
-        title: "Packaging / service charge",
-        hint: "Amount in ₹",
-        value: money().fromPaise(st.chargesPaise),
-        type: "number"
-      });
-      if (v == null) return;
-      st.chargesPaise = money().toPaise(v);
-      renderCart();
+      /* charges UI removed — keep handler for any leftover refs */
+      return;
+    }
+    if (a === "custom") {
+      openCustomItemModal();
     }
     if (a === "settings") {
       const p = root.KG.print.prefs();
@@ -374,18 +700,31 @@
       const s = st.settings;
       if ($("kgPosGstOn")) $("kgPosGstOn").checked = !!s.gstEnabled;
       if ($("kgPosGstPct")) $("kgPosGstPct").value = s.gstPercent ?? 5;
+      if ($("kgPosShopName")) $("kgPosShopName").value = s.shopName || "The Kilogram";
       if ($("kgPosAddress")) $("kgPosAddress").value = s.address || "";
       if ($("kgPosGstin")) $("kgPosGstin").value = s.gstin || "";
       if ($("kgPosPhone")) $("kgPosPhone").value = s.phone || "";
       if ($("kgPosUpi")) $("kgPosUpi").value = s.upiId || "";
+      if ($("kgPosRatingsUrl")) $("kgPosRatingsUrl").value = s.ratingsUrl || "";
+      if ($("kgPosWaDefault")) $("kgPosWaDefault").checked = s.whatsappShareDefault !== false;
       $("kgPosSettingsOverlay").style.display = "flex";
+    }
+    if (a === "whatsapp") {
+      syncCustomerFromInputs();
+      const last = st.lastBillPayload;
+      if (!last) return toast("Settle a bill first, then share on WhatsApp", "info");
+      // Allow updating phone after settle from the header field
+      const phoneNow = $("kgPosCustomerPhone")?.value || last.customerPhone;
+      if (!root.KG.whatsappBill?.normalizePhone?.(phoneNow)) {
+        return toast("Enter customer WhatsApp number in Phone field", "error");
+      }
+      shareBillOnWhatsApp({ ...last, customerPhone: phoneNow, customerName: st.customerName || last.customerName });
     }
     if (a === "clear") {
       root.KG.posState.clearCart();
       renderCart();
     }
     if (a === "reprint-kot") root.KG.print.reprintLastKOT();
-    if (a === "reprint-bill") root.KG.print.reprintLastBill();
     if (a === "void") {
       const last = st.lastBillId || "";
       if ($("kgPosVoidBillId")) $("kgPosVoidBillId").value = last;
@@ -399,28 +738,62 @@
     rootEl.__kgBound = true;
 
     rootEl.addEventListener("click", async (e) => {
+      const ch = e.target.closest("[data-channel]");
+      if (ch) {
+        root.KG.posState.setOrderType(ch.getAttribute("data-channel"));
+        setOrderTypeUi();
+        return;
+      }
+      const unfav = e.target.closest("[data-unfav]");
+      if (unfav) {
+        e.preventDefault();
+        e.stopPropagation();
+        const key = unfav.getAttribute("data-unfav");
+        root.KG.posFavourites?.removeFavourite?.(key);
+        renderCategories();
+        renderMenu();
+        toast("Removed from favourites", "success");
+        return;
+      }
+
       const t = e.target.closest(
-        "[data-menu-id],[data-group-key],[data-cat],[data-order-type],[data-act],[data-hold],[data-table],[data-pos-action]"
+        "[data-size-id],[data-menu-id],[data-group-key],[data-cat],[data-order-type],[data-act],[data-hold],[data-table],[data-pos-action]"
       );
       if (!t) return;
+
+      // Size chip inside card → add that variant immediately
+      if (t.hasAttribute("data-size-id")) {
+        e.stopPropagation();
+        const item = root.KG.posMenu.getById(t.getAttribute("data-size-id"));
+        if (item) {
+          root.KG.posState.addLine(lineFromItem(item));
+          renderCart();
+          const sz = cleanVar(item.__variantLabel);
+          /* quiet — no toast on every tap */
+        }
+        return;
+      }
 
       if (t.hasAttribute("data-group-key")) {
         const g = root.KG.posMenu.getGroup(t.getAttribute("data-group-key"));
         if (!g) return;
-        if (g.hasVariants || (g.addons && g.addons.length)) openVariantPicker(g);
-        else {
-          const item = g.variants[0];
-          if (item) {
-            root.KG.posState.addLine({ ...item, menuItemId: item.id || item.menuItemId });
-            renderCart();
-          }
+        // Never open butter/cheese/addon popup — add directly (or ask to tap a size)
+        if (g.hasVariants && g.variants.length >= 2) {
+          toast("Tap a size on the card (500 ग्राम / 1 किलो…)", "info");
+          return;
+        }
+        const item = g.variants[0];
+        if (item) {
+          root.KG.posState.addLine(lineFromItem(item));
+          renderCart();
+          /* quiet */
         }
         return;
       }
       if (t.hasAttribute("data-menu-id")) {
         const item = root.KG.posMenu.getById(t.getAttribute("data-menu-id"));
         if (item) {
-          root.KG.posState.addLine(item);
+          root.KG.posState.addLine(lineFromItem(item));
           renderCart();
         }
         return;
@@ -432,8 +805,7 @@
         return;
       }
       if (t.hasAttribute("data-order-type")) {
-        root.KG.posState.setOrderType(t.getAttribute("data-order-type"));
-        setOrderTypeUi(t.getAttribute("data-order-type"));
+        setOrderTypeUi();
         return;
       }
       if (t.hasAttribute("data-table")) {
@@ -448,7 +820,7 @@
         if ($("kgPosCustomerPhone")) $("kgPosCustomerPhone").value = st.customerPhone || "";
         renderCart();
         renderHeld();
-        setOrderTypeUi(st.orderType);
+        setOrderTypeUi();
         return;
       }
       if (t.hasAttribute("data-act")) {
@@ -458,16 +830,25 @@
         const st = root.KG.posState.getState();
         const row = st.cart.find((l) => l.lineId === lineId);
         if (!row) return;
-        if (act === "inc") root.KG.posState.updateQty(lineId, row.qty + 1);
-        if (act === "dec") root.KG.posState.updateQty(lineId, row.qty - 1);
+        if (act === "inc") {
+          if (row.isWeightMerge) root.KG.posState.adjustWeightGrams(lineId, 500);
+          else root.KG.posState.updateQty(lineId, row.qty + 1);
+        }
+        if (act === "dec") {
+          if (row.isWeightMerge) root.KG.posState.adjustWeightGrams(lineId, -500);
+          else root.KG.posState.updateQty(lineId, row.qty - 1);
+        }
         if (act === "rm") root.KG.posState.removeLine(lineId);
         if (act === "note") {
           const note = await openInputModal({
-            title: "Line note",
-            hint: "e.g. less spicy",
+            title: "Kitchen note",
+            hint: "Hinglish OK — e.g. bilkul hi light bhaji (goes in Hindi)",
             value: row.note || ""
           });
-          if (note != null) root.KG.posState.setLineNote(lineId, note);
+          if (note != null) {
+            const hi = await toKitchenNoteHi(note);
+            root.KG.posState.setLineNote(lineId, hi || note);
+          }
         }
         if (act === "setqty") {
           const v = await openInputModal({
@@ -518,7 +899,7 @@
     }
     if (e.key === "F6") {
       e.preventDefault();
-      handleAction("bill");
+      handleAction("settle");
     }
     if (e.key === "F8") {
       e.preventDefault();
@@ -549,7 +930,9 @@
         root.KG.posState.addLine(flat[0]);
         renderCart();
       } else if (menuListCache[0]?.variants?.[0]) {
-        openVariantPicker(menuListCache[0]);
+        const item = menuListCache[0].variants[0];
+        root.KG.posState.addLine(lineFromItem(item));
+        renderCart();
       }
     }
     if (e.key === "Enter" && $("kgPosInputOverlay")?.style.display === "flex") {
@@ -566,12 +949,32 @@
     } catch (e) {
       console.warn(e);
     }
-    if (!list.length && root.KILOGRAM_MENU_SEED) {
-      list = (root.KILOGRAM_MENU_SEED || []).map((m, i) =>
-        Object.assign({ id: m.id || `seed_${i}`, available: true }, m)
-      );
+    const seed = root.KILOGRAM_MENU_SEED || [];
+    if (!list.length && seed.length) {
+      list = seed.map((m, i) => Object.assign({ id: m.id || `seed_${i}`, available: true }, m));
+    } else if (list.length && seed.length) {
+      // Attach HD dish photos from seed when live menu has no imageUrl
+      const byName = new Map();
+      seed.forEach((m) => {
+        const k = String(m.name || "")
+          .toLowerCase()
+          .replace(/\s+/g, " ")
+          .trim();
+        if (k && m.imageUrl) byName.set(k, m.imageUrl);
+      });
+      list = list.map((m) => {
+        if (m.imageUrl || m.image) return m;
+        const k = String(m.name || "")
+          .toLowerCase()
+          .replace(/\s+/g, " ")
+          .trim();
+        const img = byName.get(k);
+        return img ? Object.assign({}, m, { imageUrl: img }) : m;
+      });
     }
     root.KG.posMenu.loadFromArray(list);
+    const st = root.KG.posState.getState();
+    if (!st.activeCategory || st.activeCategory === "Snacks") st.activeCategory = "__favs";
     renderCategories();
     renderMenu();
   }
@@ -583,14 +986,31 @@
       await root.KG.posState.hydrateOfflineQueue?.();
     } catch (_) {}
     await loadMenuIntoIndex();
+    try {
+      await root.KG.posFavourites?.refreshFromFirestore?.();
+      renderCategories();
+      // Only refresh fav/hot views — avoid full menu blink on other tabs
+      const cat = root.KG.posState.getState().activeCategory;
+      if (cat === "__favs" || cat === "__hot") renderMenu(true);
+    } catch (_) {}
     renderCart();
     renderHeld();
-    setOrderTypeUi(root.KG.posState.getState().orderType);
+    setOrderTypeUi();
+    document.getElementById("kgPosKdsInsight")?.remove();
     syncIndicator();
     try {
       await root.KG.print.autoReconnect();
     } catch (_) {}
     root.KG.posCheckout.syncQueue().catch(() => {});
+    try {
+      root.KG.posCheckout.startBackgroundSync?.();
+    } catch (_) {}
+    try {
+      root.KG.posKdsLive?.start?.();
+    } catch (_) {}
+    window.addEventListener("online", () => syncIndicator());
+    window.addEventListener("offline", () => syncIndicator());
+    setInterval(syncIndicator, 12000);
     const clock = $("kgPosClock");
     if (clock && !clock.__timer) {
       clock.__timer = setInterval(() => {
@@ -618,16 +1038,32 @@
     if (mounted) return;
     mounted = true;
     bindEvents();
+    $("kgPosPlatformNo")?.addEventListener("input", (e) => {
+      root.KG.posState.setPlatformOrderNo(e.target.value);
+    });
     unsub = root.KG.posState.subscribe((evt) => {
       if (evt === "sync") syncIndicator();
       if (evt === "hold" || evt === "reopen") {
         renderHeld();
         renderCart();
+        setOrderTypeUi();
       }
+      if (evt === "orderType") setOrderTypeUi();
     });
 
     $("kgPosInputOk")?.addEventListener("click", () => closeInputModal($("kgPosInputValue")?.value));
     $("kgPosInputCancel")?.addEventListener("click", () => closeInputModal(null));
+    $("kgPosCustomAdd")?.addEventListener("click", () => addCustomItemFromModal());
+    $("kgPosCustomCancel")?.addEventListener("click", () => {
+      const ov = $("kgPosCustomOverlay");
+      if (ov) ov.style.display = "none";
+    });
+    $("kgPosCustomPrice")?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") addCustomItemFromModal();
+    });
+    $("kgPosCustomName")?.addEventListener("keydown", (e) => {
+      if (e.key === "Enter") $("kgPosCustomPrice")?.focus();
+    });
 
     $("kgPosVariantClose")?.addEventListener("click", () => {
       $("kgPosVariantOverlay").style.display = "none";
@@ -740,12 +1176,15 @@
         billTransport: $("kgPosBillTransport")?.value || "auto"
       });
       root.KG.posState.setSettings({
-        gstPercent: Number.isFinite(gst) ? gst : 5,
-        gstEnabled: !!$("kgPosGstOn")?.checked,
+        gstPercent: 0,
+        gstEnabled: false,
+        shopName: $("kgPosShopName")?.value || "The Kilogram",
         address: $("kgPosAddress")?.value || "",
         gstin: $("kgPosGstin")?.value || "",
         phone: $("kgPosPhone")?.value || "",
-        upiId: $("kgPosUpi")?.value || ""
+        upiId: $("kgPosUpi")?.value || "",
+        ratingsUrl: $("kgPosRatingsUrl")?.value || "",
+        whatsappShareDefault: !!$("kgPosWaDefault")?.checked
       });
       toast("Settings saved", "success");
       $("kgPosSettingsOverlay").style.display = "none";
@@ -760,7 +1199,8 @@
     renderMenu,
     openSettleModal,
     handleAction,
-    openInputModal
+    openInputModal,
+    syncIndicator
   };
 
   root.KG = root.KG || {};

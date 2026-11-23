@@ -1,5 +1,6 @@
 /**
- * Live dashboard: dailySalesSummary + hourly sales chart (Cash vs Online).
+ * Live dashboard: sales docs are source of truth (KPIs + hourly + donut).
+ * dailySalesSummary is optional/fast path only — never trusted over sales.
  */
 (function (root) {
   "use strict";
@@ -27,6 +28,64 @@
     return root.KG?.money?.formatINR(n) || "₹" + (Number(n) || 0).toFixed(0);
   }
 
+  function isActiveSale(s) {
+    const st = String(s?.status || "")
+      .toLowerCase()
+      .trim();
+    if (st === "void" || st === "cancelled" || st === "refunded") return false;
+    // Advances / non-revenue money movements — exclude from completed-sale KPIs
+    if (s?.countsAsRevenue === false) return false;
+    if (String(s?.revenueKind || "") === "customer_advance") return false;
+    if (String(s?.source || "") === "scheduled_advance") return false;
+    return true;
+  }
+
+  /** Shop UPI/card = otherOnline (or legacy onlineAmount); platforms stay separate. */
+  function saleParts(s) {
+    const cash = Number(s.cashAmount) || 0;
+    const swiggy = Number(s.swiggyAmount) || 0;
+    const zomato = Number(s.zomatoAmount) || 0;
+    const other = Number(s.otherOnlineAmount) || 0;
+    const legacy = Number(s.onlineAmount) || 0;
+    const upi = swiggy > 0 || zomato > 0 || other > 0 ? other : legacy;
+    const onlineTotal = upi + swiggy + zomato;
+    const total = Number(s.totalAmount) || cash + onlineTotal;
+    return { cash, swiggy, zomato, upi, onlineTotal, total };
+  }
+
+  function summarizeSales(sales) {
+    let totalSales = 0;
+    let cashSales = 0;
+    let onlineSales = 0;
+    let swiggySales = 0;
+    let zomatoSales = 0;
+    let billCount = 0;
+    let cashBillCount = 0;
+    let onlineBillCount = 0;
+    (sales || []).forEach((s) => {
+      if (!isActiveSale(s)) return;
+      const p = saleParts(s);
+      totalSales += p.total;
+      cashSales += p.cash;
+      onlineSales += p.upi;
+      swiggySales += p.swiggy;
+      zomatoSales += p.zomato;
+      billCount += 1;
+      if (p.cash > 0) cashBillCount += 1;
+      if (p.upi > 0) onlineBillCount += 1;
+    });
+    return {
+      totalSales,
+      cashSales,
+      onlineSales,
+      swiggySales,
+      zomatoSales,
+      billCount,
+      cashBillCount,
+      onlineBillCount
+    };
+  }
+
   function detach() {
     if (unsubSummary) {
       unsubSummary();
@@ -47,9 +106,9 @@
     set("kgLiveTotalSales", fmt(d.totalSales || 0));
     set("kgLiveBillCount", String(d.billCount || 0));
     set("kgLiveCashSales", fmt(d.cashSales || 0));
-    set("kgLiveCashCount", String(d.cashBillCount || 0));
+    set("kgLiveCashCount", String(d.cashBillCount || 0) + " bills");
     set("kgLiveOnlineSales", fmt(d.onlineSales || 0));
-    set("kgLiveOnlineCount", String(d.onlineBillCount || 0));
+    set("kgLiveOnlineCount", String(d.onlineBillCount || 0) + " bills");
     set("kgLiveSwiggy", fmt(d.swiggySales || 0));
     set("kgLiveZomato", fmt(d.zomatoSales || 0));
     const aov = d.billCount ? (d.totalSales || 0) / d.billCount : 0;
@@ -65,11 +124,16 @@
     if (empty) empty.style.display = d.billCount ? "none" : "block";
   }
 
-  function hourBuckets(sales, businessDate) {
-    // Hours from 10:00 to 02:00 next day relative to business date
+  function businessHours(cutOffHour) {
+    const cut = Number.isFinite(cutOffHour) ? cutOffHour : 4;
     const hours = [];
-    for (let h = 10; h <= 23; h++) hours.push(h);
-    hours.push(0, 1, 2);
+    for (let i = 0; i < 24; i++) hours.push((cut + i) % 24);
+    return hours;
+  }
+
+  function hourBuckets(sales, businessDate) {
+    const cut = root.KG?.posState?.getState()?.settings?.businessDayCutOff ?? 4;
+    const hours = businessHours(cut);
     const cash = {};
     const online = {};
     const count = {};
@@ -80,21 +144,17 @@
     });
 
     (sales || []).forEach((s) => {
-      if (s.status === "void") return;
-      if (String(s.date).slice(0, 10) !== businessDate) return;
+      if (!isActiveSale(s)) return;
+      if (String(s.date || "").slice(0, 10) !== businessDate) return;
       let hour = 12;
       try {
         const ts = s.createdAt?.toDate ? s.createdAt.toDate() : s.at ? new Date(s.at) : null;
-        if (ts) hour = ts.getHours();
+        if (ts && !Number.isNaN(ts.getTime())) hour = ts.getHours();
       } catch (_) {}
-      if (cash[hour] == null) return;
-      const c = Number(s.cashAmount) || 0;
-      const o =
-        (Number(s.otherOnlineAmount) || 0) +
-        (Number(s.swiggyAmount) || 0) +
-        (Number(s.zomatoAmount) || 0);
-      cash[hour] += c;
-      online[hour] += o;
+      if (cash[hour] == null) hour = hours[0];
+      const p = saleParts(s);
+      cash[hour] += p.cash;
+      online[hour] += p.onlineTotal;
       count[hour] += 1;
     });
 
@@ -119,7 +179,8 @@
     if (typeof Chart === "undefined") return;
     const hourlyCanvas = $("kgLiveHourlyChart");
     const donutCanvas = $("kgLiveDonutChart");
-    if (hourlyCanvas) {
+    // Hourly chart merged into dashboard Sales pulse — skip when hidden
+    if (hourlyCanvas && !hourlyCanvas.hidden) {
       if (chartHourly) chartHourly.destroy();
       const datasets = [
         {
@@ -130,7 +191,7 @@
           type: "bar"
         },
         {
-          label: "Online",
+          label: "Online (UPI + platforms)",
           data: buckets.online,
           backgroundColor: "rgba(59,130,246,0.7)",
           stack: "s",
@@ -167,7 +228,10 @@
               callbacks: {
                 afterBody(items) {
                   const i = items[0]?.dataIndex;
-                  return i != null ? `Bills: ${buckets.count[i]}` : "";
+                  if (i == null) return "";
+                  const c = buckets.cash[i] || 0;
+                  const o = buckets.online[i] || 0;
+                  return [`Bills: ${buckets.count[i]}`, `Hour total: ${fmt(c + o)}`];
                 }
               }
             }
@@ -179,7 +243,11 @@
     if (donutCanvas) {
       if (chartDonut) chartDonut.destroy();
       const cash = Number(summary?.cashSales) || 0;
-      const online = Number(summary?.onlineSales) || 0;
+      // Donut Online = shop UPI + Swiggy + Zomato for the day
+      const online =
+        Number(summary?.onlineSales || 0) +
+        Number(summary?.swiggySales || 0) +
+        Number(summary?.zomatoSales || 0);
       chartDonut = new Chart(donutCanvas, {
         type: "doughnut",
         data: {
@@ -191,7 +259,21 @@
             }
           ]
         },
-        options: { responsive: true, maintainAspectRatio: false, plugins: { legend: { position: "bottom" } } }
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { position: "bottom" },
+            tooltip: {
+              callbacks: {
+                label(ctx) {
+                  const v = Number(ctx.parsed) || 0;
+                  return `${ctx.label}: ${fmt(v)}`;
+                }
+              }
+            }
+          }
+        }
       });
     }
   }
@@ -208,22 +290,13 @@
     }
 
     const db = firebase.firestore();
+    // Keep listening to summary only as a loading hint; sales overwrite KPIs.
     unsubSummary = db
       .collection("dailySalesSummary")
       .doc(selectedDate)
       .onSnapshot(
-        (snap) => {
-          const data = snap.exists ? snap.data() : {};
-          setKPI(data, { offline: !navigator.onLine });
-          // keep donut in sync
-          if (chartDonut || $("kgLiveDonutChart")) {
-            // hourly refresh happens via sales listener
-          }
-        },
-        (err) => {
-          console.warn(err);
-          setKPI({}, { offline: true });
-        }
+        () => {},
+        (err) => console.warn(err)
       );
 
     const lastWeek = sameWeekdayLastWeekISO(selectedDate);
@@ -232,6 +305,7 @@
     let latestSummary = null;
 
     function paint() {
+      if (latestSummary) setKPI(latestSummary, { offline: !navigator.onLine });
       if (latestBuckets) renderCharts(latestBuckets, latestSummary, compareBucketsCache);
     }
 
@@ -254,22 +328,13 @@
         (snap) => {
           const sales = snap.docs.map((d) => Object.assign({ id: d.id }, d.data()));
           latestBuckets = hourBuckets(sales, selectedDate);
-          latestSummary = {
-            cashSales: sales.reduce((s, x) => s + (x.status === "void" ? 0 : Number(x.cashAmount) || 0), 0),
-            onlineSales: sales.reduce(
-              (s, x) =>
-                s +
-                (x.status === "void"
-                  ? 0
-                  : (Number(x.otherOnlineAmount) || 0) +
-                    (Number(x.swiggyAmount) || 0) +
-                    (Number(x.zomatoAmount) || 0)),
-              0
-            )
-          };
+          latestSummary = summarizeSales(sales);
           paint();
         },
-        (err) => console.warn(err)
+        (err) => {
+          console.warn(err);
+          setKPI({}, { offline: true });
+        }
       );
   }
 
@@ -306,17 +371,17 @@
     const body = $("kgMarginBody");
     if (!ov || !body) return;
     const money = root.KG.money;
-    const fmt = (n) => money.formatINR(n);
+    const fmtMoney = (n) => money.formatINR(n);
     body.innerHTML = `
       <div class="kg-waterfall">
-        <div>Net Revenue <b>${fmt(result.netRevenue)}</b></div>
-        <div>− COGS <b>${fmt(result.cogs)}</b></div>
-        <div>− Daily expenses <b>${fmt(result.dailyExpenses)}</b></div>
-        <div>− Staff <b>${fmt(result.staffCost)}</b></div>
-        <div>− Fixed costs <b>${fmt(result.fixedCostAllocated)}</b></div>
-        <div>− Commission <b>${fmt(result.platformCommission)}</b></div>
-        <div>− Gateway <b>${fmt(result.gatewayCharges)}</b></div>
-        <div class="kg-waterfall-net">Net Profit <b>${fmt(result.netProfit)}</b> (${
+        <div>Net Revenue <b>${fmtMoney(result.netRevenue)}</b></div>
+        <div>− COGS <b>${fmtMoney(result.cogs)}</b></div>
+        <div>− Daily expenses <b>${fmtMoney(result.dailyExpenses)}</b></div>
+        <div>− Staff <b>${fmtMoney(result.staffCost)}</b></div>
+        <div>− Fixed costs <b>${fmtMoney(result.fixedCostAllocated)}</b></div>
+        <div>− Commission <b>${fmtMoney(result.platformCommission)}</b></div>
+        <div>− Gateway <b>${fmtMoney(result.gatewayCharges)}</b></div>
+        <div class="kg-waterfall-net">Net Profit <b>${fmtMoney(result.netProfit)}</b> (${
       result.netMarginPct == null ? "—" : result.netMarginPct.toFixed(1) + "%"
     })</div>
       </div>
@@ -324,7 +389,7 @@
       <tbody>${(result.daily || [])
         .map(
           (d) =>
-            `<tr><td>${d.date}</td><td>${fmt(d.revenue)}</td><td>${fmt(d.costs)}</td><td>${fmt(
+            `<tr><td>${d.date}</td><td>${fmtMoney(d.revenue)}</td><td>${fmtMoney(d.costs)}</td><td>${fmtMoney(
               d.profit
             )}</td><td>${d.marginPct == null ? "—" : d.marginPct.toFixed(1) + "%"}</td></tr>`
         )
@@ -349,14 +414,15 @@
     root.KG.finance.loadFixedCosts().then((list) => {
       const el = $("kgFixedCostsList");
       if (!el) return;
-      el.innerHTML = list
-        .map(
-          (f) =>
-            `<div class="list-item"><b>${f.name}</b> · ${root.KG.money.formatINR(f.amount)} · ${
-              f.recurring ? "recurring" : f.month || ""
-            }</div>`
-        )
-        .join("") || "<div class='muted'>No fixed costs yet</div>";
+      el.innerHTML =
+        list
+          .map(
+            (f) =>
+              `<div class="list-item"><b>${f.name}</b> · ${root.KG.money.formatINR(f.amount)} · ${
+                f.recurring ? "recurring" : f.month || ""
+              }</div>`
+          )
+          .join("") || "<div class='muted'>No fixed costs yet</div>";
     });
   }
 
@@ -412,7 +478,9 @@
     onDashboardLeave,
     refreshNetMargin,
     bindOnce,
-    todayISO
+    todayISO,
+    summarizeSales,
+    saleParts
   };
 
   root.KG = root.KG || {};

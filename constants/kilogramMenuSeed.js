@@ -5,7 +5,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "रेगुलर दाबेली",
     "price": 30,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/dabeli.jpg",
     "available": true,
     "sort": 0,
     "sourceId": 1
@@ -15,7 +15,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "बटर दाबेली",
     "price": 40,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/dabeli.jpg",
     "available": true,
     "sort": 1,
     "sourceId": 2
@@ -25,7 +25,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "चीज़ दाबेली",
     "price": 60,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/dabeli.jpg",
     "available": true,
     "sort": 2,
     "sourceId": 3
@@ -35,7 +35,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "वड़ापाव (ऑयल)",
     "price": 30,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/new-vadapau.jpg",
     "available": true,
     "sort": 3,
     "sourceId": 4
@@ -45,7 +45,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "वड़ापाव (बटर)",
     "price": 40,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/new-vadapau.jpg",
     "available": true,
     "sort": 4,
     "sourceId": 4
@@ -55,7 +55,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "चीज़ वड़ापाव",
     "price": 60,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/cheese-vadapau-new.jpg",
     "available": true,
     "sort": 5,
     "sourceId": 5
@@ -65,7 +65,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "मेयोनीज़ वड़ापाव",
     "price": 50,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/new-vadapau.jpg",
     "available": true,
     "sort": 6,
     "sourceId": 6
@@ -75,7 +75,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "सेजवान वड़ापाव",
     "price": 50,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/new-vadapau.jpg",
     "available": true,
     "sort": 7,
     "sourceId": 7
@@ -85,7 +85,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "बॉम्बे वड़ापाव",
     "price": 20,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/new-vadapau.jpg",
     "available": true,
     "sort": 8,
     "sourceId": 8
@@ -95,7 +95,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "रेगुलर पफ",
     "price": 30,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/reg-puff.jpg",
     "available": true,
     "sort": 9,
     "sourceId": 9
@@ -105,7 +105,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "वेज पफ",
     "price": 40,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/veg-puff.jpg",
     "available": true,
     "sort": 10,
     "sourceId": 10
@@ -115,7 +115,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "चाइनीज पफ",
     "price": 30,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/sezwan-fried-rice.jpg",
     "available": true,
     "sort": 11,
     "sourceId": 11
@@ -125,7 +125,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "तंदूरी पफ",
     "price": 50,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/tandoorie.jpg",
     "available": true,
     "sort": 12,
     "sourceId": 12
@@ -135,7 +135,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "तड़का पफ",
     "price": 60,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/aloo-muter-grill.jpg",
     "available": true,
     "sort": 13,
     "sourceId": 13
@@ -145,7 +145,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "चीज़ पफ",
     "price": 60,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/cheese-puff.jpg",
     "available": true,
     "sort": 14,
     "sourceId": 14
@@ -155,7 +155,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "मेयोनीज़ पफ",
     "price": 40,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/mayoniese-puff.jpg",
     "available": true,
     "sort": 15,
     "sourceId": 15
@@ -165,7 +165,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "आलू टिक्की बर्गर",
     "price": 50,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/aloo-tikiig.jpg",
     "available": true,
     "sort": 16,
     "sourceId": 16
@@ -175,7 +175,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "वेज बर्गर",
     "price": 60,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/aloo-tikiig.jpg",
     "available": true,
     "sort": 17,
     "sourceId": 17
@@ -185,7 +185,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "तंदूरी बर्गर",
     "price": 70,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/aloo-tikiig.jpg",
     "available": true,
     "sort": 18,
     "sourceId": 18
@@ -195,7 +195,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "सेजवान बर्गर",
     "price": 70,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/aloo-tikiig.jpg",
     "available": true,
     "sort": 19,
     "sourceId": 19
@@ -205,7 +205,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पेरी पेरी बर्गर",
     "price": 70,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/aloo-tikiig.jpg",
     "available": true,
     "sort": 20,
     "sourceId": 20
@@ -215,7 +215,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "किलोग्राम स्पेशल बर्गर",
     "price": 90,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/aloo-tikiig.jpg",
     "available": true,
     "sort": 21,
     "sourceId": 21
@@ -225,7 +225,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "ब्रेड बटर सैंडविच (ग्रिल्ड +₹20)",
     "price": 50,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/bread-butter.jpg",
     "available": true,
     "sort": 22,
     "sourceId": 22
@@ -235,7 +235,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "ब्रेड बटर सैंडविच (Option 2)",
     "price": 70,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/bread-butter.jpg",
     "available": true,
     "sort": 23,
     "sourceId": 22
@@ -245,7 +245,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "ब्रेड बटर सैंडविच (Option 3)",
     "price": 20,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/bread-butter.jpg",
     "available": true,
     "sort": 24,
     "sourceId": 22
@@ -255,7 +255,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "बटर जैम सैंडविच (ग्रिल्ड +₹20)",
     "price": 70,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/butter-jam.jpg",
     "available": true,
     "sort": 25,
     "sourceId": 23
@@ -265,7 +265,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "बटर जैम सैंडविच (Option 2)",
     "price": 90,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/butter-jam.jpg",
     "available": true,
     "sort": 26,
     "sourceId": 23
@@ -275,7 +275,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "बटर जैम सैंडविच (Option 3)",
     "price": 20,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/butter-jam.jpg",
     "available": true,
     "sort": 27,
     "sourceId": 23
@@ -285,7 +285,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "वेज सैंडविच (ग्रिल्ड +₹20)",
     "price": 60,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/veg.jpg",
     "available": true,
     "sort": 28,
     "sourceId": 24
@@ -295,7 +295,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "वेज सैंडविच (Option 2)",
     "price": 80,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/veg.jpg",
     "available": true,
     "sort": 29,
     "sourceId": 24
@@ -305,7 +305,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "वेज सैंडविच (Option 3)",
     "price": 20,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/veg.jpg",
     "available": true,
     "sort": 30,
     "sourceId": 24
@@ -315,7 +315,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "आलू मटर सैंडविच (ग्रिल्ड +₹20)",
     "price": 60,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/aloo-muter-grill.jpg",
     "available": true,
     "sort": 31,
     "sourceId": 25
@@ -325,7 +325,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "आलू मटर सैंडविच (Option 2)",
     "price": 80,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/aloo-muter-grill.jpg",
     "available": true,
     "sort": 32,
     "sourceId": 25
@@ -335,7 +335,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "आलू मटर सैंडविच (Option 3)",
     "price": 20,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/aloo-muter-grill.jpg",
     "available": true,
     "sort": 33,
     "sourceId": 25
@@ -345,7 +345,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "चीज़ सैंडविच (ग्रिल्ड +₹20)",
     "price": 80,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/cheese.jpg",
     "available": true,
     "sort": 34,
     "sourceId": 26
@@ -355,7 +355,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "चीज़ सैंडविच (Option 2)",
     "price": 100,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/cheese.jpg",
     "available": true,
     "sort": 35,
     "sourceId": 26
@@ -365,7 +365,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "चीज़ सैंडविच (Option 3)",
     "price": 20,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/cheese.jpg",
     "available": true,
     "sort": 36,
     "sourceId": 26
@@ -375,7 +375,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "चीज़ चटनी सैंडविच (ग्रिल्ड +₹20)",
     "price": 90,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/cheese.jpg",
     "available": true,
     "sort": 37,
     "sourceId": 27
@@ -385,7 +385,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "चीज़ चटनी सैंडविच (Option 2)",
     "price": 110,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/cheese.jpg",
     "available": true,
     "sort": 38,
     "sourceId": 27
@@ -395,7 +395,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "चीज़ चटनी सैंडविच (Option 3)",
     "price": 20,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/cheese.jpg",
     "available": true,
     "sort": 39,
     "sourceId": 27
@@ -405,7 +405,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "चॉकलेट सैंडविच",
     "price": 80,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/choicolate.jpg",
     "available": true,
     "sort": 40,
     "sourceId": 28
@@ -415,7 +415,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पाइनएप्पल सैंडविच",
     "price": 100,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/butter-jam.jpg",
     "available": true,
     "sort": 41,
     "sourceId": 29
@@ -425,7 +425,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "रबड़ी सैंडविच",
     "price": 80,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/choicolate.jpg",
     "available": true,
     "sort": 42,
     "sourceId": 30
@@ -435,7 +435,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "चीज़ चिली प्याज ग्रिल",
     "price": 120,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/wmremove-transformed.jpg",
     "available": true,
     "sort": 43,
     "sourceId": 31
@@ -445,7 +445,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "कॉर्न फिएस्टा ग्रिल",
     "price": 120,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/wmremove-transformed-1.jpg",
     "available": true,
     "sort": 44,
     "sourceId": 32
@@ -455,7 +455,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "मैक्सिकन ग्रिल सैंडविच",
     "price": 120,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/maxican.jpg",
     "available": true,
     "sort": 45,
     "sourceId": 33
@@ -465,7 +465,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "वेज कोलस्लॉ ग्रिल",
     "price": 130,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/wmremove-transformed-2.jpg",
     "available": true,
     "sort": 46,
     "sourceId": 34
@@ -475,7 +475,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पनीर तंदूरी ग्रिल",
     "price": 130,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/tandoorie.jpg",
     "available": true,
     "sort": 47,
     "sourceId": 35
@@ -485,7 +485,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पेरी पेरी पनीर ग्रिल",
     "price": 130,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/periperi.jpg",
     "available": true,
     "sort": 48,
     "sourceId": 36
@@ -495,7 +495,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "चिपोटले पनीर ग्रिल",
     "price": 140,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-chilli-dry.jpg",
     "available": true,
     "sort": 49,
     "sourceId": 37
@@ -505,7 +505,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "मखनी पनीर ग्रिल",
     "price": 140,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-chillie-gravy.jpg",
     "available": true,
     "sort": 50,
     "sourceId": 38
@@ -515,7 +515,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पिज़्ज़ेरिया ग्रिल सैंडविच",
     "price": 140,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/tripple.jpg",
     "available": true,
     "sort": 51,
     "sourceId": 39
@@ -525,7 +525,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "अमेरिकन क्लब सैंडविच",
     "price": 180,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/new-one.jpg",
     "available": true,
     "sort": 52,
     "sourceId": 40
@@ -535,7 +535,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "तंदूरी पनीर क्लब",
     "price": 180,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/tandoorie.jpg",
     "available": true,
     "sort": 53,
     "sourceId": 41
@@ -545,7 +545,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "जंगली पनीर क्लब",
     "price": 200,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-manchurinad-gravy.jpg",
     "available": true,
     "sort": 54,
     "sourceId": 42
@@ -555,7 +555,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "क्लासिक क्लब सैंडविच",
     "price": 160,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/veg-burger.jpg",
     "available": true,
     "sort": 55,
     "sourceId": 43
@@ -565,7 +565,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पनीर टकाटक सैंडविच",
     "price": 180,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-chilli-dry.jpg",
     "available": true,
     "sort": 56,
     "sourceId": 44
@@ -575,7 +575,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "मैक्सिकन क्लब सैंडविच",
     "price": 190,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/maxican.jpg",
     "available": true,
     "sort": 57,
     "sourceId": 45
@@ -585,7 +585,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "थ्री-इन-वन सैंडविच",
     "price": 190,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/tripple.jpg",
     "available": true,
     "sort": 58,
     "sourceId": 46
@@ -595,7 +595,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "मसाला मैगी",
     "price": 55,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/meggie.jpg",
     "available": true,
     "sort": 59,
     "sourceId": 50
@@ -605,7 +605,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "बटर मैगी",
     "price": 60,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/meggie.jpg",
     "available": true,
     "sort": 60,
     "sourceId": 51
@@ -615,7 +615,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "वेज मैगी",
     "price": 70,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/meggie.jpg",
     "available": true,
     "sort": 61,
     "sourceId": 52
@@ -625,7 +625,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "तड़का मैगी",
     "price": 80,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/meggie.jpg",
     "available": true,
     "sort": 62,
     "sourceId": 53
@@ -635,7 +635,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "वेज तड़का मैगी",
     "price": 90,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/meggie.jpg",
     "available": true,
     "sort": 63,
     "sourceId": 54
@@ -645,7 +645,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "मैक्सिकन पनीनी",
     "price": 140,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/maxican.jpg",
     "available": true,
     "sort": 64,
     "sourceId": 47
@@ -655,7 +655,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पिज़्ज़ेरिया पनीनी",
     "price": 160,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/wmremove-transformed.jpg",
     "available": true,
     "sort": 65,
     "sourceId": 48
@@ -665,7 +665,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "रशियन पनीनी",
     "price": 170,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/wmremove-transformed-2.jpg",
     "available": true,
     "sort": 66,
     "sourceId": 49
@@ -675,7 +675,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "रेगुलर भेल",
     "price": 60,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/gemini-generated-image-l6ov0hl6ov0hl6ov.jpg",
     "available": true,
     "sort": 67,
     "sourceId": 55
@@ -685,7 +685,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "सूखी भेल",
     "price": 50,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/firefly-geminiflash-ultra-realistic-professional-studio-food-photography-of-a-pure-jain-bhel-served-in-a-681736.jpg",
     "available": true,
     "sort": 68,
     "sourceId": 56
@@ -695,7 +695,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "जैन भेल",
     "price": 60,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/firefly-geminiflash-ultra-realistic-professional-studio-food-photography-of-a-pure-jain-bhel-served-in-a-681736.jpg",
     "available": true,
     "sort": 69,
     "sourceId": 57
@@ -705,7 +705,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "मसाला फ्राइज़",
     "price": 60,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/wmremove-transformed-1.jpg",
     "available": true,
     "sort": 70,
     "sourceId": 58
@@ -715,7 +715,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पेरी पेरी फ्राइज़",
     "price": 90,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/periperi.jpg",
     "available": true,
     "sort": 71,
     "sourceId": 59
@@ -725,7 +725,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "कोल्ड कॉफी",
     "price": 110,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/gemini-generated-image-whwnclwhwnclwhwn.jpg",
     "available": true,
     "sort": 72,
     "sourceId": 60
@@ -735,7 +735,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "चॉकलेट कोल्ड कॉफी",
     "price": 130,
     "category": "Snacks",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/choicolate.jpg",
     "available": true,
     "sort": 73,
     "sourceId": 61
@@ -745,7 +745,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "हॉट एंड सॉर सूप",
     "price": 80,
     "category": "Chinese",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/firefly-gemini-flash-ultra-realistic-professional-studio-food-photography-of-a-classic-indo-chinese-mancho-681736.jpg",
     "available": true,
     "sort": 74,
     "sourceId": 62
@@ -755,7 +755,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "मैन चाउ सूप",
     "price": 80,
     "category": "Chinese",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/firefly-gemini-flash-ultra-realistic-professional-studio-food-photography-of-a-classic-indo-chinese-mancho-681736.jpg",
     "available": true,
     "sort": 75,
     "sourceId": 63
@@ -765,7 +765,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "टोमैटो सूप",
     "price": 80,
     "category": "Chinese",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/firefly-gemini-flash-ultra-realistic-professional-studio-food-photography-of-a-classic-tomato-soup-served-681736.jpg",
     "available": true,
     "sort": 76,
     "sourceId": 64
@@ -775,7 +775,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "स्वीट कॉर्न सूप",
     "price": 100,
     "category": "Chinese",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/firefly-gemini-flash-ultra-realistic-professional-studio-food-photography-of-a-classic-sweet-corn-soup-ser-681736.jpg",
     "available": true,
     "sort": 77,
     "sourceId": 65
@@ -785,7 +785,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "ड्राई मंचूरियन",
     "price": 120,
     "category": "Chinese",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/wmremove-transformed.jpg",
     "available": true,
     "sort": 78,
     "sourceId": 66
@@ -795,7 +795,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "ग्रेवी मंचूरियन",
     "price": 120,
     "category": "Chinese",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-manchurinad-gravy.jpg",
     "available": true,
     "sort": 79,
     "sourceId": 67
@@ -805,7 +805,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "मंचूरियन ड्राई — किलो पर चाइनीज (500 g)",
     "price": 120,
     "category": "Chinese",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/wmremove-transformed.jpg",
     "available": true,
     "sort": 80,
     "sourceId": 92
@@ -815,7 +815,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "मंचूरियन ड्राई — किलो पर चाइनीज (1 kg)",
     "price": 230,
     "category": "Chinese",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/wmremove-transformed.jpg",
     "available": true,
     "sort": 81,
     "sourceId": 92
@@ -825,7 +825,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "वेज फ्राइड राइस",
     "price": 120,
     "category": "Chinese",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/garlic-rice.jpg",
     "available": true,
     "sort": 82,
     "sourceId": 70
@@ -835,7 +835,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "सेजवान राइस",
     "price": 120,
     "category": "Chinese",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/sezwan-fried-rice.jpg",
     "available": true,
     "sort": 83,
     "sourceId": 71
@@ -845,7 +845,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "मंचूरियन राइस",
     "price": 120,
     "category": "Chinese",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/manchurin-rice.jpg",
     "available": true,
     "sort": 84,
     "sourceId": 72
@@ -855,7 +855,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "गार्लिक राइस",
     "price": 120,
     "category": "Chinese",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/garlic-rice.jpg",
     "available": true,
     "sort": 85,
     "sourceId": 73
@@ -865,7 +865,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "नूडल राइस",
     "price": 120,
     "category": "Chinese",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/noodles-rice.jpg",
     "available": true,
     "sort": 86,
     "sourceId": 74
@@ -875,7 +875,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पनीर राइस",
     "price": 150,
     "category": "Chinese",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-rice.jpg",
     "available": true,
     "sort": 87,
     "sourceId": 75
@@ -885,7 +885,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "मैक्सिकन राइस",
     "price": 150,
     "category": "Chinese",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/maxican.jpg",
     "available": true,
     "sort": 88,
     "sourceId": 76
@@ -895,7 +895,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "ट्रिपल फ्राइड राइस",
     "price": 200,
     "category": "Chinese",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/tripple.jpg",
     "available": true,
     "sort": 89,
     "sourceId": 77
@@ -905,7 +905,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "किलोग्राम स्पेशल राइस",
     "price": 200,
     "category": "Chinese",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/new-one.jpg",
     "available": true,
     "sort": 90,
     "sourceId": 78
@@ -915,7 +915,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "मंचूरियन फ्राइड राइस — किलो पर चाइनीज (500 g)",
     "price": 120,
     "category": "Chinese",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/manchurin-rice.jpg",
     "available": true,
     "sort": 91,
     "sourceId": 93
@@ -925,7 +925,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "मंचूरियन फ्राइड राइस — किलो पर चाइनीज (1 kg)",
     "price": 230,
     "category": "Chinese",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/manchurin-rice.jpg",
     "available": true,
     "sort": 92,
     "sourceId": 93
@@ -935,7 +935,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "वेज फ्राइड राइस — किलो पर चाइनीज (500 g)",
     "price": 130,
     "category": "Chinese",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/garlic-rice.jpg",
     "available": true,
     "sort": 93,
     "sourceId": 94
@@ -945,7 +945,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "वेज फ्राइड राइस — किलो पर चाइनीज (1 kg)",
     "price": 250,
     "category": "Chinese",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/garlic-rice.jpg",
     "available": true,
     "sort": 94,
     "sourceId": 94
@@ -955,7 +955,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "हक्का नूडल्स",
     "price": 120,
     "category": "Chinese",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/chowmin.jpg",
     "available": true,
     "sort": 95,
     "sourceId": 79
@@ -965,7 +965,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "सेजवान नूडल्स",
     "price": 120,
     "category": "Chinese",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/sezwan-noodles.jpg",
     "available": true,
     "sort": 96,
     "sourceId": 80
@@ -975,7 +975,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "Chowmein",
     "price": 120,
     "category": "Chinese",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/chowmin.jpg",
     "available": true,
     "sort": 97,
     "sourceId": 81
@@ -985,7 +985,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "मंचूरियन नूडल्स",
     "price": 120,
     "category": "Chinese",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/man-noodles.jpg",
     "available": true,
     "sort": 98,
     "sourceId": 82
@@ -995,7 +995,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "गार्लिक नूडल्स",
     "price": 120,
     "category": "Chinese",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/garlic-noodles.jpg",
     "available": true,
     "sort": 99,
     "sourceId": 83
@@ -1005,7 +1005,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पनीर नूडल्स",
     "price": 150,
     "category": "Chinese",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-noodles.jpg",
     "available": true,
     "sort": 100,
     "sourceId": 84
@@ -1015,7 +1015,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "हक्का नूडल्स — किलो पर चाइनीज (500 g)",
     "price": 150,
     "category": "Chinese",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/chowmin.jpg",
     "available": true,
     "sort": 101,
     "sourceId": 95
@@ -1025,7 +1025,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "हक्का नूडल्स — किलो पर चाइनीज (1 kg)",
     "price": 270,
     "category": "Chinese",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/chowmin.jpg",
     "available": true,
     "sort": 102,
     "sourceId": 95
@@ -1035,7 +1035,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पनीर मंचूरियन ड्राई",
     "price": 150,
     "category": "Chinese",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-chilli-dry.jpg",
     "available": true,
     "sort": 103,
     "sourceId": 68
@@ -1045,7 +1045,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पनीर मंचूरियन ग्रेवी",
     "price": 150,
     "category": "Chinese",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-chillie-gravy.jpg",
     "available": true,
     "sort": 104,
     "sourceId": 69
@@ -1055,7 +1055,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पनीर चिली ड्राई",
     "price": 170,
     "category": "Chinese",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-chilli-dry.jpg",
     "available": true,
     "sort": 105,
     "sourceId": 85
@@ -1065,7 +1065,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पनीर चिली ग्रेवी",
     "price": 170,
     "category": "Chinese",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-chillie-gravy.jpg",
     "available": true,
     "sort": 106,
     "sourceId": 86
@@ -1075,7 +1075,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पनीर क्रिस्पी",
     "price": 170,
     "category": "Chinese",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-chilli-dry.jpg",
     "available": true,
     "sort": 107,
     "sourceId": 87
@@ -1085,7 +1085,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "चिली आलू",
     "price": 150,
     "category": "Chinese",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/wmremove-transformed.jpg",
     "available": true,
     "sort": 108,
     "sourceId": 88
@@ -1095,7 +1095,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "हनी चिली आलू",
     "price": 160,
     "category": "Chinese",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/wmremove-transformed-2.jpg",
     "available": true,
     "sort": 109,
     "sourceId": 89
@@ -1105,7 +1105,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "क्रिस्पी कॉर्न",
     "price": 150,
     "category": "Chinese",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/wmremove-transformed-1.jpg",
     "available": true,
     "sort": 110,
     "sourceId": 90
@@ -1115,7 +1115,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "चाइनीज भेल",
     "price": 160,
     "category": "Chinese",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/wmremove-transformed-3.jpg",
     "available": true,
     "sort": 111,
     "sourceId": 91
@@ -1125,7 +1125,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "चाइनीज भेल — किलो पर चाइनीज (500 g)",
     "price": 160,
     "category": "Chinese",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/wmremove-transformed-3.jpg",
     "available": true,
     "sort": 112,
     "sourceId": 96
@@ -1135,7 +1135,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "चाइनीज भेल — किलो पर चाइनीज (1 kg)",
     "price": 300,
     "category": "Chinese",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/wmremove-transformed-3.jpg",
     "available": true,
     "sort": 113,
     "sourceId": 96
@@ -1145,7 +1145,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "रेगुलर भाजी (500 g)",
     "price": 120,
     "category": "Mains",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/plate2.jpg",
     "available": true,
     "sort": 114,
     "sourceId": 97
@@ -1155,7 +1155,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "रेगुलर भाजी (1 kg)",
     "price": 230,
     "category": "Mains",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/plate2.jpg",
     "available": true,
     "sort": 115,
     "sourceId": 97
@@ -1165,7 +1165,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "स्वामिनारायण भाजी (500 g)",
     "price": 120,
     "category": "Mains",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/veg.jpg",
     "available": true,
     "sort": 116,
     "sourceId": 98
@@ -1175,7 +1175,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "स्वामिनारायण भाजी (1 kg)",
     "price": 230,
     "category": "Mains",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/veg.jpg",
     "available": true,
     "sort": 117,
     "sourceId": 98
@@ -1185,7 +1185,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "बाउल भाजी (500 g)",
     "price": 130,
     "category": "Mains",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/wmremove-transformed.jpg",
     "available": true,
     "sort": 118,
     "sourceId": 99
@@ -1195,7 +1195,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "बाउल भाजी (1 kg)",
     "price": 250,
     "category": "Mains",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/wmremove-transformed.jpg",
     "available": true,
     "sort": 119,
     "sourceId": 99
@@ -1205,7 +1205,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पनीर भाजी (500 g)",
     "price": 150,
     "category": "Mains",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-chilli-dry.jpg",
     "available": true,
     "sort": 120,
     "sourceId": 100
@@ -1215,7 +1215,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पनीर भाजी (1 kg)",
     "price": 270,
     "category": "Mains",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-chilli-dry.jpg",
     "available": true,
     "sort": 121,
     "sourceId": 100
@@ -1225,7 +1225,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "स्पेशल भाजी (500 g)",
     "price": 160,
     "category": "Mains",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/new-one.jpg",
     "available": true,
     "sort": 122,
     "sourceId": 101
@@ -1235,7 +1235,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "स्पेशल भाजी (1 kg)",
     "price": 300,
     "category": "Mains",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/new-one.jpg",
     "available": true,
     "sort": 123,
     "sourceId": 101
@@ -1245,7 +1245,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "रेगुलर पुलाव (500 g)",
     "price": 120,
     "category": "Mains",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/garlic-rice.jpg",
     "available": true,
     "sort": 124,
     "sourceId": 102
@@ -1255,7 +1255,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "रेगुलर पुलाव (1 kg)",
     "price": 230,
     "category": "Mains",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/garlic-rice.jpg",
     "available": true,
     "sort": 125,
     "sourceId": 102
@@ -1265,7 +1265,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "स्वामिनारायण पुलाव (500 g)",
     "price": 120,
     "category": "Mains",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-rice.jpg",
     "available": true,
     "sort": 126,
     "sourceId": 103
@@ -1275,7 +1275,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "स्वामिनारायण पुलाव (1 kg)",
     "price": 230,
     "category": "Mains",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-rice.jpg",
     "available": true,
     "sort": 127,
     "sourceId": 103
@@ -1285,7 +1285,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "जैन पुलाव (500 g)",
     "price": 120,
     "category": "Mains",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/noodles-rice.jpg",
     "available": true,
     "sort": 128,
     "sourceId": 104
@@ -1295,7 +1295,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "जैन पुलाव (1 kg)",
     "price": 230,
     "category": "Mains",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/noodles-rice.jpg",
     "available": true,
     "sort": 129,
     "sourceId": 104
@@ -1305,7 +1305,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "ड्राई फ्रूट पुलाव (500 g)",
     "price": 140,
     "category": "Mains",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/tripple.jpg",
     "available": true,
     "sort": 130,
     "sourceId": 105
@@ -1315,7 +1315,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "ड्राई फ्रूट पुलाव (1 kg)",
     "price": 260,
     "category": "Mains",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/tripple.jpg",
     "available": true,
     "sort": 131,
     "sourceId": 105
@@ -1325,7 +1325,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "कश्मीरी पुलाव (500 g)",
     "price": 140,
     "category": "Mains",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/maxican.jpg",
     "available": true,
     "sort": 132,
     "sourceId": 106
@@ -1335,7 +1335,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "कश्मीरी पुलाव (1 kg)",
     "price": 260,
     "category": "Mains",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/maxican.jpg",
     "available": true,
     "sort": 133,
     "sourceId": 106
@@ -1345,7 +1345,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "स्पेशल पुलाव (500 g)",
     "price": 160,
     "category": "Mains",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/wmremove-transformed-1.jpg",
     "available": true,
     "sort": 134,
     "sourceId": 107
@@ -1355,7 +1355,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "स्पेशल पुलाव (1 kg)",
     "price": 300,
     "category": "Mains",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/wmremove-transformed-1.jpg",
     "available": true,
     "sort": 135,
     "sourceId": 107
@@ -1365,7 +1365,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "रेगुलर पाव (6)",
     "price": 25,
     "category": "Mains",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/gemini-generated-image-whwnclwhwnclwhwn.jpg",
     "available": true,
     "sort": 136,
     "sourceId": 108
@@ -1375,7 +1375,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "रेगुलर पाव (12 pcs)",
     "price": 45,
     "category": "Mains",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/gemini-generated-image-whwnclwhwnclwhwn.jpg",
     "available": true,
     "sort": 137,
     "sourceId": 108
@@ -1385,7 +1385,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "ऑयल पाव (6)",
     "price": 40,
     "category": "Mains",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/new-vadapau.jpg",
     "available": true,
     "sort": 138,
     "sourceId": 109
@@ -1395,7 +1395,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "ऑयल पाव (12 pcs)",
     "price": 70,
     "category": "Mains",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/new-vadapau.jpg",
     "available": true,
     "sort": 139,
     "sourceId": 109
@@ -1405,7 +1405,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "बटर पाव (6)",
     "price": 50,
     "category": "Mains",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/butter-jam.jpg",
     "available": true,
     "sort": 140,
     "sourceId": 110
@@ -1415,7 +1415,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "बटर पाव (12 pcs)",
     "price": 90,
     "category": "Mains",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/butter-jam.jpg",
     "available": true,
     "sort": 141,
     "sourceId": 110
@@ -1425,7 +1425,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "250 g भाजी + 2 ऑयल पाव",
     "price": 90,
     "category": "Mains",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/plate2.jpg",
     "available": true,
     "sort": 142,
     "sourceId": 111
@@ -1435,7 +1435,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "250 g भाजी + 2 बटर पाव",
     "price": 110,
     "category": "Mains",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/butter-jam.jpg",
     "available": true,
     "sort": 143,
     "sourceId": 112
@@ -1445,7 +1445,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "500 g भाजी + 500 g पुलाव + 6 Reg पाव",
     "price": 240,
     "category": "Mains",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/wmremove-transformed-2.jpg",
     "available": true,
     "sort": 144,
     "sourceId": 113
@@ -1455,7 +1455,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "500 g भाजी + 500 g पुलाव + 6 ऑयल पाव",
     "price": 250,
     "category": "Mains",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/new-vadapau.jpg",
     "available": true,
     "sort": 145,
     "sourceId": 114
@@ -1465,7 +1465,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "1 kg भाजी + 1 kg पुलाव + 12 Reg पाव",
     "price": 460,
     "category": "Mains",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/tripple.jpg",
     "available": true,
     "sort": 146,
     "sourceId": 115
@@ -1475,7 +1475,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "1 kg भाजी + 1 kg पुलाव + 12 ऑयल पाव",
     "price": 480,
     "category": "Mains",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/new-one.jpg",
     "available": true,
     "sort": 147,
     "sourceId": 116
@@ -1485,7 +1485,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "एक्स्ट्रा बटर — 500 g भाजी / पुलाव",
     "price": 20,
     "category": "Mains",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/butter-jam.jpg",
     "available": true,
     "sort": 148,
     "sourceId": 117
@@ -1495,7 +1495,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "एक्स्ट्रा बटर — 1 kg भाजी / पुलाव",
     "price": 40,
     "category": "Mains",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/cheese.jpg",
     "available": true,
     "sort": 149,
     "sourceId": 118
@@ -1505,7 +1505,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "एक्स्ट्रा बटर — 500 g कॉम्बो",
     "price": 40,
     "category": "Mains",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/cheese-puff.jpg",
     "available": true,
     "sort": 150,
     "sourceId": 119
@@ -1515,7 +1515,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "एक्स्ट्रा बटर — 1 kg कॉम्बो",
     "price": 60,
     "category": "Mains",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-chilli-dry.jpg",
     "available": true,
     "sort": 151,
     "sourceId": 120
@@ -1525,7 +1525,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "लसण चटनी",
     "price": 100,
     "category": "Mains",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/wmremove-transformed-3.jpg",
     "available": true,
     "sort": 152,
     "sourceId": 121
@@ -1535,7 +1535,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "वेज मसाला (300 g)",
     "price": 180,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/plate2.jpg",
     "available": true,
     "sort": 153,
     "sourceId": 127
@@ -1545,7 +1545,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "वेज मसाला (500 g)",
     "price": 280,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/plate2.jpg",
     "available": true,
     "sort": 154,
     "sourceId": 127
@@ -1555,7 +1555,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "वेज मसाला (1 kg)",
     "price": 550,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/plate2.jpg",
     "available": true,
     "sort": 155,
     "sourceId": 127
@@ -1565,7 +1565,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "वेज कड़ाही (300 g)",
     "price": 180,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/plate2.jpg",
     "available": true,
     "sort": 156,
     "sourceId": 128
@@ -1575,7 +1575,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "वेज कड़ाही (500 g)",
     "price": 280,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/plate2.jpg",
     "available": true,
     "sort": 157,
     "sourceId": 128
@@ -1585,7 +1585,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "वेज कड़ाही (1 kg)",
     "price": 550,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/plate2.jpg",
     "available": true,
     "sort": 158,
     "sourceId": 128
@@ -1595,7 +1595,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "वेज कोल्हापुरी (300 g)",
     "price": 180,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/plate2.jpg",
     "available": true,
     "sort": 159,
     "sourceId": 129
@@ -1605,7 +1605,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "वेज कोल्हापुरी (500 g)",
     "price": 280,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/plate2.jpg",
     "available": true,
     "sort": 160,
     "sourceId": 129
@@ -1615,7 +1615,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "वेज कोल्हापुरी (1 kg)",
     "price": 550,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/plate2.jpg",
     "available": true,
     "sort": 161,
     "sourceId": 129
@@ -1625,7 +1625,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "वेज हैदराबादी (300 g)",
     "price": 180,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/plate2.jpg",
     "available": true,
     "sort": 162,
     "sourceId": 130
@@ -1635,7 +1635,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "वेज हैदराबादी (500 g)",
     "price": 280,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/plate2.jpg",
     "available": true,
     "sort": 163,
     "sourceId": 130
@@ -1645,7 +1645,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "वेज हैदराबादी (1 kg)",
     "price": 550,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/plate2.jpg",
     "available": true,
     "sort": 164,
     "sourceId": 130
@@ -1655,7 +1655,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "वेज जयपुरी (300 g)",
     "price": 180,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/plate2.jpg",
     "available": true,
     "sort": 165,
     "sourceId": 131
@@ -1665,7 +1665,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "वेज जयपुरी (500 g)",
     "price": 280,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/plate2.jpg",
     "available": true,
     "sort": 166,
     "sourceId": 131
@@ -1675,7 +1675,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "वेज जयपुरी (1 kg)",
     "price": 550,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/plate2.jpg",
     "available": true,
     "sort": 167,
     "sourceId": 131
@@ -1685,7 +1685,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "वेज चटपटा (300 g)",
     "price": 180,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/plate2.jpg",
     "available": true,
     "sort": 168,
     "sourceId": 132
@@ -1695,7 +1695,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "वेज चटपटा (500 g)",
     "price": 280,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/plate2.jpg",
     "available": true,
     "sort": 169,
     "sourceId": 132
@@ -1705,7 +1705,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "वेज चटपटा (1 kg)",
     "price": 550,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/plate2.jpg",
     "available": true,
     "sort": 170,
     "sourceId": 132
@@ -1715,7 +1715,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "चना मसाला (300 g)",
     "price": 180,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/plate2.jpg",
     "available": true,
     "sort": 171,
     "sourceId": 133
@@ -1725,7 +1725,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "चना मसाला (500 g)",
     "price": 280,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/plate2.jpg",
     "available": true,
     "sort": 172,
     "sourceId": 133
@@ -1735,7 +1735,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "चना मसाला (1 kg)",
     "price": 550,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/plate2.jpg",
     "available": true,
     "sort": 173,
     "sourceId": 133
@@ -1745,7 +1745,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "वेज कोरमा (300 g)",
     "price": 180,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/plate2.jpg",
     "available": true,
     "sort": 174,
     "sourceId": 134
@@ -1755,7 +1755,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "वेज कोरमा (500 g)",
     "price": 280,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/plate2.jpg",
     "available": true,
     "sort": 175,
     "sourceId": 134
@@ -1765,7 +1765,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "वेज कोरमा (1 kg)",
     "price": 550,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/plate2.jpg",
     "available": true,
     "sort": 176,
     "sourceId": 134
@@ -1775,7 +1775,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "मिक्स वेज (300 g)",
     "price": 180,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/plate2.jpg",
     "available": true,
     "sort": 177,
     "sourceId": 135
@@ -1785,7 +1785,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "मिक्स वेज (500 g)",
     "price": 280,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/plate2.jpg",
     "available": true,
     "sort": 178,
     "sourceId": 135
@@ -1795,7 +1795,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "मिक्स वेज (1 kg)",
     "price": 550,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/plate2.jpg",
     "available": true,
     "sort": 179,
     "sourceId": 135
@@ -1805,7 +1805,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "वेज अंगारा (300 g)",
     "price": 180,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/plate2.jpg",
     "available": true,
     "sort": 180,
     "sourceId": 136
@@ -1815,7 +1815,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "वेज अंगारा (500 g)",
     "price": 280,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/plate2.jpg",
     "available": true,
     "sort": 181,
     "sourceId": 136
@@ -1825,7 +1825,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "वेज अंगारा (1 kg)",
     "price": 550,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/plate2.jpg",
     "available": true,
     "sort": 182,
     "sourceId": 136
@@ -1835,7 +1835,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "आलू पालक (300 g)",
     "price": 180,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/aloo-muter-grill.jpg",
     "available": true,
     "sort": 183,
     "sourceId": 137
@@ -1845,7 +1845,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "आलू पालक (500 g)",
     "price": 280,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/aloo-muter-grill.jpg",
     "available": true,
     "sort": 184,
     "sourceId": 137
@@ -1855,7 +1855,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "आलू पालक (1 kg)",
     "price": 550,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/aloo-muter-grill.jpg",
     "available": true,
     "sort": 185,
     "sourceId": 137
@@ -1865,7 +1865,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "आलू मटर (300 g)",
     "price": 180,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/aloo-muter-grill.jpg",
     "available": true,
     "sort": 186,
     "sourceId": 138
@@ -1875,7 +1875,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "आलू मटर (500 g)",
     "price": 280,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/aloo-muter-grill.jpg",
     "available": true,
     "sort": 187,
     "sourceId": 138
@@ -1885,7 +1885,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "आलू मटर (1 kg)",
     "price": 550,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/aloo-muter-grill.jpg",
     "available": true,
     "sort": 188,
     "sourceId": 138
@@ -1895,7 +1895,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "दम आलू (300 g)",
     "price": 180,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/plate2.jpg",
     "available": true,
     "sort": 189,
     "sourceId": 139
@@ -1905,7 +1905,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "दम आलू (500 g)",
     "price": 280,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/plate2.jpg",
     "available": true,
     "sort": 190,
     "sourceId": 139
@@ -1915,7 +1915,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "दम आलू (1 kg)",
     "price": 550,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/plate2.jpg",
     "available": true,
     "sort": 191,
     "sourceId": 139
@@ -1925,7 +1925,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "वेज कोफ्ता (300 g)",
     "price": 180,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/wmremove-transformed.jpg",
     "available": true,
     "sort": 192,
     "sourceId": 140
@@ -1935,7 +1935,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "वेज कोफ्ता (500 g)",
     "price": 280,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/wmremove-transformed.jpg",
     "available": true,
     "sort": 193,
     "sourceId": 140
@@ -1945,7 +1945,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "वेज कोफ्ता (1 kg)",
     "price": 550,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/wmremove-transformed.jpg",
     "available": true,
     "sort": 194,
     "sourceId": 140
@@ -1955,7 +1955,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "वेज हांडी (300 g)",
     "price": 180,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/plate2.jpg",
     "available": true,
     "sort": 195,
     "sourceId": 141
@@ -1965,7 +1965,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "वेज हांडी (500 g)",
     "price": 280,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/plate2.jpg",
     "available": true,
     "sort": 196,
     "sourceId": 141
@@ -1975,7 +1975,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "वेज हांडी (1 kg)",
     "price": 550,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/plate2.jpg",
     "available": true,
     "sort": 197,
     "sourceId": 141
@@ -1985,7 +1985,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पनीर टिक्का मसाला (300 g)",
     "price": 200,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-manchurinad-gravy.jpg",
     "available": true,
     "sort": 198,
     "sourceId": 142
@@ -1995,7 +1995,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पनीर टिक्का मसाला (500 g)",
     "price": 300,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-manchurinad-gravy.jpg",
     "available": true,
     "sort": 199,
     "sourceId": 142
@@ -2005,7 +2005,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पनीर टिक्का मसाला (1 kg)",
     "price": 580,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-manchurinad-gravy.jpg",
     "available": true,
     "sort": 200,
     "sourceId": 142
@@ -2015,7 +2015,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पनीर बटर मसाला (300 g)",
     "price": 200,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-manchurinad-gravy.jpg",
     "available": true,
     "sort": 201,
     "sourceId": 143
@@ -2025,7 +2025,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पनीर बटर मसाला (500 g)",
     "price": 300,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-manchurinad-gravy.jpg",
     "available": true,
     "sort": 202,
     "sourceId": 143
@@ -2035,7 +2035,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पनीर बटर मसाला (1 kg)",
     "price": 580,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-manchurinad-gravy.jpg",
     "available": true,
     "sort": 203,
     "sourceId": 143
@@ -2045,7 +2045,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पनीर कड़ाही (300 g)",
     "price": 200,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-chillie-gravy.jpg",
     "available": true,
     "sort": 204,
     "sourceId": 144
@@ -2055,7 +2055,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पनीर कड़ाही (500 g)",
     "price": 300,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-chillie-gravy.jpg",
     "available": true,
     "sort": 205,
     "sourceId": 144
@@ -2065,7 +2065,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पनीर कड़ाही (1 kg)",
     "price": 580,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-chillie-gravy.jpg",
     "available": true,
     "sort": 206,
     "sourceId": 144
@@ -2075,7 +2075,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पनीर तवा मसाला (300 g)",
     "price": 200,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-chilli-dry.jpg",
     "available": true,
     "sort": 207,
     "sourceId": 145
@@ -2085,7 +2085,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पनीर तवा मसाला (500 g)",
     "price": 300,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-chilli-dry.jpg",
     "available": true,
     "sort": 208,
     "sourceId": 145
@@ -2095,7 +2095,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पनीर तवा मसाला (1 kg)",
     "price": 580,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-chilli-dry.jpg",
     "available": true,
     "sort": 209,
     "sourceId": 145
@@ -2105,7 +2105,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पनीर राजवाड़ी (300 g)",
     "price": 200,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-manchurinad-gravy.jpg",
     "available": true,
     "sort": 210,
     "sourceId": 146
@@ -2115,7 +2115,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पनीर राजवाड़ी (500 g)",
     "price": 300,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-manchurinad-gravy.jpg",
     "available": true,
     "sort": 211,
     "sourceId": 146
@@ -2125,7 +2125,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पनीर राजवाड़ी (1 kg)",
     "price": 580,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-manchurinad-gravy.jpg",
     "available": true,
     "sort": 212,
     "sourceId": 146
@@ -2135,7 +2135,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पनीर कोल्हापुरी (300 g)",
     "price": 200,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-chillie-gravy.jpg",
     "available": true,
     "sort": 213,
     "sourceId": 147
@@ -2145,7 +2145,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पनीर कोल्हापुरी (500 g)",
     "price": 300,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-chillie-gravy.jpg",
     "available": true,
     "sort": 214,
     "sourceId": 147
@@ -2155,7 +2155,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पनीर कोल्हापुरी (1 kg)",
     "price": 580,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-chillie-gravy.jpg",
     "available": true,
     "sort": 215,
     "sourceId": 147
@@ -2165,7 +2165,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पनीर अंगारा (300 g)",
     "price": 200,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-manchurinad-gravy.jpg",
     "available": true,
     "sort": 216,
     "sourceId": 148
@@ -2175,7 +2175,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पनीर अंगारा (500 g)",
     "price": 300,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-manchurinad-gravy.jpg",
     "available": true,
     "sort": 217,
     "sourceId": 148
@@ -2185,7 +2185,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पनीर अंगारा (1 kg)",
     "price": 580,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-manchurinad-gravy.jpg",
     "available": true,
     "sort": 218,
     "sourceId": 148
@@ -2195,7 +2195,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पनीर भुना मसाला (300 g)",
     "price": 200,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-chillie-gravy.jpg",
     "available": true,
     "sort": 219,
     "sourceId": 149
@@ -2205,7 +2205,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पनीर भुना मसाला (500 g)",
     "price": 300,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-chillie-gravy.jpg",
     "available": true,
     "sort": 220,
     "sourceId": 149
@@ -2215,7 +2215,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पनीर भुना मसाला (1 kg)",
     "price": 580,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-chillie-gravy.jpg",
     "available": true,
     "sort": 221,
     "sourceId": 149
@@ -2225,7 +2225,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "मटर पनीर (300 g)",
     "price": 200,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-manchurinad-gravy.jpg",
     "available": true,
     "sort": 222,
     "sourceId": 150
@@ -2235,7 +2235,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "मटर पनीर (500 g)",
     "price": 300,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-manchurinad-gravy.jpg",
     "available": true,
     "sort": 223,
     "sourceId": 150
@@ -2245,7 +2245,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "मटर पनीर (1 kg)",
     "price": 580,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-manchurinad-gravy.jpg",
     "available": true,
     "sort": 224,
     "sourceId": 150
@@ -2255,7 +2255,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पालक पनीर (300 g)",
     "price": 200,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-chillie-gravy.jpg",
     "available": true,
     "sort": 225,
     "sourceId": 151
@@ -2265,7 +2265,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पालक पनीर (500 g)",
     "price": 300,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-chillie-gravy.jpg",
     "available": true,
     "sort": 226,
     "sourceId": 151
@@ -2275,7 +2275,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पालक पनीर (1 kg)",
     "price": 580,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-chillie-gravy.jpg",
     "available": true,
     "sort": 227,
     "sourceId": 151
@@ -2285,7 +2285,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "शाही पनीर (300 g)",
     "price": 200,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-manchurinad-gravy.jpg",
     "available": true,
     "sort": 228,
     "sourceId": 152
@@ -2295,7 +2295,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "शाही पनीर (500 g)",
     "price": 300,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-manchurinad-gravy.jpg",
     "available": true,
     "sort": 229,
     "sourceId": 152
@@ -2305,7 +2305,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "शाही पनीर (1 kg)",
     "price": 580,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-manchurinad-gravy.jpg",
     "available": true,
     "sort": 230,
     "sourceId": 152
@@ -2315,7 +2315,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पनीर चटपटा (300 g)",
     "price": 200,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-chilli-dry.jpg",
     "available": true,
     "sort": 231,
     "sourceId": 153
@@ -2325,7 +2325,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पनीर चटपटा (500 g)",
     "price": 300,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-chilli-dry.jpg",
     "available": true,
     "sort": 232,
     "sourceId": 153
@@ -2335,7 +2335,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पनीर चटपटा (1 kg)",
     "price": 580,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-chilli-dry.jpg",
     "available": true,
     "sort": 233,
     "sourceId": 153
@@ -2345,7 +2345,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पनीर लबाबदार (300 g)",
     "price": 200,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-manchurinad-gravy.jpg",
     "available": true,
     "sort": 234,
     "sourceId": 154
@@ -2355,7 +2355,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पनीर लबाबदार (500 g)",
     "price": 300,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-manchurinad-gravy.jpg",
     "available": true,
     "sort": 235,
     "sourceId": 154
@@ -2365,7 +2365,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पनीर लबाबदार (1 kg)",
     "price": 580,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-manchurinad-gravy.jpg",
     "available": true,
     "sort": 236,
     "sourceId": 154
@@ -2375,7 +2375,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पनीर कोरमा (300 g)",
     "price": 200,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-manchurinad-gravy.jpg",
     "available": true,
     "sort": 237,
     "sourceId": 155
@@ -2385,7 +2385,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पनीर कोरमा (500 g)",
     "price": 300,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-manchurinad-gravy.jpg",
     "available": true,
     "sort": 238,
     "sourceId": 155
@@ -2395,7 +2395,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पनीर कोरमा (1 kg)",
     "price": 580,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-manchurinad-gravy.jpg",
     "available": true,
     "sort": 239,
     "sourceId": 155
@@ -2405,7 +2405,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "मलाई कोफ्ता (300 g)",
     "price": 200,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-manchurinad-gravy.jpg",
     "available": true,
     "sort": 240,
     "sourceId": 156
@@ -2415,7 +2415,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "मलाई कोफ्ता (500 g)",
     "price": 300,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-manchurinad-gravy.jpg",
     "available": true,
     "sort": 241,
     "sourceId": 156
@@ -2425,7 +2425,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "मलाई कोफ्ता (1 kg)",
     "price": 580,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-manchurinad-gravy.jpg",
     "available": true,
     "sort": 242,
     "sourceId": 156
@@ -2435,7 +2435,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पनीर तूफानी (300 g)",
     "price": 200,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-chillie-gravy.jpg",
     "available": true,
     "sort": 243,
     "sourceId": 157
@@ -2445,7 +2445,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पनीर तूफानी (500 g)",
     "price": 300,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-chillie-gravy.jpg",
     "available": true,
     "sort": 244,
     "sourceId": 157
@@ -2455,7 +2455,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पनीर तूफानी (1 kg)",
     "price": 580,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-chillie-gravy.jpg",
     "available": true,
     "sort": 245,
     "sourceId": 157
@@ -2465,7 +2465,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पनीर कढ़ाई (300 g)",
     "price": 200,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-chillie-gravy.jpg",
     "available": true,
     "sort": 246,
     "sourceId": 158
@@ -2475,7 +2475,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पनीर कढ़ाई (500 g)",
     "price": 300,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-chillie-gravy.jpg",
     "available": true,
     "sort": 247,
     "sourceId": 158
@@ -2485,7 +2485,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पनीर कढ़ाई (1 kg)",
     "price": 580,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-chillie-gravy.jpg",
     "available": true,
     "sort": 248,
     "sourceId": 158
@@ -2495,7 +2495,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पनीर हांडी (300 g)",
     "price": 200,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-manchurinad-gravy.jpg",
     "available": true,
     "sort": 249,
     "sourceId": 159
@@ -2505,7 +2505,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पनीर हांडी (500 g)",
     "price": 300,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-manchurinad-gravy.jpg",
     "available": true,
     "sort": 250,
     "sourceId": 159
@@ -2515,7 +2515,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पनीर हांडी (1 kg)",
     "price": 580,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-manchurinad-gravy.jpg",
     "available": true,
     "sort": 251,
     "sourceId": 159
@@ -2525,7 +2525,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "काजू करी (300 g)",
     "price": 210,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-rice.jpg",
     "available": true,
     "sort": 252,
     "sourceId": 160
@@ -2535,7 +2535,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "काजू करी (500 g)",
     "price": 330,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-rice.jpg",
     "available": true,
     "sort": 253,
     "sourceId": 160
@@ -2545,7 +2545,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "काजू करी (1 kg)",
     "price": 620,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-rice.jpg",
     "available": true,
     "sort": 254,
     "sourceId": 160
@@ -2555,7 +2555,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "काजू मसाला (300 g)",
     "price": 210,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-rice.jpg",
     "available": true,
     "sort": 255,
     "sourceId": 161
@@ -2565,7 +2565,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "काजू मसाला (500 g)",
     "price": 330,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-rice.jpg",
     "available": true,
     "sort": 256,
     "sourceId": 161
@@ -2575,7 +2575,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "काजू मसाला (1 kg)",
     "price": 620,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-rice.jpg",
     "available": true,
     "sort": 257,
     "sourceId": 161
@@ -2585,7 +2585,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "काजू बटर मसाला (300 g)",
     "price": 210,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-rice.jpg",
     "available": true,
     "sort": 258,
     "sourceId": 162
@@ -2595,7 +2595,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "काजू बटर मसाला (500 g)",
     "price": 330,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-rice.jpg",
     "available": true,
     "sort": 259,
     "sourceId": 162
@@ -2605,7 +2605,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "काजू बटर मसाला (1 kg)",
     "price": 620,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-rice.jpg",
     "available": true,
     "sort": 260,
     "sourceId": 162
@@ -2615,7 +2615,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "काजू पनीर मसाला (300 g)",
     "price": 210,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-manchurinad-gravy.jpg",
     "available": true,
     "sort": 261,
     "sourceId": 163
@@ -2625,7 +2625,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "काजू पनीर मसाला (500 g)",
     "price": 330,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-manchurinad-gravy.jpg",
     "available": true,
     "sort": 262,
     "sourceId": 163
@@ -2635,7 +2635,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "काजू पनीर मसाला (1 kg)",
     "price": 620,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/paneer-manchurinad-gravy.jpg",
     "available": true,
     "sort": 263,
     "sourceId": 163
@@ -2645,7 +2645,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "काजू कोफ्ता (300 g)",
     "price": 210,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/choicolate.jpg",
     "available": true,
     "sort": 264,
     "sourceId": 164
@@ -2655,7 +2655,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "काजू कोफ्ता (500 g)",
     "price": 330,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/choicolate.jpg",
     "available": true,
     "sort": 265,
     "sourceId": 164
@@ -2665,7 +2665,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "काजू कोफ्ता (1 kg)",
     "price": 620,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/choicolate.jpg",
     "available": true,
     "sort": 266,
     "sourceId": 164
@@ -2675,7 +2675,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "खोया काजू (300 g)",
     "price": 210,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/choicolate.jpg",
     "available": true,
     "sort": 267,
     "sourceId": 165
@@ -2685,7 +2685,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "खोया काजू (500 g)",
     "price": 330,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/choicolate.jpg",
     "available": true,
     "sort": 268,
     "sourceId": 165
@@ -2695,7 +2695,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "खोया काजू (1 kg)",
     "price": 620,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/choicolate.jpg",
     "available": true,
     "sort": 269,
     "sourceId": 165
@@ -2705,7 +2705,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "दाल फ्राई (300 g)",
     "price": 150,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/plate2.jpg",
     "available": true,
     "sort": 270,
     "sourceId": 166
@@ -2715,7 +2715,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "दाल फ्राई (500 g)",
     "price": 230,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/plate2.jpg",
     "available": true,
     "sort": 271,
     "sourceId": 166
@@ -2725,7 +2725,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "दाल फ्राई (1 kg)",
     "price": 450,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/plate2.jpg",
     "available": true,
     "sort": 272,
     "sourceId": 166
@@ -2735,7 +2735,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "दाल तड़का (300 g)",
     "price": 170,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/plate2.jpg",
     "available": true,
     "sort": 273,
     "sourceId": 167
@@ -2745,7 +2745,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "दाल तड़का (500 g)",
     "price": 250,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/plate2.jpg",
     "available": true,
     "sort": 274,
     "sourceId": 167
@@ -2755,7 +2755,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "दाल तड़का (1 kg)",
     "price": 480,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/plate2.jpg",
     "available": true,
     "sort": 275,
     "sourceId": 167
@@ -2765,7 +2765,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "दाल तड़का बटर (300 g)",
     "price": 170,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/butter-jam.jpg",
     "available": true,
     "sort": 276,
     "sourceId": 168
@@ -2775,7 +2775,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "दाल तड़का बटर (500 g)",
     "price": 280,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/butter-jam.jpg",
     "available": true,
     "sort": 277,
     "sourceId": 168
@@ -2785,7 +2785,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "दाल तड़का बटर (1 kg)",
     "price": 530,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/butter-jam.jpg",
     "available": true,
     "sort": 278,
     "sourceId": 168
@@ -2795,7 +2795,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "दाल खिचड़ी (300 g)",
     "price": 150,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/garlic-rice.jpg",
     "available": true,
     "sort": 279,
     "sourceId": 169
@@ -2805,7 +2805,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "दाल खिचड़ी (500 g)",
     "price": 230,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/garlic-rice.jpg",
     "available": true,
     "sort": 280,
     "sourceId": 169
@@ -2815,7 +2815,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "दाल खिचड़ी (1 kg)",
     "price": 450,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/garlic-rice.jpg",
     "available": true,
     "sort": 281,
     "sourceId": 169
@@ -2825,7 +2825,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "प्लेन राइस (300 g)",
     "price": 80,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/garlic-rice.jpg",
     "available": true,
     "sort": 282,
     "sourceId": 170
@@ -2835,7 +2835,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "प्लेन राइस (500 g)",
     "price": 150,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/garlic-rice.jpg",
     "available": true,
     "sort": 283,
     "sourceId": 170
@@ -2845,7 +2845,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "प्लेन राइस (1 kg)",
     "price": 280,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/garlic-rice.jpg",
     "available": true,
     "sort": 284,
     "sourceId": 170
@@ -2855,7 +2855,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "जीरा राइस (300 g)",
     "price": 100,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/garlic-rice.jpg",
     "available": true,
     "sort": 285,
     "sourceId": 171
@@ -2865,7 +2865,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "जीरा राइस (500 g)",
     "price": 180,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/garlic-rice.jpg",
     "available": true,
     "sort": 286,
     "sourceId": 171
@@ -2875,7 +2875,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "जीरा राइस (1 kg)",
     "price": 350,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/garlic-rice.jpg",
     "available": true,
     "sort": 287,
     "sourceId": 171
@@ -2885,7 +2885,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "वेज बिरयानी (300 g)",
     "price": 140,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/maxican.jpg",
     "available": true,
     "sort": 288,
     "sourceId": 172
@@ -2895,7 +2895,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "वेज बिरयानी (500 g)",
     "price": 260,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/maxican.jpg",
     "available": true,
     "sort": 289,
     "sourceId": 172
@@ -2905,7 +2905,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "वेज बिरयानी (1 kg)",
     "price": 500,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/maxican.jpg",
     "available": true,
     "sort": 290,
     "sourceId": 172
@@ -2915,7 +2915,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "हैदराबादी बिरयानी (300 g)",
     "price": 160,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/maxican.jpg",
     "available": true,
     "sort": 291,
     "sourceId": 173
@@ -2925,7 +2925,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "हैदराबादी बिरयानी (500 g)",
     "price": 270,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/maxican.jpg",
     "available": true,
     "sort": 292,
     "sourceId": 173
@@ -2935,7 +2935,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "हैदराबादी बिरयानी (1 kg)",
     "price": 530,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/maxican.jpg",
     "available": true,
     "sort": 293,
     "sourceId": 173
@@ -2945,7 +2945,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "प्लेन तवा रोटी",
     "price": 10,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/gemini-generated-image-whwnclwhwnclwhwn.jpg",
     "available": true,
     "sort": 294,
     "sourceId": 174
@@ -2955,7 +2955,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "बटर तवा रोटी",
     "price": 15,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/gemini-generated-image-whwnclwhwnclwhwn.jpg",
     "available": true,
     "sort": 295,
     "sourceId": 175
@@ -2965,7 +2965,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "प्लेन तंदूरी रोटी",
     "price": 30,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/bread-butter.jpg",
     "available": true,
     "sort": 296,
     "sourceId": 176
@@ -2975,7 +2975,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "बटर तंदूरी रोटी",
     "price": 35,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/butter-jam.jpg",
     "available": true,
     "sort": 297,
     "sourceId": 177
@@ -2985,7 +2985,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "बटर नान",
     "price": 45,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/bread-butter.jpg",
     "available": true,
     "sort": 298,
     "sourceId": 178
@@ -2995,7 +2995,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "Paratha",
     "price": 30,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/bread-butter.jpg",
     "available": true,
     "sort": 299,
     "sourceId": 179
@@ -3005,7 +3005,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "बटर पराठा",
     "price": 35,
     "category": "Punjabi",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/butter-jam.jpg",
     "available": true,
     "sort": 300,
     "sourceId": 180
@@ -3015,7 +3015,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "थम्स अप",
     "price": 20,
     "category": "Beverages",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/default.jpg",
     "available": true,
     "sort": 301,
     "sourceId": 122
@@ -3025,7 +3025,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "फैंटा",
     "price": 20,
     "category": "Beverages",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/default.jpg",
     "available": true,
     "sort": 302,
     "sourceId": 123
@@ -3035,7 +3035,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "स्प्राइट",
     "price": 20,
     "category": "Beverages",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/default.jpg",
     "available": true,
     "sort": 303,
     "sourceId": 124
@@ -3045,7 +3045,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पानी की बोतल",
     "price": 10,
     "category": "Beverages",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/default.jpg",
     "available": true,
     "sort": 304,
     "sourceId": 125
@@ -3055,7 +3055,7 @@ window.KILOGRAM_MENU_SEED = [
     "nameHi": "पानी की बोतल",
     "price": 20,
     "category": "Beverages",
-    "imageUrl": "",
+    "imageUrl": "assets/menu/default.jpg",
     "available": true,
     "sort": 305,
     "sourceId": 126

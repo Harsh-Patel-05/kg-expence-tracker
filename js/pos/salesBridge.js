@@ -53,7 +53,7 @@
       onlineAmount,
       totalAmount,
       method: bill.method || paymentMethod({ cashAmount: cash, otherOnlineAmount: otherOnline, swiggyAmount: swiggy, zomatoAmount: zomato }),
-      source: "pos",
+      source: bill.source || "pos",
       billId: bill.billId || bill.id,
       billNo: bill.billNo || "",
       orderType: bill.orderType || "takeaway",
@@ -64,6 +64,9 @@
       taxTotal: Number(bill.taxTotal) || 0,
       notes: bill.notes || `POS bill ${bill.billNo || ""}`.trim()
     };
+    if (bill.countsAsRevenue === false) payload.countsAsRevenue = false;
+    if (bill.revenueKind) payload.revenueKind = bill.revenueKind;
+    if (bill.scheduledOrderId) payload.scheduledOrderId = bill.scheduledOrderId;
     return payload;
   }
 
@@ -75,17 +78,19 @@
     const online = other; // UPI/card bucket for dashboard chips
     const total = Number(sale.totalAmount) || cash + swiggy + zomato + other;
     const sign = sale.status === "void" ? -1 : 1;
+    // Customer advances / refunds move cash but must not inflate completed-sale KPIs
+    const countsRevenue = sale.countsAsRevenue !== false && sale.revenueKind !== "customer_advance";
     return {
-      totalSales: sign * total,
+      totalSales: countsRevenue ? sign * total : 0,
       cashSales: sign * cash,
       onlineSales: sign * online,
       swiggySales: sign * swiggy,
       zomatoSales: sign * zomato,
-      billCount: sign * 1,
+      billCount: countsRevenue ? sign * 1 : 0,
       cashBillCount: cash > 0 ? sign * 1 : 0,
       onlineBillCount: online > 0 ? sign * 1 : 0,
-      discountTotal: sign * (Number(sale.discountTotal) || 0),
-      taxTotal: sign * (Number(sale.taxTotal) || 0)
+      discountTotal: countsRevenue ? sign * (Number(sale.discountTotal) || 0) : 0,
+      taxTotal: countsRevenue ? sign * (Number(sale.taxTotal) || 0) : 0
     };
   }
 
@@ -200,16 +205,19 @@
       const swiggy = Number(s.swiggyAmount) || 0;
       const zomato = Number(s.zomatoAmount) || 0;
       const other = Number(s.otherOnlineAmount) || 0;
-      const total = Number(s.totalAmount) || cash + swiggy + zomato + other;
-      row.totalSales += total;
+      const legacy = Number(s.onlineAmount) || 0;
+      const upi = swiggy > 0 || zomato > 0 || other > 0 ? other : legacy;
+      const total = Number(s.totalAmount) || cash + swiggy + zomato + upi;
+      const countsRevenue = s.countsAsRevenue !== false && s.revenueKind !== "customer_advance";
+      if (countsRevenue) row.totalSales += total;
       row.cashSales += cash;
-      row.onlineSales += other;
+      row.onlineSales += upi;
       row.swiggySales += swiggy;
       row.zomatoSales += zomato;
-      row.billCount += 1;
+      if (countsRevenue) row.billCount += 1;
       if (cash > 0) row.cashBillCount += 1;
-      if (other > 0) row.onlineBillCount += 1;
-      row.discountTotal += Number(s.discountTotal) || 0;
+      if (upi > 0) row.onlineBillCount += 1;
+      if (countsRevenue) row.discountTotal += Number(s.discountTotal) || 0;
       row.taxTotal += Number(s.taxTotal) || 0;
     });
 

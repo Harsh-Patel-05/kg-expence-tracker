@@ -302,8 +302,10 @@ function resolvePeriodRange(period) {
     from.setMonth(from.getMonth() - 5);
     return { fromISO: localISODate(from), toISO, period: "m6", hint: "Last 6 months" };
   }
-  if (period === "year") {
-    return { fromISO: startOfRangeISO("year"), toISO, period: "year", hint: "This year" };
+  if (period === "year" || period === "y1" || period === "12m") {
+    const from = parseLocalDay(startOfRangeISO("month"));
+    from.setMonth(from.getMonth() - 11);
+    return { fromISO: localISODate(from), toISO, period: "year", hint: "Last 12 months" };
   }
   return { fromISO: startOfRangeISO("month"), toISO, period: "month", hint: "This month" };
 }
@@ -461,22 +463,9 @@ function buildTrendBuckets(period, fromISO, toISO) {
 }
 
 function ensureDashboardMonthChips() {
+  // Separate calendar months removed — use 1 / 3 / 6 months / 1 year only
   const host = document.getElementById("dashboardMonthChips");
-  if (!host) return;
-  const active =
-    document.querySelector("#dashboardPeriodFilter .period-chip.active")?.dataset.period || "month";
-  const now = parseLocalDay(todayISO());
-  const chips = [];
-  for (let i = 5; i >= 0; i--) {
-    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
-    const key = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
-    const period = `cal-${key}`;
-    const label = d.toLocaleDateString("en-IN", { month: "short" });
-    chips.push(
-      `<button type="button" class="period-chip${active === period ? " active" : ""}" data-period="${period}" onclick="setDashboardPeriod('${period}')">${label}</button>`
-    );
-  }
-  host.innerHTML = chips.join("");
+  if (host) host.innerHTML = "";
 }
 
 function expenseTotalOnDay(dateISO) {
@@ -528,7 +517,7 @@ function salesTotalInMonth(monthKey) {
 }
 
 function getDashboardPeriodRange() {
-  const period = document.querySelector("#dashboardPeriodFilter .period-chip.active")?.dataset.period || "month";
+  const period = document.querySelector("#dashboardPeriodFilter .period-chip.active")?.dataset.period || "d7";
   return resolvePeriodRange(period);
 }
 
@@ -579,6 +568,8 @@ const state = {
   fixedSalaries: [],
   reminders: [],
   balanceTransfers: [],
+  investments: [],
+  profitWithdrawals: [],
   dailyClosings: [],
   documents: []
 };
@@ -587,7 +578,56 @@ let api = null;
 let loadingCount = 0;
 let supplierTab = "manage";
 let staffTab = "add";
-let activeSection = "dashboard";
+const ACTIVE_SECTION_KEY = "kg_active_section";
+
+function sectionFromHash() {
+  try {
+    const h = String(location.hash || "")
+      .replace(/^#\/?/, "")
+      .split("?")[0]
+      .trim();
+    return h || "";
+  } catch {
+    return "";
+  }
+}
+
+function readRememberedSection() {
+  // Prefer URL hash (survives Safari refresh reliably), then session/local storage
+  const fromHash = sectionFromHash();
+  if (fromHash) return fromHash;
+  try {
+    const s = String(sessionStorage.getItem(ACTIVE_SECTION_KEY) || "").trim();
+    if (s) return s;
+  } catch (_) {}
+  try {
+    return String(localStorage.getItem(ACTIVE_SECTION_KEY) || "").trim();
+  } catch {
+    return "";
+  }
+}
+
+function rememberActiveSection(name) {
+  const n = String(name || "").trim();
+  if (!n) return;
+  try {
+    localStorage.setItem(ACTIVE_SECTION_KEY, n);
+  } catch (_) {}
+  try {
+    sessionStorage.setItem(ACTIVE_SECTION_KEY, n);
+  } catch (_) {}
+  try {
+    const want = n === "dashboard" ? "" : `#${n}`;
+    const cur = String(location.hash || "");
+    if (want) {
+      if (cur !== want) history.replaceState(null, "", `${location.pathname}${location.search}${want}`);
+    } else if (cur) {
+      history.replaceState(null, "", `${location.pathname}${location.search}`);
+    }
+  } catch (_) {}
+}
+
+let activeSection = readRememberedSection() || "dashboard";
 
 let posSalesInterval = null;
 
@@ -950,7 +990,8 @@ window.closeAppSidebar = function () {
 };
 
 window.toggleAppSidebar = function () {
-  if (isMobileSidebarLayout()) {
+  // POS focus + mobile: slide-in drawer (not icon-rail collapse)
+  if (document.body.classList.contains("pos-mode") || isMobileSidebarLayout()) {
     document.body.classList.toggle("sidebar-open");
     setTimeout(() => window.resizeDashboardCharts?.(), 280);
     return;
@@ -1038,8 +1079,11 @@ function salaryLeaveDeduction(monthly, stats) {
   return Math.min(num(monthly), daily * leaveDays);
 }
 
+/** Pay only for days attended (present + half-day×0.5) on fixed 30-day rate. */
 function salaryEarnedFromAttendance(monthly, stats) {
-  return Math.max(0, num(monthly) - salaryLeaveDeduction(monthly, stats));
+  const daily = salaryDailyRate(monthly);
+  const daysWorked = num(stats?.presentEquivalent);
+  return Math.max(0, daily * daysWorked);
 }
 
 function attendanceStatsForMonth(name, month) {
@@ -1586,7 +1630,9 @@ function balanceDataSnapshot() {
     salaries: state.salaries,
     advances: state.advances,
     supplierPayments: state.supplierPayments,
-    balanceTransfers: state.balanceTransfers
+    balanceTransfers: state.balanceTransfers,
+    investments: state.investments,
+    profitWithdrawals: state.profitWithdrawals
   };
 }
 
@@ -1614,7 +1660,7 @@ function calcTotals() {
 
   const balances = bm
     ? bm.computeBalances(balanceDataSnapshot())
-    : { cashBalance: 0, bankBalance: 0 };
+    : { cashBalance: 0, bankBalance: 0, meta: null };
   const cashBalance = balances.cashBalance;
   const bankBalance = balances.bankBalance;
   const totalBalance = cashBalance + bankBalance;
@@ -1624,6 +1670,7 @@ function calcTotals() {
     cashBalance,
     bankBalance,
     totalBalance,
+    meta: balances.meta || null,
     totalRevenue,
     totalSales,
     onlineSales,
@@ -1728,11 +1775,6 @@ function renderDashboard() {
   const retailSalesEl = document.getElementById("kpiRetailSales");
   const expensesEl = document.getElementById("kpiTotalExpenses");
   const upiEl = document.getElementById("kpiUpiOnline");
-  const cashHint = document.getElementById("kpiCashHint");
-  const bankHint = document.getElementById("kpiBankHint");
-  const grossHint = document.getElementById("kpiGrossHint");
-  const onlineHint = document.getElementById("kpiOnlineHint");
-  const totalBalHint = document.getElementById("kpiTotalBalanceHint");
   const netPosCard = document.getElementById("netPositionCard");
 
   const unpaidSupplier = totalSupplierOutstanding();
@@ -1740,63 +1782,28 @@ function renderDashboard() {
     .filter((e) => e.status === "unpaid")
     .reduce((sum, e) => sum + num(e.amount), 0);
   const pendingTotal = unpaidSupplier + unpaidExpenses;
-  const netPosition = balances.cashBalance + balances.bankBalance - pendingTotal;
+  const totalCashOnline = balances.cashBalance + balances.bankBalance;
 
   if (cashEl) animateNumber(cashEl, balances.cashBalance, (v) => money(v), 950);
   if (bankEl) animateNumber(bankEl, balances.bankBalance, (v) => money(v), 950);
-  if (totalBalEl) animateNumber(totalBalEl, netPosition, (v) => money(v), 950);
+  if (totalBalEl) animateNumber(totalBalEl, totalCashOnline, (v) => money(v), 950);
   if (revEl) animateNumber(revEl, t.totalRevenue, (v) => money(v), 950);
   if (expensesEl) animateNumber(expensesEl, t.totalExpenses, (v) => money(v), 950);
-  if (cashHint) cashHint.textContent = "Physical cash";
-  if (bankHint) bankHint.textContent = "Bank account";
-  if (totalBalHint) {
-    totalBalHint.textContent =
-      netPosition >= 0
-        ? `In surplus · Cash+Bank ${money(balances.totalBalance)} − pending ${money(pendingTotal)}`
-        : `Shortfall · Cash+Bank ${money(balances.totalBalance)} − pending ${money(pendingTotal)}`;
-  }
-  if (netPosCard) netPosCard.classList.toggle("negative", netPosition < 0);
-
-  if (profitEl && profitCard) {
-    profitCard.classList.toggle("negative", t.netProfit < 0);
-    animateNumber(profitEl, t.netProfit, (v) => money(v), 1050);
-  }
-  if (grossHint) {
-    grossHint.textContent = `Gross ${money(t.grossProfit)} · ${
-      t.netProfit >= 0 ? "profit" : "loss"
-    } this period`;
-  }
+  if (netPosCard) netPosCard.classList.toggle("negative", totalCashOnline < 0);
 
   if (onlineSalesEl) animateNumber(onlineSalesEl, t.onlineSales, (v) => money(v), 950);
   if (retailSalesEl) animateNumber(retailSalesEl, t.retailSales, (v) => money(v), 950);
   if (upiEl) animateNumber(upiEl, t.upiOnline, (v) => money(v), 950);
-  if (onlineHint) onlineHint.textContent = `Swiggy+Zomato ${money(t.onlineSales)} · Cash ${money(t.cashSales)}`;
 
   const pendingEl = document.getElementById("kpiPendingBills");
-  const pendingHint = document.getElementById("kpiPendingHint");
   if (pendingEl) animateNumber(pendingEl, pendingTotal, (v) => money(v), 950);
-  if (pendingHint) pendingHint.textContent = `Supplier ${money(unpaidSupplier)} · Expenses ${money(unpaidExpenses)}`;
 
   const marginEl = document.getElementById("kpiMarginPct");
-  const marginHint = document.getElementById("kpiMarginHint");
   const marginPct = t.totalRevenue > 0 ? (t.netProfit / t.totalRevenue) * 100 : 0;
   if (marginEl) marginEl.textContent = `${marginPct >= 0 ? "" : "−"}${Math.abs(marginPct).toFixed(1)}%`;
-  if (marginHint) marginHint.textContent = "Profit ÷ sales";
 
   drawSparkline("sparkSales", lastNDaySeries(7, salesTotalOnDay), "rgba(99, 102, 241, 0.95)");
-  drawSparkline(
-    "sparkProfit",
-    lastNDaySeries(7, (d) => salesTotalOnDay(d) - expenseTotalOnDay(d)),
-    "rgba(22, 199, 132, 0.95)"
-  );
   drawSparkline("sparkExpenses", lastNDaySeries(7, expenseTotalOnDay), "rgba(239, 68, 68, 0.9)");
-
-  const trendNote = document.getElementById("dashTrendChartNote");
-  if (trendNote) {
-    if (period.period === "today") trendNote.textContent = "Last 7 days trend · KPI cards show today only";
-    else if (period.period === "year") trendNote.textContent = "Monthly sales, expenses & profit this year";
-    else trendNote.textContent = `Revenue · expenses · profit · ${period.hint}`;
-  }
 
   safeRun("sales expense trend", renderSalesExpenseTrendChart);
   safeRun("payment mix chart", renderPaymentMixChart);
@@ -1891,6 +1898,60 @@ function renderDashStaffSnapshot() {
   </div>`;
 }
 
+/** Daily shop revenue goal (₹). Month buckets use days-in-month × this. */
+const DAILY_REVENUE_TARGET = 10000;
+
+function daysInMonthKey(monthKey, capISO) {
+  const parts = String(monthKey || "").split("-").map(Number);
+  if (parts.length < 2) return 30;
+  const y = parts[0];
+  const m = parts[1];
+  const last = new Date(y, m, 0).getDate();
+  const cap = String(capISO || todayISO()).slice(0, 10);
+  const monthEnd = `${String(y).padStart(4, "0")}-${String(m).padStart(2, "0")}-${String(last).padStart(2, "0")}`;
+  const monthStart = `${String(y).padStart(4, "0")}-${String(m).padStart(2, "0")}-01`;
+  if (cap < monthStart) return 0;
+  if (cap >= monthEnd) return last;
+  return Math.max(1, Number(cap.slice(8, 10)) || 1);
+}
+
+function salesChannelsOnDay(dateISO) {
+  const d = String(dateISO || "").slice(0, 10);
+  let cash = 0;
+  let upi = 0;
+  let swiggy = 0;
+  let zomato = 0;
+  state.sales.forEach((s) => {
+    if (String(s.date || "").slice(0, 10) !== d) return;
+    const a = saleAmounts(s);
+    cash += a.cash;
+    swiggy += a.swiggy;
+    zomato += a.zomato;
+    if (a.legacyOnline > 0 && a.swiggy === 0 && a.zomato === 0 && a.otherOnline === 0) upi += a.legacyOnline;
+    else upi += a.otherOnline;
+  });
+  return { cash, upi, swiggy, zomato, total: cash + upi + swiggy + zomato };
+}
+
+function salesChannelsInMonth(monthKey) {
+  const key = String(monthKey || "").slice(0, 7);
+  let cash = 0;
+  let upi = 0;
+  let swiggy = 0;
+  let zomato = 0;
+  state.sales.forEach((s) => {
+    if (String(s.date || "").slice(0, 7) !== key) return;
+    const a = saleAmounts(s);
+    cash += a.cash;
+    swiggy += a.swiggy;
+    zomato += a.zomato;
+    if (a.legacyOnline > 0 && a.swiggy === 0 && a.zomato === 0 && a.otherOnline === 0) upi += a.legacyOnline;
+    else upi += a.otherOnline;
+  });
+  return { cash, upi, swiggy, zomato, total: cash + upi + swiggy + zomato };
+}
+
+/** One full-width pulse: Cash + UPI + Swiggy + Zomato bars, expenses + ₹10k target lines */
 function renderSalesExpenseTrendChart() {
   const canvas = document.getElementById("salesExpenseTrendChart");
   if (!canvas || typeof Chart === "undefined") return;
@@ -1900,77 +1961,95 @@ function renderSalesExpenseTrendChart() {
   const buckets = buildTrendBuckets(period.period, period.fromISO, period.toISO);
   const isMonthMode = ["year", "m2", "m3", "m6"].includes(period.period);
 
-  const sales = buckets.map((b) => (isMonthMode ? salesTotalInMonth(b.key) : salesTotalOnDay(b.key)));
+  const channels = buckets.map((b) =>
+    isMonthMode ? salesChannelsInMonth(b.key) : salesChannelsOnDay(b.key)
+  );
+  const cash = channels.map((c) => c.cash);
+  const upi = channels.map((c) => c.upi);
+  const swiggy = channels.map((c) => c.swiggy);
+  const zomato = channels.map((c) => c.zomato);
+  const sales = channels.map((c) => c.total);
   const expenses = buckets.map((b) => (isMonthMode ? expenseTotalInMonth(b.key) : expenseTotalOnDay(b.key)));
-  const profit = sales.map((s, i) => s - expenses[i]);
+  const targets = buckets.map((b) =>
+    isMonthMode ? DAILY_REVENUE_TARGET * daysInMonthKey(b.key, period.toISO) : DAILY_REVENUE_TARGET
+  );
+  const hitFlags = sales.map((v, i) => v >= targets[i] && targets[i] > 0);
 
-  const ctx = canvas.getContext("2d");
-  const h = canvas.parentElement?.clientHeight || 320;
-  const revFill = ctx.createLinearGradient(0, 0, 0, h);
-  revFill.addColorStop(0, "rgba(232, 122, 58, 0.45)");
-  revFill.addColorStop(0.55, "rgba(232, 122, 58, 0.14)");
-  revFill.addColorStop(1, "rgba(232, 122, 58, 0)");
-
-  const expFill = ctx.createLinearGradient(0, 0, 0, h);
-  expFill.addColorStop(0, "rgba(160, 74, 53, 0.32)");
-  expFill.addColorStop(1, "rgba(160, 74, 53, 0)");
+  const note = document.getElementById("dashTrendChartNote");
+  if (note) note.textContent = `${period.hint} · Cash · UPI · Swiggy · Zomato · expenses`;
 
   const ink = "#FDE8D8";
   const muted = "rgba(253, 232, 216, 0.62)";
   const grid = "rgba(253, 232, 216, 0.1)";
-  const showPts = buckets.length <= 16;
 
   salesExpenseChartRef = new Chart(canvas, {
-    type: "line",
     data: {
       labels: buckets.map((b) => b.label),
       datasets: [
         {
-          label: "Revenue",
-          data: sales,
-          borderColor: "#FDE8D8",
-          backgroundColor: revFill,
-          fill: true,
-          tension: 0.42,
-          borderWidth: 3,
-          pointRadius: showPts ? 3.5 : 0,
-          pointHoverRadius: 6,
-          pointBackgroundColor: "#E87A3A",
-          pointBorderColor: "#FDE8D8",
-          pointBorderWidth: 2,
-          pointHoverBackgroundColor: "#FDE8D8",
-          pointHoverBorderColor: "#E87A3A",
+          type: "bar",
+          label: "Cash",
+          data: cash,
+          backgroundColor: "rgba(34, 197, 94, 0.85)",
+          borderRadius: 6,
+          stack: "sales",
+          order: 4,
+          maxBarThickness: 28
+        },
+        {
+          type: "bar",
+          label: "Shop UPI",
+          data: upi,
+          backgroundColor: "rgba(59, 130, 246, 0.88)",
+          borderRadius: 6,
+          stack: "sales",
+          order: 4,
+          maxBarThickness: 28
+        },
+        {
+          type: "bar",
+          label: "Swiggy",
+          data: swiggy,
+          backgroundColor: "rgba(160, 74, 53, 0.92)",
+          borderRadius: 6,
+          stack: "sales",
+          order: 4,
+          maxBarThickness: 28
+        },
+        {
+          type: "bar",
+          label: "Zomato",
+          data: zomato,
+          backgroundColor: "rgba(232, 122, 58, 0.92)",
+          borderRadius: 6,
+          stack: "sales",
+          order: 4,
+          maxBarThickness: 28
+        },
+        {
+          type: "line",
+          label: "Expenses",
+          data: expenses,
+          borderColor: "#FCA5A5",
+          backgroundColor: "transparent",
+          tension: 0.35,
+          borderWidth: 2.4,
+          pointRadius: buckets.length <= 16 ? 3 : 0,
+          pointBackgroundColor: "#FCA5A5",
+          stack: "exp",
           order: 2
         },
         {
-          label: "Expenses",
-          data: expenses,
-          borderColor: "#A04A35",
-          backgroundColor: expFill,
-          fill: true,
-          tension: 0.42,
-          borderWidth: 2.4,
-          pointRadius: showPts ? 2.5 : 0,
-          pointHoverRadius: 5,
-          pointBackgroundColor: "#5C2A1F",
-          pointBorderColor: "#A04A35",
-          pointBorderWidth: 1.5,
-          order: 3
-        },
-        {
-          label: "Profit",
-          data: profit,
-          borderColor: "#C46A2E",
+          type: "line",
+          label: isMonthMode ? "Target (₹10k×days)" : "Daily target ₹10k",
+          data: targets,
+          borderColor: "#4ADE80",
           backgroundColor: "transparent",
-          fill: false,
-          tension: 0.38,
-          borderWidth: 2.6,
-          borderDash: [7, 5],
-          pointRadius: showPts ? 3 : 0,
-          pointHoverRadius: 6,
-          pointBackgroundColor: "#C46A2E",
-          pointBorderColor: "#5C2A1F",
-          pointBorderWidth: 2,
+          tension: 0,
+          borderWidth: 2.2,
+          borderDash: [6, 5],
+          pointRadius: 0,
+          stack: "tgt",
           order: 1
         }
       ]
@@ -1987,29 +2066,42 @@ function renderSalesExpenseTrendChart() {
           align: "end",
           labels: {
             color: ink,
-            font: { family: "Plus Jakarta Sans", size: 12, weight: "650" },
+            font: { family: "Plus Jakarta Sans", size: 11, weight: "650" },
             usePointStyle: true,
             pointStyle: "circle",
             boxWidth: 8,
-            padding: 16
+            padding: 14
           }
         },
         tooltip: {
           backgroundColor: "rgba(92, 42, 31, 0.94)",
           titleColor: "#FDE8D8",
           bodyColor: "#FDE8D8",
-          borderColor: "rgba(232, 122, 58, 0.55)",
+          borderColor: "rgba(74, 222, 128, 0.55)",
           borderWidth: 1,
           padding: 12,
           displayColors: true,
           boxPadding: 6,
           callbacks: {
+            afterTitle: (items) => {
+              const i = items?.[0]?.dataIndex;
+              if (i == null) return "";
+              if (hitFlags[i]) return "✓ Target achieved";
+              const gap = Math.max(0, (targets[i] || 0) - (sales[i] || 0));
+              return gap > 0 ? `Short by ${money(gap)}` : "";
+            },
+            footer: (items) => {
+              const i = items?.[0]?.dataIndex;
+              if (i == null) return "";
+              return `Total sales: ${money(sales[i] || 0)}`;
+            },
             label: (ctx) => ` ${ctx.dataset.label}: ${money(ctx.parsed.y)}`
           }
         }
       },
       scales: {
         x: {
+          stacked: true,
           ticks: {
             color: muted,
             maxRotation: 0,
@@ -2020,6 +2112,7 @@ function renderSalesExpenseTrendChart() {
           border: { display: false }
         },
         y: {
+          stacked: true,
           ticks: {
             color: muted,
             font: { family: "Plus Jakarta Sans", size: 11, weight: "600" },
@@ -2035,7 +2128,7 @@ function renderSalesExpenseTrendChart() {
             lineWidth: (ctx) => (ctx.tick.value === 0 ? 1.5 : 1)
           },
           border: { display: false },
-          beginAtZero: false
+          beginAtZero: true
         }
       }
     }
@@ -2044,7 +2137,8 @@ function renderSalesExpenseTrendChart() {
 
 function renderPaymentMixChart() {
   const canvas = document.getElementById("paymentMixChart");
-  if (!canvas || typeof Chart === "undefined") return;
+  // Duplicate Cash vs Online — kept hidden; live donut is the only visible one
+  if (!canvas || canvas.hidden || typeof Chart === "undefined") return;
   if (paymentMixChartRef) paymentMixChartRef.destroy();
 
   const { fromISO, toISO } = getDashboardPeriodRange();
@@ -2213,8 +2307,22 @@ function onlineChannelInRange(fromISO, toISO) {
   return { swiggy, zomato };
 }
 
+function onlineChannelInMonth(monthKey) {
+  let swiggy = 0;
+  let zomato = 0;
+  const key = String(monthKey || "").slice(0, 7);
+  state.sales.forEach((s) => {
+    if (String(s.date || "").slice(0, 7) !== key) return;
+    const a = saleAmounts(s);
+    swiggy += a.swiggy;
+    zomato += a.zomato;
+  });
+  return { swiggy, zomato };
+}
+
 function renderOnlinePayoutTrendChart() {
   const canvas = document.getElementById("onlinePayoutTrendChart");
+  // Merged into Sales pulse — keep hook only
   if (!canvas || canvas.hidden || typeof Chart === "undefined") return;
   if (onlinePayoutChartRef) onlinePayoutChartRef.destroy();
   if (swiggySalesChartRef) {
@@ -2226,19 +2334,39 @@ function renderOnlinePayoutTrendChart() {
     zomatoSalesChartRef = null;
   }
 
-  // Weekly buckets — platform sales are usually entered once per week
-  const buckets = buildWeekBuckets(8);
-  const swiggy = buckets.map((b) => onlineChannelInRange(b.from, b.to).swiggy);
-  const zomato = buckets.map((b) => onlineChannelInRange(b.from, b.to).zomato);
+  // Same dashboard period filter as Sales analytics
+  const period = getDashboardPeriodRange();
+  const buckets = buildTrendBuckets(period.period, period.fromISO, period.toISO);
+  const isMonthMode = ["year", "m2", "m3", "m6"].includes(period.period);
+  const swiggy = buckets.map((b) =>
+    isMonthMode ? onlineChannelInMonth(b.key).swiggy : onlineChannelOnDay(b.key).swiggy
+  );
+  const zomato = buckets.map((b) =>
+    isMonthMode ? onlineChannelInMonth(b.key).zomato : onlineChannelOnDay(b.key).zomato
+  );
   const totalS = swiggy.reduce((a, b) => a + b, 0);
   const totalZ = zomato.reduce((a, b) => a + b, 0);
+  let peakIdx = -1;
+  let peakAmt = 0;
+  buckets.forEach((_, i) => {
+    const t = (swiggy[i] || 0) + (zomato[i] || 0);
+    if (t > peakAmt) {
+      peakAmt = t;
+      peakIdx = i;
+    }
+  });
   const ink = "#FDE8D8";
   const muted = "rgba(253, 232, 216, 0.62)";
   const grid = "rgba(253, 232, 216, 0.1)";
   const note = document.getElementById("onlinePayoutChartNote");
-  if (note) {
-    note.textContent = `Weekly · Swiggy ${money(totalS)} · Zomato ${money(totalZ)}`;
-  }
+  if (note) note.textContent = period.hint || "Swiggy & Zomato";
+
+  const swiggyColors = swiggy.map((_, i) =>
+    i === peakIdx && peakAmt > 0 ? "rgba(160, 74, 53, 1)" : "rgba(160, 74, 53, 0.85)"
+  );
+  const zomatoColors = zomato.map((_, i) =>
+    i === peakIdx && peakAmt > 0 ? "rgba(232, 122, 58, 1)" : "rgba(232, 122, 58, 0.88)"
+  );
 
   onlinePayoutChartRef = new Chart(canvas, {
     type: "bar",
@@ -2248,7 +2376,7 @@ function renderOnlinePayoutTrendChart() {
         {
           label: "Swiggy",
           data: swiggy,
-          backgroundColor: "rgba(160, 74, 53, 0.9)",
+          backgroundColor: swiggyColors,
           hoverBackgroundColor: "#A04A35",
           borderRadius: 10,
           maxBarThickness: 22,
@@ -2257,7 +2385,7 @@ function renderOnlinePayoutTrendChart() {
         {
           label: "Zomato",
           data: zomato,
-          backgroundColor: "rgba(232, 122, 58, 0.92)",
+          backgroundColor: zomatoColors,
           hoverBackgroundColor: "#E87A3A",
           borderRadius: 10,
           maxBarThickness: 22,
@@ -2289,9 +2417,14 @@ function renderOnlinePayoutTrendChart() {
           borderWidth: 1,
           callbacks: {
             label: (ctx) => `${ctx.dataset.label}: ${money(ctx.parsed.y)}`,
+            afterTitle: (items) => {
+              const i = items?.[0]?.dataIndex;
+              if (i === peakIdx && peakAmt > 0) return "★ Peak platforms";
+              return "";
+            },
             footer: (items) => {
               const sum = items.reduce((a, it) => a + (Number(it.parsed.y) || 0), 0);
-              return `Week total: ${money(sum)}`;
+              return `Total: ${money(sum)}`;
             }
           }
         }
@@ -2958,6 +3091,7 @@ window.showSection = function (sectionName) {
     return;
   }
   activeSection = sectionName;
+  rememberActiveSection(sectionName);
   closeAppSidebar();
   document.querySelectorAll(".dashboard-section").forEach((section) => {
     section.classList.remove("active");
@@ -2996,6 +3130,15 @@ window.showSection = function (sectionName) {
     renderBalanceTransferForm();
     renderBalanceTransferHistory();
   }
+  if (sectionName === "investments") {
+    window.KG?.investments?.bind?.();
+    window.KG?.investments?.onEnter?.();
+  }
+  if (sectionName === "kds") {
+    window.KG?.kdsManager?.onEnter?.();
+  } else {
+    window.KG?.kdsManager?.onLeave?.();
+  }
   if (sectionName === "daily-closing") {
     refreshDailyClosingPreview();
     renderDailyClosingHistory();
@@ -3013,6 +3156,13 @@ window.showSection = function (sectionName) {
   }
   if (sectionName === "reminders") {
     renderReminders();
+  }
+  if (sectionName === "scheduled") {
+    try {
+      window.KG?.scheduledUI?.onEnter?.();
+    } catch (e) {
+      console.warn(e);
+    }
   }
   if (sectionName === "profit-analysis") {
     renderProfitAnalysis();
@@ -3034,6 +3184,7 @@ window.showSection = function (sectionName) {
       window.__sidebarBeforePos = document.body.classList.contains("sidebar-collapsed");
     }
     document.body.classList.add("pos-mode");
+    document.body.classList.remove("sidebar-open");
     setSidebarCollapsed(true);
     applySidebarButtonText();
     try {
@@ -3051,6 +3202,7 @@ window.showSection = function (sectionName) {
     }
   } else {
     document.body.classList.remove("pos-mode");
+    document.body.classList.remove("sidebar-open");
     if (window.__sidebarBeforePos != null) {
       setSidebarCollapsed(!!window.__sidebarBeforePos);
       window.__sidebarBeforePos = null;
@@ -5215,12 +5367,14 @@ window.addBill = function () {
       attachment = await window.KgPhase2.fileToDataUrl(file);
       attachmentName = file.name || "bill";
     }
+    const payMethod = status === "paid" ? (paymentMethod === "online" ? "online" : "cash") : "unpaid";
     await api.expenses.create({
       date,
       category,
       amount,
       status: status === "paid" ? "paid" : "unpaid",
-      paymentMethod: status === "paid" ? (paymentMethod === "online" ? "online" : "cash") : "unpaid",
+      paymentMethod: payMethod,
+      paidFrom: payMethod === "online" ? "bank" : payMethod === "cash" ? "cash" : undefined,
       note,
       attachment,
       attachmentName
@@ -5847,8 +6001,9 @@ window.calculateAttendanceBasedSalary = function () {
 
   if (document.getElementById("salAmount")) document.getElementById("salAmount").value = s.earned.toFixed(2);
   toast(
-    `Calculated: Rs ${s.earned.toFixed(2)} on ${s.salaryDays}-day basis (fixed monthly Rs ${s.monthly.toFixed(2)}). ` +
-      `Absent ${s.stats.absent}, half ${s.stats.half}. Advance: Rs ${advance}. Payable: Rs ${finalSalary.toFixed(2)}`,
+    `Calculated: Rs ${s.earned.toFixed(2)} = ${s.stats.presentEquivalent} present-day(s) × Rs ${s.daily.toFixed(2)}/day ` +
+      `(monthly Rs ${s.monthly.toFixed(2)} ÷ ${s.salaryDays}). Absent ${s.stats.absent}, half ${s.stats.half}. ` +
+      `Advance: Rs ${advance}. Payable: Rs ${finalSalary.toFixed(2)}`,
     "info"
   );
 };
@@ -5868,7 +6023,15 @@ window.addAdvance = function () {
   const amount = num(document.getElementById("advAmount")?.value);
   if (!(amount > 0)) return toast("Enter advance amount", "error");
   withErr(async () => {
-    await api.advances.create({ date, month, name, amount, method: method === "online" ? "online" : "cash" });
+    const advMethod = method === "online" ? "online" : "cash";
+    await api.advances.create({
+      date,
+      month,
+      name,
+      amount,
+      method: advMethod,
+      paidFrom: advMethod === "online" ? "bank" : "cash"
+    });
     document.getElementById("advAmount").value = "";
     await loadAll();
     toast("Advance saved", "ok");
@@ -6095,6 +6258,8 @@ window.resetAll = function () {
     fixedSalaries: [],
     reminders: [],
     balanceTransfers: [],
+    investments: [],
+    profitWithdrawals: [],
     dailyClosings: [],
     documents: []
   };
@@ -6348,7 +6513,7 @@ function renderBills() {
             <div class="row-title">${escapeHtml(String(e.date || "").slice(0, 10))} — ${escapeHtml(expenseCategoryLabel(e.category))}: ${money(e.amount)}</div>
             <div class="row-meta">
               <span class="pill">${escapeHtml(e.status || "")}</span>
-              <span class="pill">${e.paymentMethod === "online" ? "Online" : "Cash"}</span>${att}
+              <span class="pill">${(window.balanceMath?.recordIsOnline?.(e) || String(e.paymentMethod || "").toLowerCase() === "online") ? "Online" : "Cash"}</span>${att}
               ${e.note ? `<span class="row-note">${escapeHtml(e.note)}</span>` : ""}
             </div>
           </div>
@@ -6623,7 +6788,7 @@ function buildStaffSalarySlipHtml(name, month) {
         <td style="width:20%;padding:8px;border:1px solid #bbb;background:#f7f7f7;">
           <div style="font-size:10px;color:#555;font-weight:700;">अर्जित वेतन</div>
           <div style="font-size:16px;font-weight:800;margin-top:4px;">${money(earnedAmt)}</div>
-          <div style="font-size:10px;color:#555;margin-top:2px;">अनुपस्थिति के बाद</div>
+          <div style="font-size:10px;color:#555;margin-top:2px;">${Number(s.stats?.presentEquivalent || 0).toFixed(1)} दिन × ${money(dailyAmt)}</div>
         </td>
         <td style="width:20%;padding:8px;border:1px solid #bbb;background:#f7f7f7;">
           <div style="font-size:10px;color:#555;font-weight:700;">अग्रिम</div>
@@ -6777,6 +6942,7 @@ window.renderSalaryOverview = function () {
   table.innerHTML = `<div class="table-row"><strong>Employee</strong><strong>Monthly</strong><strong>Attendance (month)</strong><strong>Payable</strong></div>`;
 
   let totalMonthly = 0;
+  let totalEarned = 0;
   let totalAdv = 0;
   let totalLeave = 0;
   let totalMonthEnd = 0;
@@ -6787,16 +6953,17 @@ window.renderSalaryOverview = function () {
     names.forEach((name) => {
       const s = calcSalaryForMonth(name, month);
       totalMonthly += num(s.monthly);
+      totalEarned += num(s.earned);
       totalAdv += num(s.adv);
       totalLeave += num(s.leaveDeduction);
       totalMonthEnd += num(s.monthEndPayable);
       const attLabel =
         s.stats.presentEquivalent > 0 || s.stats.marked > 0
-          ? `${s.stats.presentEquivalent} present · ${s.stats.marked} marked · ${s.salaryDays}-day salary${s.leaveDays > 0 ? ` · leave ${s.leaveDays}` : ""}`
-          : "No attendance marked";
+          ? `${s.stats.presentEquivalent} present · ${s.stats.marked} marked · ₹${Math.round(s.daily)}/day${s.leaveDays > 0 ? ` · leave ${s.leaveDays}` : ""}`
+          : "No attendance marked — ₹0 earned";
       const carryPill = s.carryIn > 0 ? ` <span class="pill bad">carry ${money(Math.round(s.carryIn))}</span>` : "";
       const settledPill = s.settled ? ` <span class="pill" style="background:#C46A2E22;color:#C46A2E;">paid · closed</span>` : "";
-      const earnPill = `<span class="pill">${money(Math.round(s.earned))} earned · ${s.salaryDays}d basis</span>`;
+      const earnPill = `<span class="pill">${money(Math.round(s.earned))} earned · ${s.stats.presentEquivalent}d × ₹${Math.round(s.daily)}</span>`;
       const advPill = `<span class="pill">adv ${money(Math.round(s.adv))}</span>`;
       const payBtns = s.settled
         ? ""
@@ -6816,7 +6983,7 @@ window.renderSalaryOverview = function () {
   const payEl = document.getElementById("salTotalPayable");
   const cardEl = document.getElementById("salPayableCard");
   const hintEl = document.getElementById("salMonthEndHint");
-  if (earnedEl) earnedEl.textContent = money(Math.round(totalMonthly));
+  if (earnedEl) earnedEl.textContent = money(Math.round(totalEarned));
   if (advEl) advEl.textContent = money(Math.round(totalAdv));
   if (payEl) payEl.textContent = money(Math.round(totalMonthEnd));
   if (cardEl) {
@@ -6824,11 +6991,11 @@ window.renderSalaryOverview = function () {
     cardEl.classList.toggle("negative", totalMonthEnd < 0);
   }
   if (hintEl) {
-    const leaveBit = totalLeave > 0 ? ` minus leave ${money(Math.round(totalLeave))}` : "";
+    const leaveBit = totalLeave > 0 ? ` (leave marked ${money(Math.round(totalLeave))})` : "";
     hintEl.textContent =
       totalMonthEnd >= 0
-        ? `Full monthly salaries ${money(Math.round(totalMonthly))} minus advances (incl. carryover) ${money(Math.round(totalAdv))}${leaveBit} — pay ${money(Math.round(totalMonthEnd))} at month end. Excess advance auto-carries to next month until you pay full salary.`
-        : `Advances (incl. carryover) ${money(Math.round(totalAdv))} exceed salaries ${money(Math.round(totalMonthly))}${leaveBit}. Deficit auto-handover to next month until settled.`;
+        ? `Attendance-based earned ${money(Math.round(totalEarned))} (not full monthly ${money(Math.round(totalMonthly))}) minus advances ${money(Math.round(totalAdv))}${leaveBit} — payable ${money(Math.round(totalMonthEnd))}.`
+        : `Advances ${money(Math.round(totalAdv))} exceed attendance-based earned ${money(Math.round(totalEarned))}${leaveBit}. Deficit carries to next month until settled.`;
   }
 };
 
@@ -7389,6 +7556,7 @@ function renderAll() {
   safeRun("documents", renderDocuments);
   safeRun("balance transfer form", renderBalanceTransferForm);
   safeRun("balance transfer history", renderBalanceTransferHistory);
+  safeRun("investments", () => window.KG?.investments?.renderAll?.());
   safeRun("daily closing history", renderDailyClosingHistory);
   safeRun("analytics transfer history", () => window.renderAnalyticsTransferHistory?.());
 }
@@ -7425,6 +7593,8 @@ async function loadAll() {
       menuItems,
       orders,
       balanceTransfers,
+      investments,
+      profitWithdrawals,
       dailyClosings,
       documents
     ] = await Promise.all([
@@ -7446,6 +7616,8 @@ async function loadAll() {
       fetchList("menu", () => (api.menuItems?.list ? api.menuItems.list() : [])),
       fetchList("orders", () => (api.orders?.list ? api.orders.list() : [])),
       fetchList("balance transfers", () => (api.balanceTransfers?.list ? api.balanceTransfers.list() : [])),
+      fetchList("investments", () => (api.investments?.list ? api.investments.list() : [])),
+      fetchList("profit withdrawals", () => (api.profitWithdrawals?.list ? api.profitWithdrawals.list() : [])),
       fetchList("daily closings", () => (api.dailyClosings?.list ? api.dailyClosings.list() : [])),
       fetchList("documents", () => (api.documents?.list ? api.documents.list() : []))
     ]);
@@ -7468,6 +7640,8 @@ async function loadAll() {
     state.menuItems = menuItems;
     state.orders = orders;
     state.balanceTransfers = balanceTransfers;
+    state.investments = investments;
+    state.profitWithdrawals = profitWithdrawals;
     state.dailyClosings = dailyClosings;
     state.documents = documents;
 
@@ -7574,9 +7748,38 @@ window.addEventListener("load", async () => {
   }
 
   await loadAll();
-  // Ensure only one screen is visible (fixes dashboard stacking under other sections)
-  window.showSection?.(activeSection || "dashboard");
+  try {
+    window.KG?.scheduledReminders?.start?.();
+    window.KG?.scheduledPosBridge?.start?.();
+    setTimeout(() => {
+      window.KG?.scheduledReminders?.hydrateFromOrders?.();
+      window.KG?.scheduledPosBridge?.tick?.();
+    }, 2000);
+  } catch (_) {}
+  // Restore last screen (e.g. stay on POS after Safari refresh) if role allows
+  let bootSection = sectionFromHash() || readRememberedSection() || activeSection || "dashboard";
+  if (window.KgAuth?.canAccessSection && !window.KgAuth.canAccessSection(bootSection)) {
+    // Don't kick POS users to dashboard if auth profile is still warming — retry once
+    try {
+      await new Promise((r) => setTimeout(r, 200));
+    } catch (_) {}
+    if (!window.KgAuth.canAccessSection(bootSection)) bootSection = "dashboard";
+  }
+  activeSection = bootSection;
+  window.showSection?.(bootSection);
+  // Safari sometimes paints dashboard first — re-assert POS after a tick
+  if (bootSection === "pos") {
+    setTimeout(() => {
+      if (activeSection !== "pos") return;
+      window.showSection?.("pos");
+    }, 50);
+  }
   startTopbarLive();
+});
+
+window.addEventListener("hashchange", () => {
+  const sec = sectionFromHash();
+  if (sec && sec !== activeSection) window.showSection?.(sec);
 });
 
 function weatherCodeLabel(code) {

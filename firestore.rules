@@ -36,6 +36,8 @@ service cloud.firestore {
           'stock_lots', 'recurring_expenses',
           'attendance', 'salaries', 'advances', 'suppliers', 'supplierPayments',
           'staff', 'fixedSalaries', 'reminders', 'balance_transfers', 'daily_closings',
+          'investments', 'profit_withdrawals',
+          'kds_orders', 'kds_menu', 'kds_settings',
           'menuItems', 'orders',
           'customers', 'tables', 'payments', 'discounts', 'coupons', 'taxes',
           'refunds', 'kitchenTickets', 'settings', 'transactions', 'activityLogs',

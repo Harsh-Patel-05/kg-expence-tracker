@@ -1637,9 +1637,11 @@
   <link rel="stylesheet" href="css/saas-premium.css?v=20260902sal30" />
   <link rel="stylesheet" href="css/app-shell.css?v=20260902sal30" />
   <link rel="stylesheet" href="css/dash-polish.css?v=20260902sal30" />
-  <link rel="stylesheet" href="css/dashboard-pro.css?v=20260902sal30" />
+  <link rel="stylesheet" href="css/dashboard-pro.css?v=20261120pulse1" />
   <link rel="stylesheet" href="css/ui-fixes.css?v=20260902sal30" />
-  <link rel="stylesheet" href="css/pos-upgrade.css?v=20261116pos2" />
+  <link rel="stylesheet" href="css/pos-upgrade.css?v=20261120live" />
+  <link rel="stylesheet" href="css/pos-menu-tiles.css?v=20261119cat2" />
+  <link rel="stylesheet" href="css/scheduled.css?v=20261120live" />
 </head>
 <body>
   <div id="appLoading" aria-live="polite" aria-busy="true">
@@ -1652,6 +1654,11 @@
   </div>
   <div id="toastRoot" aria-live="polite"></div>
   <div class="sidebarBackdrop" onclick="closeAppSidebar()" aria-hidden="true"></div>
+
+  <!-- POS focus: small menu button (sidebar hidden until opened) -->
+  <button type="button" id="kgPosNavFab" class="kg-pos-nav-fab" onclick="toggleAppSidebar()" aria-label="Open menu" title="Menu">
+    <span aria-hidden="true">☰</span>
+  </button>
 
   <div class="app-topbar">
     <button type="button" class="appNavToggle" onclick="toggleAppSidebar()" aria-label="Open navigation menu" title="Menu">
@@ -1753,6 +1760,14 @@
             <span class="nav-icon" aria-hidden="true"><i data-lucide="monitor-smartphone"></i></span>
             <span>POS Billing</span>
           </div>
+          <div class="nav-item" data-section="scheduled" onclick="showSection('scheduled')">
+            <span class="nav-icon" aria-hidden="true"><i data-lucide="calendar-clock"></i></span>
+            <span>Scheduled Orders</span>
+          </div>
+          <div class="nav-item" data-section="kds" onclick="showSection('kds')">
+            <span class="nav-icon" aria-hidden="true"><i data-lucide="chef-hat"></i></span>
+            <span>Kitchen (KDS)</span>
+          </div>
           <div class="nav-item" data-section="inventory" onclick="showSection('inventory')">
             <span class="nav-icon" aria-hidden="true"><i data-lucide="boxes"></i></span>
             <span>Inventory</span>
@@ -1764,6 +1779,10 @@
           <div class="nav-item" data-section="balance-transfer" onclick="showSection('balance-transfer')">
             <span class="nav-icon" aria-hidden="true"><i data-lucide="arrow-left-right"></i></span>
             <span>Balance Transfer</span>
+          </div>
+          <div class="nav-item" data-section="investments" onclick="showSection('investments')">
+            <span class="nav-icon" aria-hidden="true"><i data-lucide="landmark"></i></span>
+            <span>Investments</span>
           </div>
           <div class="nav-item" data-section="backup" onclick="showSection('backup')">
             <span class="nav-icon" aria-hidden="true"><i data-lucide="hard-drive"></i></span>
@@ -1781,37 +1800,54 @@
             <h1 class="dpro-title">Business overview</h1>
             <p class="dpro-sub muted" id="dashboardPeriodLabel">Select a period to refresh metrics</p>
             <div class="period-filter dpro-periods" id="dashboardPeriodFilter" role="tablist" aria-label="Dashboard period">
-              <button type="button" class="period-chip" data-period="d7" onclick="setDashboardPeriod('d7')">7 days</button>
+              <button type="button" class="period-chip active" data-period="d7" onclick="setDashboardPeriod('d7')">7 days</button>
               <button type="button" class="period-chip" data-period="w2" onclick="setDashboardPeriod('w2')">2 weeks</button>
               <button type="button" class="period-chip" data-period="w3" onclick="setDashboardPeriod('w3')">3 weeks</button>
-              <button type="button" class="period-chip active" data-period="month" onclick="setDashboardPeriod('month')">1 month</button>
-              <span id="dashboardMonthChips" class="dpro-month-chips"></span>
+              <button type="button" class="period-chip" data-period="month" onclick="setDashboardPeriod('month')">1 month</button>
+              <button type="button" class="period-chip" data-period="m3" onclick="setDashboardPeriod('m3')">3 months</button>
               <button type="button" class="period-chip" data-period="m6" onclick="setDashboardPeriod('m6')">6 months</button>
+              <button type="button" class="period-chip" data-period="year" onclick="setDashboardPeriod('year')">1 year</button>
             </div>
           </div>
         </header>
 
-        <section class="dpro-charts-row" aria-label="Sales charts">
+        <section class="kg-live-wrap" aria-label="Today's live sales">
+          <div class="kg-live-card kg-live-card--main kg-live-card--compact">
+            <div class="kg-live-head">
+              <div>
+                <h2 style="margin:0;font-size:16px;">Today's live sales</h2>
+                <div class="muted" id="kgLiveUpdated">Waiting…</div>
+              </div>
+              <div style="display:flex;gap:8px;align-items:center;">
+                <input type="date" id="kgLiveDate" aria-label="Business date" />
+                <span class="kg-live-badge" id="kgLiveBadge">LIVE</span>
+                <button type="button" class="btn btn-secondary" id="kgRebuildSummaries">Rebuild</button>
+              </div>
+            </div>
+            <div class="kg-live-kpis">
+              <div class="kg-live-kpi"><div class="label">Total sales</div><div class="value" id="kgLiveTotalSales">₹0</div></div>
+              <div class="kg-live-kpi"><div class="label">Bills</div><div class="value" id="kgLiveBillCount">0</div></div>
+              <div class="kg-live-kpi"><div class="label">Avg bill</div><div class="value" id="kgLiveAov">₹0</div></div>
+              <div class="kg-live-kpi"><div class="label">Cash</div><div class="value" id="kgLiveCashSales">₹0</div><div class="muted" id="kgLiveCashCount">0 bills</div></div>
+              <div class="kg-live-kpi"><div class="label">Shop UPI</div><div class="value" id="kgLiveOnlineSales">₹0</div><div class="muted" id="kgLiveOnlineCount">0 bills</div></div>
+              <div class="kg-live-kpi"><div class="label">Swiggy / Zomato</div>
+                <div class="kg-live-chips"><span>Swiggy <b id="kgLiveSwiggy">₹0</b></span><span>Zomato <b id="kgLiveZomato">₹0</b></span></div>
+              </div>
+            </div>
+            <div class="muted" id="kgLiveEmpty" style="display:none;margin-top:8px;">No sales yet today</div>
+          </div>
+        </section>
+
+        <section class="dpro-charts-row dpro-charts-row--full" aria-label="Sales pulse">
           <div class="card dpro-panel dpro-panel-analytics">
             <div class="section-title">
               <div>
-                <h2>Sales analytics</h2>
-                <div class="muted" id="dashTrendChartNote">Revenue · expenses · profit</div>
+                <h2>Sales pulse</h2>
+                <div class="muted" id="dashTrendChartNote">Cash · UPI · Swiggy · Zomato · expenses · ₹10k target</div>
               </div>
             </div>
-            <div class="chart-wrap dpro-chart-lg dpro-chart-stage">
+            <div class="chart-wrap dpro-chart-hero dpro-chart-stage">
               <canvas id="salesExpenseTrendChart"></canvas>
-            </div>
-          </div>
-          <div class="card dpro-panel">
-            <div class="section-title">
-              <div>
-                <h2>Swiggy &amp; Zomato</h2>
-                <div class="muted" id="onlinePayoutChartNote">Weekly platform sales</div>
-              </div>
-            </div>
-            <div class="chart-wrap dpro-chart-md dpro-chart-stage dpro-chart-stage-soft">
-              <canvas id="onlinePayoutTrendChart"></canvas>
             </div>
           </div>
         </section>
@@ -1822,19 +1858,9 @@
             <div class="dpro-kpi-head">
               <div class="dpro-kpi-icon"><i data-lucide="trending-up"></i></div>
             </div>
-            <div class="dpro-kpi-label">Sales</div>
+            <div class="dpro-kpi-label">Sales this period</div>
             <div class="dpro-kpi-value" id="kpiTotalRevenue">Rs 0</div>
             <canvas class="dpro-spark" id="sparkSales" width="120" height="36" aria-hidden="true"></canvas>
-          </article>
-          <article class="dpro-kpi" data-tone="green" id="netProfitCard">
-            <div class="dpro-kpi-strip"></div>
-            <div class="dpro-kpi-head">
-              <div class="dpro-kpi-icon"><i data-lucide="gem"></i></div>
-            </div>
-            <div class="dpro-kpi-label">Period profit / loss</div>
-            <div class="dpro-kpi-value" id="kpiNetProfit">Rs 0</div>
-            <div class="dpro-kpi-hint muted" id="kpiGrossHint">Sales − expenses this period</div>
-            <canvas class="dpro-spark" id="sparkProfit" width="120" height="36" aria-hidden="true"></canvas>
           </article>
           <article class="dpro-kpi" data-tone="rose">
             <div class="dpro-kpi-strip"></div>
@@ -1852,7 +1878,6 @@
             </div>
             <div class="dpro-kpi-label">Pending payments</div>
             <div class="dpro-kpi-value" id="kpiPendingBills">Rs 0</div>
-            <div class="dpro-kpi-hint muted" id="kpiPendingHint">Unpaid supplier + expenses</div>
           </article>
           <article class="dpro-kpi" data-tone="cyan">
             <div class="dpro-kpi-strip"></div>
@@ -1861,16 +1886,14 @@
             </div>
             <div class="dpro-kpi-label">Cash in hand</div>
             <div class="dpro-kpi-value" id="kpiCashBalance">Rs 0</div>
-            <div class="dpro-kpi-hint muted" id="kpiCashHint">Physical cash</div>
           </article>
           <article class="dpro-kpi" data-tone="blue">
             <div class="dpro-kpi-strip"></div>
             <div class="dpro-kpi-head">
               <div class="dpro-kpi-icon"><i data-lucide="landmark"></i></div>
             </div>
-            <div class="dpro-kpi-label">Bank balance</div>
+            <div class="dpro-kpi-label">Online / Bank</div>
             <div class="dpro-kpi-value" id="kpiBankBalance">Rs 0</div>
-            <div class="dpro-kpi-hint muted" id="kpiBankHint">Bank account</div>
           </article>
           <article class="dpro-kpi" data-tone="violet" id="netPositionCard">
             <div class="dpro-kpi-strip"></div>
@@ -1879,81 +1902,52 @@
             </div>
             <div class="dpro-kpi-label">Total balance</div>
             <div class="dpro-kpi-value" id="kpiTotalBalance">Rs 0</div>
-            <div class="dpro-kpi-hint muted" id="kpiTotalBalanceHint">Cash + bank − pending</div>
           </article>
           <article class="dpro-kpi" data-tone="violet">
             <div class="dpro-kpi-strip"></div>
             <div class="dpro-kpi-head">
               <div class="dpro-kpi-icon"><i data-lucide="smartphone"></i></div>
             </div>
-            <div class="dpro-kpi-label">UPI / Online</div>
+            <div class="dpro-kpi-label">Shop UPI sales</div>
             <div class="dpro-kpi-value" id="kpiUpiOnline">Rs 0</div>
-            <div class="dpro-kpi-hint muted" id="kpiOnlineHint">Platforms separate below</div>
           </article>
-          <!-- Legacy hooks -->
-          <span id="kpiOnlineSales" class="sr-only" hidden>Rs 0</span>
-          <span id="kpiRetailSales" class="sr-only" hidden>Rs 0</span>
-          <span id="kpiMarginPct" class="sr-only" hidden>0%</span>
-          <span id="kpiMarginHint" class="sr-only" hidden></span>
-          <span id="kpiOrdersAov" class="sr-only" hidden>0</span>
-          <span id="kpiStaffPresent" class="sr-only" hidden>0</span>
         </section>
+        <div class="sr-only" aria-hidden="true">
+          <span id="kpiNetProfit">Rs 0</span>
+          <span id="kpiGrossHint"></span>
+          <span id="kpiCashHint"></span>
+          <span id="kpiBankHint"></span>
+          <span id="kpiTotalBalanceHint"></span>
+          <span id="kpiOnlineHint"></span>
+          <span id="kpiPendingHint"></span>
+          <span id="kpiOnlineSales">Rs 0</span>
+          <span id="kpiRetailSales">Rs 0</span>
+          <span id="kpiMarginPct">0%</span>
+          <span id="kpiMarginHint"></span>
+          <span id="kpiOrdersAov">0</span>
+          <span id="kpiStaffPresent">0</span>
+        </div>
 
-        <section class="kg-live-wrap" aria-label="Live sales and net margin">
-          <div class="kg-live-card">
-            <div class="kg-live-head">
-              <div>
-                <h2 style="margin:0;font-size:16px;">Today's live sales</h2>
-                <div class="muted" id="kgLiveUpdated">Waiting…</div>
-              </div>
-              <div style="display:flex;gap:8px;align-items:center;">
-                <input type="date" id="kgLiveDate" aria-label="Business date" />
-                <span class="kg-live-badge" id="kgLiveBadge">LIVE</span>
-              </div>
-            </div>
-            <div class="kg-live-kpis">
-              <div class="kg-live-kpi"><div class="label">Total sales</div><div class="value" id="kgLiveTotalSales">₹0</div></div>
-              <div class="kg-live-kpi"><div class="label">Bills</div><div class="value" id="kgLiveBillCount">0</div></div>
-              <div class="kg-live-kpi"><div class="label">Avg bill</div><div class="value" id="kgLiveAov">₹0</div></div>
-              <div class="kg-live-kpi"><div class="label">Cash</div><div class="value" id="kgLiveCashSales">₹0</div><div class="muted" id="kgLiveCashCount">0 bills</div></div>
-              <div class="kg-live-kpi"><div class="label">Online (UPI)</div><div class="value" id="kgLiveOnlineSales">₹0</div><div class="muted" id="kgLiveOnlineCount">0 bills</div></div>
-              <div class="kg-live-kpi"><div class="label">Platforms</div>
-                <div class="kg-live-chips"><span>Swiggy <b id="kgLiveSwiggy">₹0</b></span><span>Zomato <b id="kgLiveZomato">₹0</b></span></div>
-              </div>
-            </div>
-            <div class="kg-live-chart" style="margin-top:12px;"><canvas id="kgLiveHourlyChart"></canvas></div>
-            <div class="muted" id="kgLiveEmpty" style="display:none;margin-top:8px;">No sales yet today</div>
-            <button type="button" class="btn btn-secondary" id="kgRebuildSummaries" style="margin-top:8px;">Rebuild daily summaries</button>
+        <section class="dpro-insight-row" aria-label="Cash, margin, sellers, expenses">
+          <div class="card dpro-panel kg-live-card">
+            <div class="section-title"><h2>Cash vs Online</h2></div>
+            <div class="chart-wrap dpro-chart-sm"><canvas id="kgLiveDonutChart"></canvas></div>
           </div>
-          <div class="kg-live-card">
-            <h2 style="margin:0 0 8px;font-size:16px;">Cash vs Online</h2>
-            <div class="kg-live-chart"><canvas id="kgLiveDonutChart"></canvas></div>
-          </div>
-          <div id="kgNetMarginBox" class="kg-margin-box" aria-label="Net margin">
+          <div id="kgNetMarginBox" class="card dpro-panel kg-margin-box" aria-label="Net margin">
             <div class="kg-margin-label">Net Margin</div>
             <div class="muted">Loading…</div>
+          </div>
+          <div class="card dpro-panel">
+            <div class="section-title"><h2>Best sellers</h2></div>
+            <div id="dashBestSellers" class="dpro-list dpro-sellers"></div>
+          </div>
+          <div class="card dpro-panel">
+            <div class="section-title"><h2>Expense summary</h2></div>
+            <div class="chart-wrap dpro-chart-sm"><canvas id="expenseBreakdownChart"></canvas></div>
           </div>
         </section>
 
         <section class="dpro-widgets">
-          <div class="card dpro-panel">
-            <div class="section-title">
-              <div>
-                <h2>Payment mix</h2>
-                <div class="muted" id="paymentMixNote">Cash · UPI · platforms</div>
-              </div>
-            </div>
-            <div class="chart-wrap dpro-chart-md"><canvas id="paymentMixChart"></canvas></div>
-          </div>
-          <div class="card dpro-panel">
-            <div class="section-title">
-              <div>
-                <h2>Monthly cash vs online</h2>
-                <div class="muted" id="cashOnlineMonthlyNote">Cash &amp; online received by month</div>
-              </div>
-            </div>
-            <div class="chart-wrap dpro-chart-md"><canvas id="cashOnlineMonthlyChart"></canvas></div>
-          </div>
           <div class="card dpro-panel">
             <div class="section-title">
               <h2>Inventory &amp; expiry</h2>
@@ -1970,14 +1964,6 @@
             <div id="dashRemindersList" class="dpro-list"></div>
           </div>
           <div class="card dpro-panel">
-            <div class="section-title"><h2>Best sellers</h2></div>
-            <div id="dashBestSellers" class="dpro-list dpro-sellers"></div>
-          </div>
-          <div class="card dpro-panel">
-            <div class="section-title"><h2>Expense summary</h2></div>
-            <div class="chart-wrap dpro-chart-md"><canvas id="expenseBreakdownChart"></canvas></div>
-          </div>
-          <div class="card dpro-panel">
             <div class="section-title">
               <h2>Staff snapshot</h2>
               <button type="button" class="btn-ghost" onclick="showSection('staff')">Open</button>
@@ -1990,7 +1976,14 @@
           </div>
         </section>
 
-        <!-- Keep canvases for resize-safe legacy refs (hidden) -->
+        <!-- Legacy chart hooks (hidden) -->
+        <canvas id="kgLiveHourlyChart" hidden width="1" height="1"></canvas>
+        <canvas id="onlinePayoutTrendChart" hidden width="1" height="1"></canvas>
+        <span id="onlinePayoutChartNote" class="sr-only" hidden></span>
+        <canvas id="paymentMixChart" hidden width="1" height="1"></canvas>
+        <span id="paymentMixNote" class="sr-only" hidden></span>
+        <canvas id="cashOnlineMonthlyChart" hidden width="1" height="1"></canvas>
+        <span id="cashOnlineMonthlyNote" class="sr-only" hidden></span>
         <canvas id="salesOverviewChart" hidden width="1" height="1"></canvas>
         <div id="upcomingPaymentsList" class="sr-only" hidden></div>
       </div>
@@ -2480,6 +2473,136 @@
         </div>
       </div>
 
+      <div id="investments-section" class="dashboard-section">
+        <div class="card">
+          <div class="section-title">
+            <h2>Investments &amp; Take Profit</h2>
+          </div>
+          <p class="muted" style="margin:0 0 14px;">Track how much you put into The Kilogram and how much profit you take out. This stays off the dashboard.</p>
+          <div class="grid-3" style="margin-bottom:14px;">
+            <div class="kpi-card span-12 positive" style="margin:0;">
+              <div class="kpi-meta"><div class="kpi-label">Total invested</div><div class="kpi-value" id="invTotalInvested">₹0</div></div>
+            </div>
+            <div class="kpi-card span-12" style="margin:0;">
+              <div class="kpi-meta"><div class="kpi-label">Total take profit</div><div class="kpi-value" id="invTotalTaken">₹0</div></div>
+            </div>
+            <div class="kpi-card span-12 positive" style="margin:0;">
+              <div class="kpi-meta"><div class="kpi-label">Net capital (invested − taken)</div><div class="kpi-value" id="invNetCapital">₹0</div></div>
+            </div>
+          </div>
+          <div class="grid-2" style="margin-bottom:14px;">
+            <div class="kpi-card span-12" style="margin:0;">
+              <div class="kpi-meta"><div class="kpi-label">Available Cash</div><div class="kpi-value" id="invAvailCash">₹0</div></div>
+            </div>
+            <div class="kpi-card span-12" style="margin:0;">
+              <div class="kpi-meta"><div class="kpi-label">Available Online</div><div class="kpi-value" id="invAvailOnline">₹0</div></div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card" style="margin-top:14px;">
+          <div class="section-title"><h2>Add investment</h2></div>
+          <p class="muted" style="margin:0 0 10px;">Capital you add into the shop, or new shop items you buy (counted as investment).</p>
+          <div class="grid-5">
+            <input id="invDate" type="date" aria-label="Investment date" />
+            <select id="invKind" aria-label="Investment type">
+              <option value="capital_in">Capital added to shop</option>
+              <option value="shop_purchase">Shop purchase / new item</option>
+            </select>
+            <select id="invAccount" aria-label="Account">
+              <option value="cash">Cash</option>
+              <option value="online">Online</option>
+              <option value="personal">Personal (no balance change)</option>
+            </select>
+            <input id="invAmount" type="number" min="0" step="1" placeholder="Amount ₹" />
+            <input id="invTitle" placeholder="Item / description" />
+          </div>
+          <input id="invNotes" placeholder="Notes (optional)" style="margin-top:10px;width:100%;" />
+          <button type="button" id="invAddBtn" style="margin-top:12px;">Save investment</button>
+          <div id="invList" class="table-like" style="margin-top:16px;"></div>
+        </div>
+
+        <div class="card" style="margin-top:14px;">
+          <div class="section-title"><h2>Take profit</h2></div>
+          <p class="muted" style="margin:0 0 10px;">Withdraw earnings from Cash or Online — amount is deducted from that account.</p>
+          <div class="grid-4">
+            <input id="invWdDate" type="date" aria-label="Withdrawal date" />
+            <select id="invWdAccount" aria-label="From account">
+              <option value="cash">From Cash</option>
+              <option value="online">From Online</option>
+            </select>
+            <input id="invWdAmount" type="number" min="0" step="1" placeholder="Amount ₹" />
+            <input id="invWdNotes" placeholder="Notes (optional)" />
+          </div>
+          <button type="button" id="invWdAddBtn" style="margin-top:12px;">Take profit</button>
+          <div id="invWdList" class="table-like" style="margin-top:16px;"></div>
+        </div>
+      </div>
+
+      <div id="kds-section" class="dashboard-section">
+        <div class="card">
+          <div class="section-title">
+            <h2>Kitchen Display (KDS)</h2>
+            <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <button type="button" class="secondary" id="kdsMgrLangBtn">English</button>
+              <button type="button" class="secondary" id="kdsOpenTablet">Open tablet KDS</button>
+            </div>
+          </div>
+          <p class="muted" style="margin:0 0 12px;">Live kitchen orders. Tablet runs <code>kds.html</code> full-screen; this page is the phone-friendly manager view.</p>
+          <div id="kdsMgrBoard"></div>
+        </div>
+
+        <div class="card" style="margin-top:14px;" data-kds-manage>
+          <div class="section-title"><h2>New Order (manual)</h2></div>
+          <p class="muted" style="margin:0 0 10px;">Use when POS is offline or not integrated yet.</p>
+          <div class="grid-4">
+            <input id="kdsNewOrderId" placeholder="Order ID (optional)" />
+            <input id="kdsNewTable" placeholder="Table no." />
+            <select id="kdsNewType" aria-label="Order type">
+              <option value="Takeaway">Takeaway</option>
+              <option value="Dine-in">Dine-in</option>
+              <option value="Delivery">Delivery</option>
+            </select>
+            <input id="kdsNewWaiter" placeholder="Waiter / cashier" />
+          </div>
+          <div class="grid-4" style="margin-top:10px;">
+            <select id="kdsNewItemPick" aria-label="Menu item"></select>
+            <input id="kdsNewQty" type="number" min="1" value="1" placeholder="Qty" />
+            <input id="kdsNewVariant" placeholder="Variant (1/2 Kg…)" />
+            <input id="kdsNewItemNote" placeholder="Item note" />
+          </div>
+          <input id="kdsNewNote" placeholder="Order note (कम तीखा, जल्दी…)" style="margin-top:10px;width:100%;" />
+          <button type="button" id="kdsNewOrderBtn" style="margin-top:12px;">Send to kitchen</button>
+        </div>
+
+        <div class="card" style="margin-top:14px;" data-kds-manage>
+          <div class="section-title"><h2>KDS menu master</h2></div>
+          <p class="muted" style="margin:0 0 10px;">English + Hindi names for kitchen cards.</p>
+          <div class="grid-3">
+            <input id="kdsMenuEn" placeholder="Name (English)" />
+            <input id="kdsMenuHi" placeholder="नाम (हिंदी)" />
+            <input id="kdsMenuCat" placeholder="Category" />
+          </div>
+          <button type="button" id="kdsMenuSaveBtn" style="margin-top:12px;">Save item</button>
+          <div id="kdsMenuList" class="table-like" style="margin-top:14px;"></div>
+        </div>
+
+        <div class="card" style="margin-top:14px;">
+          <div class="section-title"><h2>Reports</h2></div>
+          <div id="kdsMgrReports"></div>
+        </div>
+
+        <div class="card" style="margin-top:14px;" data-kds-manage>
+          <div class="section-title"><h2>POS API settings</h2></div>
+          <p class="muted" style="margin:0 0 10px;">API key for external POS. Leave blank to push KDS orders via Firestore from this app.</p>
+          <div class="grid-2">
+            <input id="kdsApiUrl" placeholder="https://your-api.example.com/api/kds" />
+            <input id="kdsApiKey" type="password" placeholder="API key" autocomplete="off" />
+          </div>
+          <button type="button" id="kdsApiSaveBtn" style="margin-top:12px;">Save API settings</button>
+        </div>
+      </div>
+
       <div id="daily-closing-section" class="dashboard-section" hidden aria-hidden="true">
         <div class="card">
           <div class="section-title">
@@ -2610,7 +2733,7 @@
               </div>
             </div>
           </div>
-          <p class="muted" id="salMonthEndHint" style="margin-top:8px;font-size:12px;">Full monthly salaries minus advances and unpaid leave — this is the cash you still need to pay this month.</p>
+          <p class="muted" id="salMonthEndHint" style="margin-top:8px;font-size:12px;">Payable = (present days × daily rate) − advances. Daily rate = monthly ÷ 30. Unmarked days are not paid yet.</p>
 
           <div class="section-title" style="margin-top:14px;"><h2>Add Staff Advance / Pay Full Salary</h2></div>
           <div class="grid-5" style="margin-top: 10px;">
@@ -2630,7 +2753,7 @@
             <input id="advAmount" type="number" placeholder="Advance amount" />
             <button type="button" class="secondary" id="advSubmitBtn" onclick="addAdvance()">Add Staff Advance</button>
           </div>
-          <p class="muted" style="margin-top:8px;font-size:12px;">Full Salary pays remaining (monthly − advances − leave) and closes the month. Excess advance auto-carries to next month until closed.</p>
+          <p class="muted" style="margin-top:8px;font-size:12px;">Pay salary pays remaining attendance-based earned − advances and closes the month. Excess advance auto-carries to next month until closed.</p>
           <div class="section-title" style="margin-top:14px;">
             <h2>Advances History</h2>
             <div style="display:flex;gap:10px;align-items:center;justify-content:flex-end;flex-wrap:wrap;">
@@ -2845,6 +2968,65 @@
       </div>
       <!-- ===== END PROFIT ANALYSIS ===== -->
 
+      <div id="scheduled-section" class="dashboard-section">
+        <div class="so-top">
+          <div>
+            <h2>Scheduled &amp; bulk orders</h2>
+            <p class="muted" style="margin:4px 0 0;font-size:13px;">Future bookings · advances in today's cash/online · full sale only on fulfillment</p>
+          </div>
+          <div class="so-top-actions">
+            <button type="button" class="btn" id="soNewBtn">+ Book order</button>
+            <button type="button" class="btn btn-secondary" id="soRefreshBtn">Refresh</button>
+            <button type="button" class="btn btn-secondary" id="soNotifyBtn">Enable alerts</button>
+            <button type="button" class="btn btn-secondary" id="soSettingsBtn">Reminder settings</button>
+          </div>
+        </div>
+        <div class="so-summary" id="soSummary"></div>
+        <div class="so-filters">
+          <input class="input" id="soSearch" placeholder="Search name, phone, order #" />
+          <select class="input" id="soFilterRange">
+            <option value="upcoming7">Next 7 days</option>
+            <option value="today">Today</option>
+            <option value="tomorrow">Tomorrow</option>
+            <option value="all">All</option>
+            <option value="custom">Custom range</option>
+          </select>
+          <div id="soCustomRange">
+            <input class="input" id="soFrom" type="date" />
+            <input class="input" id="soTo" type="date" />
+          </div>
+          <select class="input" id="soFilterFul">
+            <option value="all">Pickup + Delivery</option>
+            <option value="pickup">Pickup</option>
+            <option value="delivery">Delivery</option>
+          </select>
+          <select class="input" id="soFilterPay">
+            <option value="all">Any payment</option>
+            <option value="unpaid">Unpaid</option>
+            <option value="partial">Partially paid</option>
+            <option value="paid">Fully paid</option>
+            <option value="refund_pending">Refund pending</option>
+          </select>
+          <select class="input" id="soFilterStatus">
+            <option value="all">Any status</option>
+            <option value="confirmed">Confirmed</option>
+            <option value="prep_pending">Prep pending</option>
+            <option value="preparing">Preparing</option>
+            <option value="ready">Ready</option>
+            <option value="out_for_delivery">Out for delivery</option>
+            <option value="completed">Completed</option>
+            <option value="cancelled">Cancelled</option>
+          </select>
+        </div>
+        <div class="so-layout">
+          <div class="so-list" id="soList"></div>
+          <div class="so-detail" id="soDetail"><div class="muted">Select an order</div></div>
+        </div>
+        <div class="so-cal-wrap">
+          <div id="soCalendar"></div>
+        </div>
+      </div>
+
       <div id="backup-section" class="dashboard-section">
         <div class="card">
           <div class="section-title"><h2>Backup</h2></div>
@@ -3056,70 +3238,105 @@
 
       <div id="pos-section" class="dashboard-section">
         <div id="kgPosRoot" class="kg-pos-root">
-          <div class="kg-pos-top">
-            <div class="kg-pos-ordertypes" role="tablist" aria-label="Order type">
-              <button type="button" data-order-type="dinein">Dine-In</button>
-              <button type="button" data-order-type="takeaway" class="active">Takeaway</button>
-              <button type="button" data-order-type="delivery">Delivery</button>
-              <button type="button" data-order-type="swiggy">Swiggy</button>
-              <button type="button" data-order-type="zomato">Zomato</button>
+          <div class="kg-pos-top kg-pos-top-compact">
+            <button type="button" class="kg-pos-menu-btn" onclick="toggleAppSidebar()" aria-label="Open menu" title="Menu">☰</button>
+            <div class="kg-pos-ordertypes" aria-label="Order type">
+              <button type="button" class="kg-pos-channel active" data-channel="takeaway">Takeaway</button>
+              <button type="button" class="kg-pos-channel" data-channel="swiggy">Swiggy</button>
+              <button type="button" class="kg-pos-channel" data-channel="zomato">Zomato</button>
             </div>
             <div class="kg-pos-meta">
-              <span id="kgPosClock">—</span>
-              <span>Cashier: <b id="kgPosCashier">—</b></span>
-              <span>Ticket: <b id="kgPosBillPreview">—</b></span>
-              <span class="kg-pos-sync ok" id="kgPosSync">Synced</span>
-              <input id="kgPosCustomerName" class="kg-pos-cust" placeholder="Customer name" autocomplete="name" />
-              <input id="kgPosCustomerPhone" class="kg-pos-cust" placeholder="Phone" inputmode="tel" autocomplete="tel" />
-              <button type="button" data-pos-action="void">Void last bill</button>
-              <button type="button" data-pos-action="settings">Printer / Settings</button>
-              <button type="button" onclick="toggleSidebar()"><span id="posSidebarBtnText">Sidebar</span></button>
-              <button type="button" onclick="posShowHistory()">History</button>
+              <span id="kgPosClock" class="kg-pos-clock">—</span>
+              <span class="kg-pos-meta-quiet">· <b id="kgPosCashier">—</b></span>
+              <span class="kg-pos-sync ok" id="kgPosSync" style="display:none;" aria-hidden="true"></span>
+              <input id="kgPosPlatformNo" class="kg-pos-cust" placeholder="Platform #" style="display:none;" />
+              <input id="kgPosCustomerName" class="kg-pos-cust" placeholder="Name" autocomplete="name" />
+              <input id="kgPosCustomerPhone" class="kg-pos-cust kg-pos-cust-phone" placeholder="Phone" inputmode="tel" autocomplete="tel" />
+              <details class="kg-pos-more">
+                <summary>More</summary>
+                <div class="kg-pos-more-panel">
+                  <span class="kg-pos-meta-quiet">Ticket <b id="kgPosBillPreview">—</b></span>
+                  <button type="button" data-pos-action="void">Void last</button>
+                  <button type="button" data-pos-action="settings">Printer</button>
+                  <button type="button" onclick="toggleSidebar()"><span id="posSidebarBtnText">Sidebar</span></button>
+                  <button type="button" onclick="posShowHistory()">History</button>
+                </div>
+              </details>
+            </div>
+          </div>
+          <div id="kgPosAggHint" class="kg-pos-agg-hint" style="display:none;">Swiggy/Zomato → kitchen with tag + # · ₹0 in POS sales</div>
+          <div id="kgPosKdsLive" class="kg-kds-live kg-kds-live-strip" aria-live="polite">
+            <div class="kg-kds-live-head">
+              <button type="button" class="kg-kds-live-bar kg-kds-live-toggle" id="kgPosKdsToggle" aria-expanded="true" title="Show / hide live orders">
+                <span class="kg-live-dot" aria-hidden="true"></span>
+                <span class="kg-kds-live-title">LIVE</span>
+                <span class="kg-kds-chevron" aria-hidden="true">▸</span>
+              </button>
+              <div class="kg-kds-stats" aria-label="Live order counts">
+                <div class="kg-kds-stat wait" title="Waiting"><span class="kg-kds-stat-n" id="kgPosKdsWaitN" data-n="0">0</span><span class="kg-kds-stat-l">Wait</span></div>
+                <div class="kg-kds-stat prep" title="Preparing"><span class="kg-kds-stat-n" id="kgPosKdsPrepN" data-n="0">0</span><span class="kg-kds-stat-l">Prep</span></div>
+                <div class="kg-kds-stat ready" title="Ready"><span class="kg-kds-stat-n" id="kgPosKdsReadyN" data-n="0">0</span><span class="kg-kds-stat-l">Ready</span></div>
+                <div class="kg-kds-stat run" title="Running"><span class="kg-kds-stat-n" id="kgPosKdsRunningN">0</span><span class="kg-kds-stat-l">All</span></div>
+                <div class="kg-kds-stat unpaid" title="Pay later pending"><span class="kg-kds-stat-n" id="kgPosKdsUnpaidN" data-n="0">0</span><span class="kg-kds-stat-l">Due</span></div>
+              </div>
+            </div>
+            <div id="kgPosKdsPending" class="kg-kds-pending" style="display:none;" aria-label="Pending payment orders"></div>
+            <div id="kgPosKdsList" class="kg-kds-list kg-kds-list-scroll">
+              <div class="kg-kds-empty">No live kitchen orders</div>
             </div>
           </div>
           <div class="kg-pos-tables" id="kgPosTables" style="display:none;"></div>
           <div id="kgPosHeld" class="kg-pos-held" style="display:none;"></div>
-          <div class="kg-pos-body">
-            <aside class="kg-pos-cats" id="kgPosCats" aria-label="Categories"></aside>
+          <div class="kg-pos-body kg-pos-body-v2">
             <section class="kg-pos-center">
-              <input id="kgPosSearch" class="kg-pos-search" placeholder="Search menu (F2)…" autocomplete="off" />
+              <div class="kg-pos-center-toolbar">
+                <div class="kg-pos-cats kg-pos-cats-pills" id="kgPosCats" aria-label="Categories"></div>
+                <input id="kgPosSearch" class="kg-pos-search" placeholder="Search menu…" autocomplete="off" />
+              </div>
               <div id="kgPosMenuGrid" class="kg-pos-menu-grid"></div>
-              <!-- legacy ids kept for old hooks -->
               <div id="posMenuGrid" hidden></div>
               <div id="posCategoryChips" hidden></div>
               <input id="posSearch" hidden />
             </section>
             <aside class="kg-pos-cart">
-              <div style="display:flex;justify-content:space-between;align-items:center;">
+              <div class="kg-pos-cart-head">
                 <div>
-                  <div style="font-weight:900;font-size:18px;">Current bill</div>
-                  <div class="muted" id="kgPosCartCount">0 items</div>
-                  <div class="pos-small" id="posCartCount" hidden>0 items</div>
+                  <div class="kg-pos-cart-title">Current order</div>
+                  <div class="kg-pos-cart-sub" id="kgPosCartChannelLabel">Takeaway</div>
                 </div>
-                <button type="button" data-pos-action="clear">Reset</button>
+                <div class="muted" id="kgPosCartCount">0 items</div>
+                <div class="pos-small" id="posCartCount" hidden>0 items</div>
               </div>
               <div id="kgPosCartList" class="kg-pos-cart-list"></div>
               <div id="posCartList" hidden></div>
-              <div class="kg-pos-totals">
-                <div><span>Subtotal</span><b id="kgPosSubtotal">₹0</b></div>
-                <div><span>Discount</span><b id="kgPosDiscount">₹0</b></div>
-                <div><span>Charges</span><b id="kgPosCharges">₹0</b></div>
-                <div><span>GST</span><b id="kgPosGst">₹0</b></div>
-                <div class="kg-pos-grand"><span>Total</span><b id="kgPosGrand">₹0</b></div>
-                <span id="posSubtotal" hidden></span><span id="posTotal" hidden></span>
+              <div class="kg-pos-cart-foot">
+                <div class="kg-pos-cart-tools">
+                  <button type="button" class="kg-pos-add-note" data-pos-action="custom">+ Custom item</button>
+                </div>
+                <div class="kg-pos-totals kg-pos-totals-simple">
+                  <div class="kg-pos-disc-hint" id="kgPosDiscHint" hidden></div>
+                  <div class="kg-pos-grand"><span>Total</span><b id="kgPosGrand">₹0</b></div>
+                  <span id="kgPosSubtotal" hidden></span>
+                  <span id="kgPosDiscount" hidden></span>
+                  <span id="kgPosCharges" hidden></span>
+                  <span id="kgPosGst" hidden></span>
+                  <span id="posSubtotal" hidden></span><span id="posTotal" hidden></span>
+                </div>
+                <button type="button" class="kg-pos-place" data-pos-action="settle">Place order</button>
+                <button type="button" class="kg-pos-wa-btn" data-pos-action="whatsapp" title="Share last bill on WhatsApp">WhatsApp bill</button>
+                <div class="kg-pos-actions kg-pos-actions-stack">
+                  <div class="kg-pos-actions-row">
+                    <button type="button" data-pos-action="hold">Hold</button>
+                    <button type="button" id="kgPosBookScheduled" onclick="openScheduledBooking()" title="Book advance / party / bulk order">Book advance order</button>
+                    <button type="button" data-pos-action="clear">Clear</button>
+                    <button type="button" data-pos-action="discount">Discount</button>
+                  </div>
+                  <div class="kg-pos-actions-row kg-pos-actions-row-kot">
+                    <button type="button" data-pos-action="kot">KOT</button>
+                    <button type="button" data-pos-action="reprint">Reprint</button>
+                  </div>
+                </div>
               </div>
-              <div class="kg-pos-actions">
-                <button type="button" data-pos-action="hold">Hold</button>
-                <button type="button" data-pos-action="discount">Discount</button>
-                <button type="button" data-pos-action="charges">Charges</button>
-                <button type="button" data-pos-action="kot">KOT (F4)</button>
-                <button type="button" data-pos-action="kotprint">KOT &amp; Print</button>
-                <button type="button" data-pos-action="bill">Bill (F6)</button>
-                <button type="button" data-pos-action="reprint-kot">Reprint KOT</button>
-                <button type="button" data-pos-action="reprint-bill">Reprint Bill</button>
-                <button type="button" class="primary" data-pos-action="settleprint">Settle &amp; Print (F8)</button>
-              </div>
-              <!-- legacy hooks -->
               <div id="posTicketsBar" hidden><div id="posTicketsRow"></div><span id="posTicketsCount">0</span></div>
               <span id="posTodaySalesMeta" hidden></span><span id="posTodaySalesTotal" hidden></span>
               <span id="posTodaySalesCash" hidden></span><span id="posTodaySalesOnline" hidden></span>
@@ -3134,6 +3351,20 @@
       </div>
 
 
+  <div id="soWizardOverlay" hidden>
+    <div class="so-wizard" role="dialog" aria-modal="true" aria-labelledby="soWizardTitle">
+      <div class="so-wizard-head">
+        <h3 id="soWizardTitle">Book advance order</h3>
+        <button type="button" class="btn-ghost" id="soWizardClose" aria-label="Close">✕</button>
+      </div>
+      <div class="so-wizard-body" id="soWizardBody"></div>
+      <div class="so-wizard-foot">
+        <button type="button" class="btn btn-secondary" id="soWizardBack">Back</button>
+        <button type="button" class="btn" id="soWizardNext">Next</button>
+      </div>
+    </div>
+  </div>
+
   <div id="kgPosSettleOverlay" class="kg-pos-overlay" style="display:none;">
     <div class="kg-pos-modal" role="dialog" aria-modal="true" aria-label="Settle payment">
       <h3>Settle · <span id="kgPosSettleTotal">₹0</span></h3>
@@ -3141,11 +3372,12 @@
         <select id="kgPosSettleMode">
           <option value="cash">Cash</option>
           <option value="online">Online (UPI/Card)</option>
-          <option value="swiggy">Swiggy</option>
-          <option value="zomato">Zomato</option>
-          <option value="split">Split</option>
+          <option value="paylater">Pay later (when ready)</option>
         </select>
       </label>
+      <p id="kgPosPayLaterHint" class="muted" style="display:none;margin:6px 0 0;font-size:13px;">
+        Sends to kitchen now · collect Cash/Online from LIVE orders when ready
+      </p>
       <div id="kgPosSettleCashBox">
         <label>Amount received <input id="kgPosReceived" type="number" min="0" step="1" /></label>
         <div class="kg-pos-quick">
@@ -3162,9 +3394,13 @@
         <input id="kgPosPaySwiggy" type="number" placeholder="Swiggy" />
         <input id="kgPosPayZomato" type="number" placeholder="Zomato" />
       </div>
+      <label id="kgPosWaShareRow" class="kg-pos-wa-share-row" style="display:none;margin-top:10px;">
+        <input type="checkbox" id="kgPosWaShare" checked />
+        Share bill on WhatsApp (opens chat — you tap Send)
+      </label>
       <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
-        <button type="button" class="btn" id="kgPosSettleConfirm">Settle</button>
-        <button type="button" class="btn" id="kgPosSettlePrint">Settle &amp; Print</button>
+        <button type="button" class="btn" id="kgPosSettleConfirm">Settle → Kitchen</button>
+        <button type="button" class="btn btn-secondary" id="kgPosSettlePrint" title="Only prints if USB/Serial/Bluetooth printer is connected">Settle + Print (if printer)</button>
         <button type="button" class="btn btn-secondary" id="kgPosSettleCancel">Cancel</button>
       </div>
     </div>
@@ -3212,12 +3448,15 @@
         </select>
       </label>
       <hr/>
-      <label><input type="checkbox" id="kgPosGstOn" checked /> GST enabled</label>
-      <label>GST % <input id="kgPosGstPct" type="number" value="5" min="0" step="0.5" /></label>
-      <label>Address <input id="kgPosAddress" /></label>
-      <label>GSTIN <input id="kgPosGstin" /></label>
-      <label>Phone <input id="kgPosPhone" /></label>
+      <label class="kg-pos-gst-settings" hidden><input type="checkbox" id="kgPosGstOn" /> GST enabled</label>
+      <label class="kg-pos-gst-settings" hidden>GST % <input id="kgPosGstPct" type="number" value="0" min="0" step="0.5" /></label>
+      <label>Shop name <input id="kgPosShopName" placeholder="The Kilogram" /></label>
+      <label>Address <input id="kgPosAddress" placeholder="Full shop address for WhatsApp bill" /></label>
+      <label class="kg-pos-gst-settings" hidden>GSTIN <input id="kgPosGstin" /></label>
+      <label>Shop phone <input id="kgPosPhone" placeholder="Shown on WhatsApp bill" /></label>
       <label>UPI ID <input id="kgPosUpi" /></label>
+      <label>Google ratings / review link <input id="kgPosRatingsUrl" placeholder="https://g.page/r/… or maps review URL" /></label>
+      <label><input type="checkbox" id="kgPosWaDefault" checked /> Auto-offer WhatsApp share after takeaway settle</label>
       <div style="display:flex;gap:8px;margin-top:12px;">
         <button type="button" id="kgPosSaveSettings">Save</button>
         <button type="button" id="kgPosSettingsClose">Close</button>
@@ -3234,6 +3473,19 @@
       <div style="display:flex;gap:8px;margin-top:12px;">
         <button type="button" id="kgPosInputOk">OK</button>
         <button type="button" id="kgPosInputCancel">Cancel</button>
+      </div>
+    </div>
+  </div>
+
+  <div id="kgPosCustomOverlay" class="kg-pos-overlay" style="display:none;">
+    <div class="kg-pos-modal" role="dialog" aria-modal="true" aria-label="Custom item">
+      <h3 style="margin:0 0 8px;">Custom item / variety</h3>
+      <p class="muted" style="margin:0 0 10px;">Type any name and price — adds to this bill only</p>
+      <label>Name <input id="kgPosCustomName" placeholder="e.g. Extra gravy / Special thali" autocomplete="off" /></label>
+      <label style="margin-top:8px;display:block;">Price ₹ <input id="kgPosCustomPrice" type="number" min="0" step="1" placeholder="0" /></label>
+      <div style="display:flex;gap:8px;margin-top:12px;flex-wrap:wrap;">
+        <button type="button" class="btn" id="kgPosCustomAdd">Add to bill</button>
+        <button type="button" class="btn btn-secondary" id="kgPosCustomCancel">Cancel</button>
       </div>
     </div>
   </div>
@@ -3306,48 +3558,79 @@
     </div>
   </div>
 
-  <div id="orderHistoryOverlay" class="modalOverlay" role="dialog" aria-modal="true" aria-label="Order history">
-    <div class="modal">
-      <div class="modalHeader">
+  <div id="orderHistoryOverlay" class="modalOverlay kg-history-overlay" role="dialog" aria-modal="true" aria-label="Order history">
+    <div class="modal kg-history-modal">
+      <div class="modalHeader kg-history-head">
         <div class="modalTitle">Order history</div>
         <button class="btn btn-secondary" type="button" onclick="posCloseHistory()">Close</button>
       </div>
-      <div class="modalBody" id="orderHistoryBody"></div>
+      <div class="modalBody kg-history-body" id="orderHistoryBody"></div>
+    </div>
+  </div>
+
+  <div id="kgPosLiveOrderOverlay" class="kg-pos-overlay" style="display:none;" role="dialog" aria-modal="true" aria-label="Live order">
+    <div class="kg-pos-modal" style="width:min(420px,94vw);">
+      <h3 id="kgPosLiveOrderTitle" style="margin:0 0 8px;">Order</h3>
+      <div id="kgPosLiveOrderBody"></div>
+    </div>
+  </div>
+
+  <div id="kgPosPickupOverlay" class="kg-pos-overlay kg-pos-pickup-overlay" style="display:none;" role="dialog" aria-modal="true" aria-label="Delivery pickup">
+    <div class="kg-pos-modal kg-pos-pickup-modal">
+      <div class="kg-pos-pickup-brand" id="kgPosPickupBrand">Zomato</div>
+      <div class="kg-pos-pickup-label">Delivery boy pickup</div>
+      <div class="kg-pos-pickup-no" id="kgPosPickupNo">#—</div>
+      <div class="kg-pos-pickup-sub" id="kgPosPickupSub">Order ready — hand over when driver arrives</div>
+      <div class="kg-pos-pickup-actions">
+        <button type="button" class="btn" id="kgPosPickupClear">Clear highlight</button>
+        <button type="button" class="btn btn-secondary" id="kgPosPickupKeep">Keep highlighted</button>
+      </div>
     </div>
   </div>
 
   <!-- Firebase SDKs -->
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-app-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-auth-compat.js"></script>
-    <script src="https://www.gstatic.com/firebasejs/10.8.0/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
     <script src="https://unpkg.com/lucide@latest/dist/umd/lucide.min.js"></script>
     <script src="js/theme.js?v=20260710g"></script>
     <script src="js/config.js"></script>
-    <script src="js/balanceMath.js"></script>
+    <script src="js/balanceMath.js?v=20261120live"></script>
+    <script src="js/investments.js?v=20261116a"></script>
+    <script src="js/kds/kdsStore.js?v=20261119fast1"></script>
+    <script src="js/kds/kdsClient.js?v=20261119fast1"></script>
+    <script src="js/kds/manager.js?v=20261117d"></script>
     <script src="js/firebase.js?v=20260820bt1"></script>
-    <script src="js/auth.js?v=20260811docs1"></script>
-    <script src="js/api.js?v=20260827m1"></script>
+    <script src="js/auth.js?v=20261120live"></script>
+    <script src="js/api.js?v=20261120live1"></script>
     <script src="js/opsPhase2.js?v=20260810p2"></script>
-    <script src="constants/kilogramMenuSeed.js"></script>
+    <script src="constants/kilogramMenuSeed.js?v=20261119fast1"></script>
     <script src="js/thermalPrinter.js"></script>
     <script src="js/pos/money.js?v=20261116b"></script>
     <script src="js/pos/offlineQueue.js?v=20261116b"></script>
     <script src="js/pos/upiQr.js?v=20261116b"></script>
-    <script src="js/pos/posState.js?v=20261116b"></script>
-    <script src="js/pos/posMenu.js?v=20261116b"></script>
-    <script src="js/pos/salesBridge.js?v=20261116b"></script>
-    <script src="js/pos/posCheckout.js?v=20261116b"></script>
+    <script src="js/pos/posState.js?v=20261119fast1"></script>
+    <script src="js/pos/posMenu.js?v=20261119cat2"></script>
+    <script src="js/pos/posFavourites.js?v=20261119fast1"></script>
+    <script src="js/pos/salesBridge.js?v=20261120live"></script>
+    <script src="js/pos/posCheckout.js?v=20261119fast1"></script>
+    <script src="js/pos/whatsappBill.js?v=20261119fast1"></script>
+    <script src="js/pos/posKdsLive.js?v=20261120live"></script>
     <script src="js/printing/escpos.js?v=20261116"></script>
     <script src="js/printing/rasterText.js?v=20261116"></script>
     <script src="js/printing/transports/webSerial.js?v=20261116"></script>
     <script src="js/printing/transports/webUsb.js?v=20261116"></script>
     <script src="js/printing/transports/browserPrint.js?v=20261116"></script>
     <script src="js/printing/transports/bluetooth.js?v=20261116"></script>
-    <script src="js/printing/printerManager.js?v=20261116b"></script>
-    <script src="js/pos/posUI.js?v=20261116b"></script>
-    <script src="js/finance/netMargin.js?v=20261116"></script>
-    <script src="js/dashboard/liveSales.js?v=20261116b"></script>
-    <script src="js/app.js?v=20260902sal30"></script>
+    <script src="js/printing/printerManager.js?v=20261117fix1"></script>
+    <script src="js/pos/posUI.js?v=20261119cat1"></script>
+    <script src="js/finance/netMargin.js?v=20261120layout1"></script>
+    <script src="js/dashboard/liveSales.js?v=20261120live"></script>
+    <script src="js/scheduled/scheduledStore.js?v=20261120live"></script>
+    <script src="js/scheduled/scheduledReminders.js?v=20261120live"></script>
+    <script src="js/scheduled/scheduledPosBridge.js?v=20261120live"></script>
+    <script src="js/scheduled/scheduledUI.js?v=20261120live"></script>
+    <script src="js/app.js?v=20261120live"></script>
     <script>
       if (window.lucide && typeof lucide.createIcons === "function") lucide.createIcons();
     </script>

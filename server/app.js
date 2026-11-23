@@ -15,6 +15,7 @@ const backupRoutes = require("./routes/backupRoutes");
 const supplierPaymentsRoutes = require("./routes/supplierPaymentsRoutes");
 const menuItemsRoutes = require("./routes/menuItemsRoutes");
 const ordersRoutes = require("./routes/ordersRoutes");
+const kdsRoutes = require("./routes/kdsRoutes");
 const { isFirebaseEnabled, getFirestore } = require("./config/firebaseAdmin");
 
 const app = express();
@@ -72,6 +73,7 @@ app.use("/api/suppliers", suppliersRoutes);
 app.use("/api/supplier-payments", supplierPaymentsRoutes);
 app.use("/api/menu-items", menuItemsRoutes);
 app.use("/api/orders", ordersRoutes);
+app.use("/api/kds", kdsRoutes);
 app.use("/api/staff", staffRoutes);
 app.use("/api/analytics", analyticsRoutes);
 app.use("/api/backup", backupRoutes);

@@ -336,22 +336,12 @@
         ? "—"
         : result.netMarginPct.toFixed(1) + "%";
     const tone = result.netProfit >= 0 ? "positive" : "negative";
-    el.className = "kg-margin-box " + tone;
+    el.className = "card dpro-panel kg-margin-box " + tone;
     el.innerHTML = `
-      <div class="kg-margin-label">Net Margin <span class="muted">${esc(
-        result._label || "1st → today"
-      )}</span></div>
+      <div class="kg-margin-label">Net Margin</div>
       <div class="kg-margin-pct">${pct}</div>
       <div class="kg-margin-profit">${fmt(result.netProfit)}</div>
-      <div class="kg-margin-sub">Revenue ${fmt(result.netRevenue)} · Cost ${fmt(
-      result.cogs + result.operatingExpenses
-    )}</div>
       <canvas id="kgMarginSpark" width="160" height="36" aria-hidden="true"></canvas>
-      ${
-        result.warnings?.length
-          ? `<div class="kg-margin-warn">${result.warnings.map(esc).join(" · ")}</div>`
-          : ""
-      }
       <button type="button" class="kg-margin-open" id="kgMarginOpenBtn">Breakdown</button>`;
     drawSpark(
       document.getElementById("kgMarginSpark"),

@@ -11,12 +11,20 @@ export type SaleDoc = {
 export type ExpenseCategory = "rent" | "utilities" | "supplies" | "misc" | "salary" | "other";
 
 export type ExpenseDoc = {
-  userId: string;
+  userId?: string;
   date: string; // YYYY-MM-DD
-  category: ExpenseCategory;
+  category: string;
   amount: number;
-  paidFrom: PaymentMethod;
+  /** React dashboard field */
+  paidFrom?: PaymentMethod;
+  /** Vanilla-compatible fields */
+  status?: "paid" | "unpaid";
+  paymentMethod?: "cash" | "online" | "unpaid" | "bank" | "upi" | "card";
+  paymentStatus?: string;
+  paidAmount?: number;
   note?: string;
+  isDeleted?: boolean;
+  archived?: boolean;
   createdAt?: unknown;
 };
 
@@ -76,4 +84,7 @@ export type ReminderDoc = {
   enabled: boolean;
   createdAt?: unknown;
 };
+
+/** POS types live under features/pos — re-export for convenience */
+export type { MenuItemDoc, OrderDoc, CustomerDoc, TableDoc } from "@/features/pos/types";
 

@@ -2,37 +2,45 @@ import type { ReactNode } from "react";
 import { Card } from "@/components/ui/Card";
 import { clsx } from "clsx";
 
+const TONE = {
+  neutral: {
+    icon: "bg-[#F3F0FF] text-[#6D5EF7]",
+    ring: "stroke-[#6D5EF7]"
+  },
+  good: {
+    icon: "bg-[#ECFDF5] text-[#16A34A]",
+    ring: "stroke-[#22C55E]"
+  },
+  bad: {
+    icon: "bg-[#FEF2F2] text-[#EF4444]",
+    ring: "stroke-[#EF4444]"
+  }
+} as const;
+
 export function KpiCard(props: {
   title: string;
   value: string;
   icon?: ReactNode;
   hint?: string;
   tone?: "neutral" | "good" | "bad";
+  trend?: string;
 }) {
-  const tone = props.tone ?? "neutral";
+  const tone = TONE[props.tone ?? "neutral"];
   return (
-    <Card className="relative overflow-hidden">
-      <div
-        className={clsx(
-          "pointer-events-none absolute -right-16 -top-16 h-40 w-40 rounded-full blur-2xl",
-          tone === "good" && "bg-emerald-400/20",
-          tone === "bad" && "bg-rose-400/20",
-          tone === "neutral" && "bg-accent-cyan/15"
-        )}
-      />
+    <Card className="min-h-[120px] p-5">
       <div className="flex items-start justify-between gap-3">
         <div className="min-w-0">
-          <div className="text-xs text-white/60">{props.title}</div>
-          <div className="mt-1 truncate text-xl font-semibold">{props.value}</div>
-          {props.hint ? <div className="mt-1 text-xs text-white/55">{props.hint}</div> : null}
-        </div>
-        {props.icon ? (
-          <div className="grid h-9 w-9 place-items-center rounded-xl border border-stroke-1 bg-white/5 shadow-neonCyan">
-            {props.icon}
+          <div className="text-[12px] font-semibold uppercase tracking-[0.08em] text-[#6B7280]">{props.title}</div>
+          <div className="mt-2 truncate text-[28px] font-bold tracking-tight text-[#111827]">{props.value}</div>
+          <div className="mt-2 flex flex-wrap items-center gap-2">
+            {props.trend ? (
+              <span className="rounded-full bg-[#ECFDF5] px-2 py-0.5 text-[11px] font-semibold text-[#15803D]">{props.trend}</span>
+            ) : null}
+            {props.hint ? <div className="text-[13px] text-[#6B7280]">{props.hint}</div> : null}
           </div>
-        ) : null}
+        </div>
+        {props.icon ? <div className={clsx("grid h-10 w-10 place-items-center rounded-xl", tone.icon)}>{props.icon}</div> : null}
       </div>
     </Card>
   );
 }
-

@@ -14,8 +14,14 @@ try {
     firebase.initializeApp(firebaseConfig);
     db = firebase.firestore();
 
-    // Enable offline persistence (best-effort)
-    db.enablePersistence().catch((err) => {
+    // Weak/proxy networks: auto long-polling is more reliable than streaming
+    try {
+        db.settings({ experimentalAutoDetectLongPolling: true, merge: true });
+    } catch (_) {}
+
+    // Offline cache — single-tab only. Multi-tab sync is a common trigger for
+    // "FIRESTORE INTERNAL ASSERTION FAILED: Unexpected state" on Safari/iPad.
+    db.enablePersistence({ synchronizeTabs: false }).catch((err) => {
         if (err.code === 'failed-precondition') {
             console.log('Multiple tabs open, persistence can only be enabled in one tab at a time.');
         } else if (err.code === 'unimplemented') {
@@ -173,21 +179,6 @@ const bulkUpsertMenuItems = async (items) => {
     return getData("menuItems");
 };
 
-const readCollectionTx = async (transaction, name) => {
-    const snap = await transaction.get(db.collection(name));
-    return snap.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
-};
-
-const loadBalanceDataTx = async (transaction) => {
-    const names = ['sales', 'purchases', 'expenses', 'salaries', 'advances', 'supplierPayments', 'balance_transfers'];
-    const parts = await Promise.all(names.map((n) => readCollectionTx(transaction, n)));
-    const out = {};
-    names.forEach((n, i) => {
-        out[n === 'balance_transfers' ? 'balanceTransfers' : n] = parts[i];
-    });
-    return out;
-};
-
 const createBalanceTransfer = async (body) => {
     assertReady();
     const amt = Number(body.amount);
@@ -200,47 +191,31 @@ const createBalanceTransfer = async (body) => {
     if (from === to) throw new Error('Cannot transfer to the same account');
     if (!['cash', 'bank'].includes(from) || !['cash', 'bank'].includes(to)) throw new Error('Invalid account');
 
-    return db.runTransaction(async (transaction) => {
-        const data = await loadBalanceDataTx(transaction);
-        const bm = window.balanceMath;
-        if (!bm) throw new Error('Balance math not loaded');
-        const { cashBalance, bankBalance } = bm.computeBalances(data);
-        const available = from === 'cash' ? cashBalance : bankBalance;
-        if (amt > available + 0.009) {
-            throw new Error(`Insufficient ${from} balance. Available: Rs ${Math.round(available).toLocaleString('en-IN')}`);
-        }
-
-        const ref = db.collection('balance_transfers').doc();
-        transaction.set(ref, {
-            date,
-            fromAccount: from,
-            toAccount: to,
-            amount: amt,
-            notes,
-            createdAt: firebase.firestore.FieldValue.serverTimestamp(),
-            updatedAt: firebase.firestore.FieldValue.serverTimestamp()
-        });
-        return ref.id;
+    const now = new Date().toISOString();
+    const docRef = await db.collection('balance_transfers').add({
+        date,
+        fromAccount: from,
+        toAccount: to,
+        amount: amt,
+        notes,
+        createdAt: now,
+        updatedAt: now
     });
+    return docRef.id;
 };
 
 const deleteBalanceTransfer = async (id) => {
     assertReady();
     const oid = String(id || '').trim();
     if (!oid) throw new Error('Transfer id required');
-    return db.runTransaction(async (transaction) => {
-        const ref = db.collection('balance_transfers').doc(oid);
-        const snap = await transaction.get(ref);
-        if (!snap.exists) throw new Error('Transfer not found');
-        transaction.delete(ref);
-        return { ok: true, id: oid };
-    });
+    await db.collection('balance_transfers').doc(oid).delete();
+    return { ok: true, id: oid };
 };
 
 const exportAllData = async () => {
     assertReady();
     const data = {};
-    const collections = ['sales', 'purchases', 'expenses', 'inventory', 'attendance', 'salaries', 'advances', 'suppliers', 'staff', 'fixedSalaries', 'reminders', 'balance_transfers', 'daily_closings'];
+    const collections = ['sales', 'purchases', 'expenses', 'inventory', 'inventory_movements', 'stock_lots', 'recurring_expenses', 'attendance', 'salaries', 'advances', 'suppliers', 'staff', 'fixedSalaries', 'reminders', 'balance_transfers', 'investments', 'profit_withdrawals', 'daily_closings', 'documents', 'users', 'menuItems', 'orders'];
     
     for (const name of collections) {
         try {
@@ -258,7 +233,7 @@ const exportAllData = async () => {
 const importAllData = async (payload) => {
     assertReady();
     const incoming = payload && payload.data ? payload.data : payload || {};
-    const collections = ['sales', 'purchases', 'expenses', 'inventory', 'attendance', 'salaries', 'advances', 'suppliers', 'staff', 'fixedSalaries', 'reminders', 'balance_transfers', 'daily_closings'];
+    const collections = ['sales', 'purchases', 'expenses', 'inventory', 'inventory_movements', 'stock_lots', 'recurring_expenses', 'attendance', 'salaries', 'advances', 'suppliers', 'staff', 'fixedSalaries', 'reminders', 'balance_transfers', 'investments', 'profit_withdrawals', 'daily_closings', 'documents', 'users', 'menuItems', 'orders'];
 
     // Clear existing data
     for (const name of collections) {
