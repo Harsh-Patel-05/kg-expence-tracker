@@ -1,15 +1,11 @@
 {
   "hosting": {
     "site": "kilogram-expance-trakker",
-    "public": ".",
+    "public": "web/dist",
     "ignore": [
       "firebase.json",
       "**/.*",
-      "**/node_modules/**",
-      "web/**",
-      "mobile/**",
-      "server/**",
-      "**/src/**"
+      "**/node_modules/**"
     ],
     "rewrites": [
       {

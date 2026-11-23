@@ -4,9 +4,10 @@
   "description": "The Kilogram — Restaurant expense & sales tracker (Firebase)",
   "main": "index.html",
   "scripts": {
-    "start": "serve -s . -l 3000",
-    "dev": "serve -s . -l 3000",
-    "build": "echo 'Static classic app ready'",
+    "start": "npm run start --prefix web",
+    "dev": "npm run dev --prefix web",
+    "build": "npm run build --prefix web",
+    "dev:classic": "serve -s . -l 3000",
     "dev:web": "npm run dev --prefix web",
     "build:web": "npm run build --prefix web",
     "firebase:login": "firebase login",
