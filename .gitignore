@@ -14,4 +14,4 @@ secrets/
 firepit-log.txt
 *.local
 .cursor/
-assets/image-*.png
+.vscode/
