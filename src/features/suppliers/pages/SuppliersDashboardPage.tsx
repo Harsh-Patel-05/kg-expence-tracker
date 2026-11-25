@@ -12,6 +12,7 @@ import { Card } from "@/components/ui/Card";
 import { KpiCard } from "@/components/ui/KpiCard";
 
 import { ContentLoading } from "@/components/ui/Loading";
+import { SuppliersClassicTabs } from "../components/SuppliersClassicTabs";
 
 function Stat({ label, value, hint }: { label: string; value: string | number; hint?: string }) {
   return <KpiCard title={label} value={String(value)} hint={hint} />;
@@ -35,24 +36,24 @@ export function SuppliersDashboardPage() {
     <div className="grid gap-4">
       <PageHeader
         eyebrow="Procurement"
-        title="Supplier command"
+        title="Suppliers"
+        description="Add suppliers, bills, payments and history"
         actions={
           <>
-          <Link to="/suppliers/list" className="kg-btn kg-btn-primary">
-            Supplier master
-          </Link>
-          <Link to="/suppliers/payments" className="kg-btn kg-btn-secondary">
-            Payments
-          </Link>
-          <Link to="/inventory/purchases" className="kg-btn kg-btn-secondary">
-            Purchases
-          </Link>
-          <Link to="/reports" className="kg-btn kg-btn-secondary">
-            Reports
-          </Link>
+            <Link to="/suppliers/list" className="kg-btn kg-btn-secondary">
+              Supplier master
+            </Link>
+            <Link to="/suppliers/payments" className="kg-btn kg-btn-secondary">
+              Payments register
+            </Link>
+            <Link to="/inventory/purchases" className="kg-btn kg-btn-secondary">
+              Inventory purchases
+            </Link>
           </>
         }
       />
+
+      <SuppliersClassicTabs />
 
       {loading ? <ContentLoading variant="block" label="Loading" /> : null}
 

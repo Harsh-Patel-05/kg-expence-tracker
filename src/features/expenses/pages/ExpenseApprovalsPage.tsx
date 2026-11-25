@@ -18,7 +18,10 @@ export function ExpenseApprovalsPage() {
   const [comment, setComment] = useState<Record<string, string>>({});
 
   const pending = useMemo(
-    () => data.filter((e) => !e.archived && (e.approvalStatus === "pending" || !e.approvalStatus)).sort((a, b) => String(b.date).localeCompare(String(a.date))),
+    () =>
+      data
+        .filter((e) => !e.archived && !(e as { isDeleted?: boolean }).isDeleted && e.approvalStatus === "pending")
+        .sort((a, b) => String(b.date).localeCompare(String(a.date))),
     [data]
   );
 

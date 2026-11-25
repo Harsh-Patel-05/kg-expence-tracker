@@ -1,6 +1,9 @@
 import { inr } from "@/lib/utils";
 import type { DietType, MenuItemDoc } from "../types";
 import type { WithId } from "../hooks/useRestaurantCollection";
+import type { CatalogProduct } from "../domain/productPricing";
+import type { MenuGroup } from "../domain/menuGrouping";
+import { fromPrice } from "../domain/productsCatalog";
 import { clsx } from "clsx";
 import { PackageSearch, Star } from "lucide-react";
 import { EmptyState } from "@/components/ui/PageHeader";
@@ -19,14 +22,21 @@ function DietBadge({ diet }: { diet?: DietType }) {
   return <span className={clsx("rounded px-1 py-0.5 text-[9px] font-bold", m.className)}>{m.label}</span>;
 }
 
+export type PosGridItem =
+  | { kind: "catalog"; product: CatalogProduct }
+  | { kind: "menu"; item: WithId<MenuItemDoc> }
+  | { kind: "group"; group: MenuGroup };
+
 export function ProductGrid(props: {
-  items: Array<WithId<MenuItemDoc>>;
+  items: PosGridItem[];
   favoriteIds: string[];
   loading?: boolean;
   totalMenuCount?: number;
   search?: string;
   category?: string;
-  onAdd: (item: WithId<MenuItemDoc>) => void;
+  onAddCatalog: (product: CatalogProduct) => void;
+  onAddMenu: (item: WithId<MenuItemDoc>) => void;
+  onAddGroup: (group: MenuGroup) => void;
   onToggleFavorite: (id: string) => void;
   onClearSearch?: () => void;
   onResetCategory?: () => void;
@@ -46,12 +56,12 @@ export function ProductGrid(props: {
     const cat = props.category && props.category !== "All" ? props.category : null;
     const noMenu = !props.totalMenuCount;
 
-    if (noMenu) {
+    if (noMenu && !hasSearch) {
       return (
         <EmptyState
           icon={<PackageSearch size={20} />}
           title="No menu items yet"
-          description="Add products to the Firestore menuItems collection to start billing."
+          description="Grouped Kilogram products still appear here. Add Firestore menuItems for the rest of the menu."
         />
       );
     }
@@ -73,12 +83,16 @@ export function ProductGrid(props: {
       );
     }
 
-    if (cat === "Favorites" || cat === "Recent") {
+    if (cat === "Favorites" || cat === "Recent" || cat === "Hotshots") {
       return (
         <EmptyState
           icon={<PackageSearch size={20} />}
-          title={cat === "Favorites" ? "No favourites yet" : "No recent items"}
-          description={cat === "Favorites" ? "Tap the star on a product to pin it here." : "Sold items appear here for quick reorder."}
+          title={cat === "Favorites" ? "No favourites yet" : cat === "Hotshots" ? "No hotshots yet" : "No recent items"}
+          description={
+            cat === "Favorites"
+              ? "Tap the star on a product to pin it here."
+              : "Sold items appear here for quick reorder."
+          }
           action={
             props.onResetCategory ? (
               <Button variant="secondary" onClick={props.onResetCategory}>
@@ -112,7 +126,96 @@ export function ProductGrid(props: {
 
   return (
     <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 xl:grid-cols-4 2xl:grid-cols-5">
-      {props.items.map((item) => {
+      {props.items.map((entry) => {
+        if (entry.kind === "catalog") {
+          const product = entry.product;
+          const favId = `product:${product.id}`;
+          const fav = props.favoriteIds.includes(favId) || Boolean(product.favourite);
+          return (
+            <div
+              key={favId}
+              className="group relative rounded-[var(--radius-lg)] border border-stroke-0 bg-card-0 p-2 text-left shadow-panel transition hover:border-primary/40 hover:shadow-float"
+            >
+              <button type="button" onClick={() => props.onAddCatalog(product)} className="w-full text-left">
+                <div
+                  className="mb-1.5 flex h-12 items-center justify-center overflow-hidden rounded-md"
+                  style={{
+                    background: `linear-gradient(135deg, ${product.gradient?.[0] || "#e56b2c"}33, ${product.gradient?.[1] || "#9a3f24"}55)`
+                  }}
+                >
+                  <span className="text-base font-bold text-primary">{product.name.slice(0, 1)}</span>
+                </div>
+                <div className="flex items-start justify-between gap-1">
+                  <div className="min-w-0">
+                    <div className="truncate text-[12px] font-semibold text-text-primary">{product.name}</div>
+                    <div className="truncate text-[10px] text-text-muted">{product.categories.join(" · ")}</div>
+                  </div>
+                  <DietBadge diet="veg" />
+                </div>
+                <div className="mt-1.5 flex items-center justify-between gap-1">
+                  <div className="text-[12px] font-bold tabular-nums text-text-primary">from {inr(fromPrice(product))}</div>
+                  <div className="text-[9px] font-semibold uppercase tracking-wide text-text-muted">Pick</div>
+                </div>
+              </button>
+              <button
+                type="button"
+                aria-label={fav ? "Remove favourite" : "Add favourite"}
+                onClick={() => props.onToggleFavorite(favId)}
+                className="absolute right-1.5 top-1.5 grid h-6 w-6 place-items-center rounded-full border border-stroke-0 bg-card-0/95 shadow-sm"
+              >
+                <Star size={12} className={clsx(fav ? "fill-warning text-warning" : "text-text-muted")} aria-hidden />
+              </button>
+            </div>
+          );
+        }
+
+        if (entry.kind === "group") {
+          const group = entry.group;
+          const favId = `group:${group.key}`;
+          const fav =
+            props.favoriteIds.includes(favId) ||
+            Boolean(group.favorite) ||
+            group.variants.some((v) => props.favoriteIds.includes(v.id));
+          return (
+            <div
+              key={favId}
+              className="group relative rounded-[var(--radius-lg)] border border-stroke-0 bg-card-0 p-2 text-left shadow-panel transition hover:border-primary/40 hover:shadow-float"
+            >
+              <button type="button" onClick={() => props.onAddGroup(group)} className="w-full text-left">
+                <div className="mb-1.5 flex h-12 items-center justify-center overflow-hidden rounded-md bg-primary-light/60">
+                  {group.imageUrl ? (
+                    <img src={group.imageUrl} alt="" className="h-full w-full object-cover" loading="lazy" />
+                  ) : (
+                    <span className="text-base font-bold text-primary">{group.baseName.slice(0, 1)}</span>
+                  )}
+                </div>
+                <div className="flex items-start justify-between gap-1">
+                  <div className="min-w-0">
+                    <div className="truncate text-[12px] font-semibold text-text-primary">{group.baseName}</div>
+                    {group.nameHi ? <div className="truncate text-[10px] text-text-muted">{group.nameHi}</div> : null}
+                  </div>
+                  <DietBadge diet={group.diet || "veg"} />
+                </div>
+                <div className="mt-1.5 flex items-center justify-between gap-1">
+                  <div className="text-[12px] font-bold tabular-nums text-text-primary">
+                    {group.variants.length > 1 ? `from ${inr(group.minPrice)}` : inr(group.minPrice)}
+                  </div>
+                  <div className="text-[9px] font-semibold uppercase tracking-wide text-text-muted">Pick</div>
+                </div>
+              </button>
+              <button
+                type="button"
+                aria-label={fav ? "Remove favourite" : "Add favourite"}
+                onClick={() => props.onToggleFavorite(favId)}
+                className="absolute right-1.5 top-1.5 grid h-6 w-6 place-items-center rounded-full border border-stroke-0 bg-card-0/95 shadow-sm"
+              >
+                <Star size={12} className={clsx(fav ? "fill-warning text-warning" : "text-text-muted")} aria-hidden />
+              </button>
+            </div>
+          );
+        }
+
+        const item = entry.item;
         const unavailable = item.available === false;
         const low = item.trackStock && numSafe(item.stockQty) <= 0;
         const fav = props.favoriteIds.includes(item.id) || item.favorite;
@@ -127,7 +230,7 @@ export function ProductGrid(props: {
             <button
               type="button"
               disabled={unavailable}
-              onClick={() => props.onAdd(item)}
+              onClick={() => props.onAddMenu(item)}
               className={clsx("w-full text-left", unavailable && "cursor-not-allowed")}
             >
               <div className="mb-1.5 flex h-12 items-center justify-center overflow-hidden rounded-md bg-primary-light/60">

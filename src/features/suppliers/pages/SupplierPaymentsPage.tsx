@@ -26,7 +26,7 @@ export function SupplierPaymentsPage() {
     seller: "",
     amount: "",
     date: isoDate(),
-    method: "cash" as const,
+    method: "cash" as "cash" | "online",
     note: "",
     referenceNumber: ""
   });
@@ -68,11 +68,9 @@ export function SupplierPaymentsPage() {
           </select>
           <input type="number" className="kg-input mb-2 w-full" placeholder="Amount" value={form.amount} onChange={(e) => setForm((f) => ({ ...f, amount: e.target.value }))} />
           <input type="date" className="kg-input mb-2 w-full" value={form.date} onChange={(e) => setForm((f) => ({ ...f, date: e.target.value }))} />
-          <select className="kg-input mb-2 w-full" value={form.method} onChange={(e) => setForm((f) => ({ ...f, method: e.target.value as any }))}>
+          <select className="kg-input mb-2 w-full" value={form.method} onChange={(e) => setForm((f) => ({ ...f, method: e.target.value as "cash" | "online" }))}>
             <option value="cash">Cash</option>
             <option value="online">Online</option>
-            <option value="upi">UPI</option>
-            <option value="bank">Bank</option>
           </select>
           <input className="kg-input mb-2 w-full" placeholder="Reference #" value={form.referenceNumber} onChange={(e) => setForm((f) => ({ ...f, referenceNumber: e.target.value }))} />
           <textarea className="kg-input mb-2 w-full" rows={2} placeholder="Note" value={form.note} onChange={(e) => setForm((f) => ({ ...f, note: e.target.value }))} />

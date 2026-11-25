@@ -3,6 +3,7 @@ import ReactDOM from "react-dom/client";
 import { BrowserRouter } from "react-router-dom";
 import App from "./app/App";
 import { RouteErrorBoundary } from "@/components/ui/RouteErrorBoundary";
+import { listenForServiceWorkerPurge, purgeLegacyServiceWorkers } from "@/lib/purgeServiceWorkers";
 import "./styles/globals.css";
 
 function Root() {
@@ -10,6 +11,9 @@ function Root() {
   const lastRemount = useRef(0);
 
   useEffect(() => {
+    void purgeLegacyServiceWorkers();
+    const stopListen = listenForServiceWorkerPurge();
+
     const recover = (msg: string) => {
       // Only remount on Firestore client fatal asserts — not routine permission denials
       if (!/INTERNAL ASSERTION FAILED/i.test(msg)) return;
@@ -27,6 +31,7 @@ function Root() {
     window.addEventListener("error", onError);
     window.addEventListener("unhandledrejection", onReject);
     return () => {
+      stopListen();
       window.removeEventListener("error", onError);
       window.removeEventListener("unhandledrejection", onReject);
     };

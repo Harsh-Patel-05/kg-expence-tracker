@@ -3,6 +3,8 @@ import type { OrderDoc, OrderStatus, OrderType } from "@/features/pos/types";
 import { useRestaurantCollection, type WithId } from "@/features/pos/hooks/useRestaurantCollection";
 import { isoDate, num } from "@/lib/utils";
 import { expectedPrepMinutes } from "../engine/statusMachine";
+import { computeOrderTiming } from "../utils/orderTiming";
+import { useNowTick } from "./useNowTick";
 
 export type OrderFilters = {
   search: string;
@@ -15,6 +17,7 @@ export type OrderFilters = {
 
 export function useLiveOrders() {
   const { data, loading, error } = useRestaurantCollection<OrderDoc>({ path: "orders" });
+  const now = useNowTick(1000);
   const [filters, setFilters] = useState<OrderFilters>({
     search: "",
     orderType: "all",
@@ -29,14 +32,22 @@ export function useLiveOrders() {
   const enriched = useMemo(() => {
     return data.map((o) => {
       const itemCount = (o.items || []).reduce((s, l) => s + num(l.qty), 0);
-      const eta = expectedPrepMinutes(o.orderType, itemCount);
-      const createdMs = parseTime(o.acceptedAt || o.heldAt || o.createdAt) || Date.now();
-      const ageMin = Math.max(0, Math.round((Date.now() - createdMs) / 60_000));
-      const expectedReady = o.expectedReadyAt ? Date.parse(o.expectedReadyAt) : createdMs + eta * 60_000;
-      const delayed = Boolean(o.delayed) || (isActiveKitchen(o.status) && Date.now() > expectedReady);
-      return { ...o, ageMin, delayed, itemCount, eta };
+      const timing = computeOrderTiming({ ...o, itemCount }, now);
+      const eta = timing.etaMin;
+      const ageMin = Math.max(0, Math.floor(timing.ageSec / 60));
+      return {
+        ...o,
+        ageMin,
+        delayed: timing.delayed,
+        itemCount,
+        eta,
+        remainSec: timing.remainSec,
+        dueMs: timing.dueMs,
+        ageSec: timing.ageSec,
+        urgencyScore: timing.priority
+      };
     });
-  }, [data]);
+  }, [data, now]);
 
   const filtered = useMemo(() => {
     const q = filters.search.trim().toLowerCase();
@@ -56,8 +67,13 @@ export function useLiveOrders() {
   const stats = useMemo(() => {
     const todays = enriched.filter((o) => String(o.date || "").slice(0, 10) === today);
     const byStatus = (s: OrderStatus | string) => todays.filter((o) => o.status === s).length;
+    // Shop revenue excludes Swiggy / Zomato platform orders
     const revenue = todays
-      .filter((o) => o.status === "completed" || num(o.paidTotal) > 0)
+      .filter((o) => {
+        const t = String(o.orderType || (o as { channel?: string }).channel || "").toLowerCase();
+        if (t.includes("swiggy") || t.includes("zomato")) return false;
+        return o.status === "completed" || num(o.paidTotal) > 0;
+      })
       .reduce((s, o) => s + num(o.paidTotal || o.total), 0);
     const prepSamples = todays
       .filter((o) => o.readyAt && (o.acceptedAt || o.preparingAt))
@@ -99,9 +115,18 @@ export function useLiveOrders() {
 }
 
 function isActiveKitchen(status?: string) {
-  return ["pending", "confirmed", "accepted", "preparing", "cooking", "ready", "packed", "waiting_pickup", "out_for_delivery"].includes(
-    String(status || "")
-  );
+  return [
+    "pending",
+    "confirmed",
+    "accepted",
+    "preparing",
+    "cooking",
+    "ready",
+    "packed",
+    "held",
+    "waiting_pickup",
+    "out_for_delivery"
+  ].includes(String(status || ""));
 }
 
 function parseTime(v: unknown): number | null {
@@ -116,7 +141,17 @@ function parseTime(v: unknown): number | null {
   return null;
 }
 
-export type LiveOrder = WithId<OrderDoc> & { ageMin: number; delayed: boolean; itemCount: number; eta: number };
+export type LiveOrder = WithId<OrderDoc> & {
+  ageMin: number;
+  delayed: boolean;
+  itemCount: number;
+  eta: number;
+  remainSec: number;
+  dueMs: number;
+  ageSec: number;
+  /** Lower = more urgent (countdown / overdue). Not OrderDoc.priority. */
+  urgencyScore: number;
+};
 
 export function filterByKitchenCategory(orders: LiveOrder[], category: string | "all") {
   if (category === "all") return orders;

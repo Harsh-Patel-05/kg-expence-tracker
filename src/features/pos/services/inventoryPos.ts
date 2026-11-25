@@ -69,7 +69,18 @@ export function planRecipeDeductions(args: {
   return { adjustments, missing: [...new Set(missing)], insufficient: [...new Set(insufficient)] };
 }
 
+let inventoryCache: { at: number; rows: Array<WithId<InventoryDoc>> } | null = null;
+
 export async function loadInventory(): Promise<Array<WithId<InventoryDoc>>> {
+  if (inventoryCache && Date.now() - inventoryCache.at < 30_000) {
+    return inventoryCache.rows;
+  }
   const snap = await getDocs(collection(db, "inventory"));
-  return snap.docs.map((d) => ({ id: d.id, ...(d.data() as InventoryDoc) }));
+  const rows = snap.docs.map((d) => ({ id: d.id, ...(d.data() as InventoryDoc) }));
+  inventoryCache = { at: Date.now(), rows };
+  return rows;
+}
+
+export function invalidateInventoryCache() {
+  inventoryCache = null;
 }

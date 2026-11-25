@@ -5,7 +5,7 @@ import { inr, isoDate, num } from "@/lib/utils";
 import { useRestaurantCollection } from "@/features/pos/hooks/useRestaurantCollection";
 import { usePosAuth } from "@/features/pos/auth/PosAuthProvider";
 import type { ExpenseDoc } from "@/features/tasks/types";
-import { EXPENSE_CATEGORIES } from "@/features/tasks/types";
+import { EXPENSE_CATEGORIES, EXPENSE_CATEGORY_GROUPS } from "@/features/tasks/types";
 import {
   archiveExpense,
   decideExpenseApproval,
@@ -20,6 +20,16 @@ import { EmptyState, PageHeader, SectionTitle } from "@/components/ui/PageHeader
 import { Card } from "@/components/ui/Card";
 
 import { ContentLoading } from "@/components/ui/Loading";
+
+type ListPeriod = "month" | "m2" | "m3" | "m6" | "year";
+
+function periodStart(period: ListPeriod, today = isoDate()): string {
+  const d = new Date(today + "T00:00:00");
+  if (period === "year") return `${d.getFullYear()}-01-01`;
+  const monthsBack = period === "month" ? 0 : period === "m2" ? 1 : period === "m3" ? 2 : 5;
+  const start = new Date(d.getFullYear(), d.getMonth() - monthsBack, 1);
+  return `${start.getFullYear()}-${String(start.getMonth() + 1).padStart(2, "0")}-01`;
+}
 
 export function ExpensesListPage() {
   const { role, user } = usePosAuth();
@@ -37,6 +47,8 @@ export function ExpensesListPage() {
   const [busy, setBusy] = useState(false);
   const [file, setFile] = useState<File | null>(null);
   const [preview, setPreview] = useState<string | null>(null);
+  const [listPeriod, setListPeriod] = useState<ListPeriod>("month");
+  const listFrom = periodStart(listPeriod);
 
   const [form, setForm] = useState({
     id: "",
@@ -58,6 +70,7 @@ export function ExpensesListPage() {
     const query = q.trim().toLowerCase();
     return data
       .filter((e) => !e.archived)
+      .filter((e) => String(e.date || "").slice(0, 10) >= listFrom)
       .filter((e) => {
         if (category !== "all" && e.category !== category) return false;
         if (payStatus === "paid" && e.status !== "paid") return false;
@@ -69,7 +82,7 @@ export function ExpensesListPage() {
           .includes(query);
       })
       .sort((a, b) => String(b.date).localeCompare(String(a.date)));
-  }, [data, q, category, payStatus]);
+  }, [data, q, category, payStatus, listFrom]);
 
   async function save() {
     if (!canCreate) return;
@@ -165,11 +178,20 @@ export function ExpensesListPage() {
             <label className="grid gap-1 text-[12px] font-semibold text-text-muted">
               Category
               <select className="kg-input !w-auto" value={form.category} onChange={(e) => setForm((f) => ({ ...f, category: e.target.value }))}>
-                {EXPENSE_CATEGORIES.map((c) => (
-                  <option key={c.value} value={c.value}>
-                    {c.label}
-                  </option>
-                ))}
+                <optgroup label="Kitchen">
+                  {EXPENSE_CATEGORY_GROUPS.kitchen.map((c) => (
+                    <option key={c.value} value={c.value}>
+                      {c.label}
+                    </option>
+                  ))}
+                </optgroup>
+                <optgroup label="Fixed / shop">
+                  {EXPENSE_CATEGORY_GROUPS.fixed.map((c) => (
+                    <option key={c.value} value={c.value}>
+                      {c.label}
+                    </option>
+                  ))}
+                </optgroup>
               </select>
             </label>
             <label className="grid gap-1 text-[12px] font-semibold text-text-muted">
@@ -235,7 +257,7 @@ export function ExpensesListPage() {
             </label>
             {preview ? <img src={preview} alt="Bill preview" className="max-h-40 rounded-lg border border-stroke-0 object-contain" /> : null}
             <button disabled={!canCreate || busy || !form.amount} onClick={save} className="kg-btn kg-btn-primary disabled:opacity-50">
-              {busy ? "Saving…" : "Save expense"}
+              {busy ? "Saving…" : "Save Expense"}
             </button>
             {form.id ? (
               <button type="button" className="kg-btn kg-btn-secondary" onClick={() => setForm((f) => ({ ...f, id: "" }))}>
@@ -246,6 +268,33 @@ export function ExpensesListPage() {
         </Card>
 
         <div className="space-y-3">
+          <ul className="flex flex-wrap items-center gap-2 text-[12px] text-text-muted list-none m-0 p-0">
+            <li className="font-semibold">Period:</li>
+            {(
+              [
+                ["month", "Month"],
+                ["m2", "2M"],
+                ["m3", "3M"],
+                ["m6", "6M"],
+                ["year", "Year"]
+              ] as const
+            ).map(([id, label]) => (
+              <li key={id}>
+                <button
+                  type="button"
+                  onClick={() => setListPeriod(id)}
+                  className={`rounded-md border px-2.5 py-1 text-[11px] font-semibold ${
+                    listPeriod === id
+                      ? "border-primary bg-primary-light text-primary"
+                      : "border-stroke-0 bg-bg-1 text-text-muted"
+                  }`}
+                >
+                  {label}
+                </button>
+              </li>
+            ))}
+            <li className="text-[11px]">from {listFrom}</li>
+          </ul>
           <div className="flex flex-wrap gap-2">
             <input className="kg-input min-w-[180px] flex-1 !w-auto" placeholder="Search number, vendor, invoice…" value={q} onChange={(e) => setQ(e.target.value)} />
             <select className="kg-input !w-auto" value={category} onChange={(e) => setCategory(e.target.value)}>
@@ -329,8 +378,21 @@ export function ExpensesListPage() {
                         <button className="text-xs font-semibold text-warning" onClick={async () => { await archiveExpense(e.id); setMsg("Archived"); }}>
                           Archive
                         </button>
-                        <button className="text-xs font-semibold text-danger" onClick={async () => { await softDeleteExpense(e.id); setMsg("Deleted"); }}>
-                          Del
+                        <button
+                          className="text-xs font-semibold text-danger"
+                          onClick={async () => {
+                            if (
+                              !window.confirm(
+                                `Delete expense ${e.category || ""} · ₹${e.amount}? Cash / Online balance will reverse if it was paid.`
+                              )
+                            ) {
+                              return;
+                            }
+                            await softDeleteExpense(e.id);
+                            setMsg("Expense deleted — balance updated.");
+                          }}
+                        >
+                          Delete
                         </button>
                       </div>
                     </td>

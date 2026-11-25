@@ -1,109 +1,153 @@
-import { useMemo, useState } from "react";
-import { inr, num } from "@/lib/utils";
-import type { PaymentMode } from "../types";
+import { useState } from "react";
+import { clsx } from "clsx";
+import { inr } from "@/lib/utils";
 import { usePosStore } from "../store/posStore";
 import { LoadingLabel } from "@/components/ui/Loading";
 
-const MODES: PaymentMode[] = ["cash", "upi", "card", "wallet", "bank", "credit"];
+type SettleMode = "cash" | "upi" | "split" | "paylater";
 
-export function PaymentPanel(props: { onCharge: () => Promise<void>; busy: boolean }) {
-  const payments = usePosStore((s) => s.payments);
+export function PaymentPanel(props: {
+  onCharge: () => Promise<void>;
+  onPayLater: () => Promise<void>;
+  busy: boolean;
+}) {
   const addPayment = usePosStore((s) => s.addPayment);
   const clearPayments = usePosStore((s) => s.clearPayments);
+  const orderType = usePosStore((s) => s.orderType);
+  const platformOrderId = usePosStore((s) => s.platformOrderId);
   const totals = usePosStore((s) => s.totals);
   const t = totals();
-  const [mode, setMode] = useState<PaymentMode>("cash");
-  const [amount, setAmount] = useState("");
-  const [refNo, setRefNo] = useState("");
+  const [mode, setMode] = useState<SettleMode>("cash");
+  const [cashAmt, setCashAmt] = useState("");
+  const [upiAmt, setUpiAmt] = useState("");
 
-  const due = useMemo(() => t.balance, [t.balance]);
+  const due = t.balance || t.total;
+  const needsPlatformId = orderType === "swiggy" || orderType === "zomato";
+  const platformOk = !needsPlatformId || Boolean(String(platformOrderId || "").trim());
+  const platformLabel = orderType === "zomato" ? "Zomato" : "Swiggy";
 
-  function quickPay(m: PaymentMode) {
-    setMode(m);
-    const a = due || t.total;
-    if (a > 0) {
-      addPayment(m, a);
-      setAmount("");
-    } else {
-      setAmount(String(a || ""));
+  function applyModePayments() {
+    clearPayments();
+    if (mode === "paylater") return;
+    if (mode === "cash") {
+      if (due > 0) addPayment("cash", due);
+      return;
     }
+    if (mode === "upi") {
+      if (due > 0) addPayment("upi", due);
+      return;
+    }
+    const cash = Math.max(0, Number(cashAmt) || 0);
+    const upi = Math.max(0, Number(upiAmt) || 0);
+    if (cash > 0) addPayment("cash", cash);
+    if (upi > 0) addPayment("upi", upi);
+  }
+
+  async function charge() {
+    if (needsPlatformId) {
+      // Kitchen prep only — never posts sales / cash / online balance
+      clearPayments();
+      await props.onCharge();
+      return;
+    }
+    if (mode === "paylater") {
+      await props.onPayLater();
+      return;
+    }
+    applyModePayments();
+    await props.onCharge();
+  }
+
+  if (needsPlatformId) {
+    return (
+      <div className="space-y-2 bg-card-0">
+        <div className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-muted">Kitchen only</div>
+        <p className="text-[12px] leading-snug text-text-secondary">
+          {platformLabel} tickets go to KDS only. Sales are entered manually every week — not counted in shop balance.
+        </p>
+        <button
+          type="button"
+          disabled={props.busy || t.total <= 0 || !platformOk}
+          className="kg-btn kg-btn-primary w-full !py-3 !text-[14px] disabled:opacity-60"
+          title={!platformOk ? `Enter ${platformLabel} order ID first` : undefined}
+          onClick={() => void charge()}
+        >
+          {props.busy ? (
+            <LoadingLabel>Sending…</LoadingLabel>
+          ) : !platformOk ? (
+            `Enter ${platformLabel} ID`
+          ) : (
+            `Send to kitchen · ${inr(t.total)}`
+          )}
+        </button>
+      </div>
+    );
   }
 
   return (
     <div className="space-y-2 bg-card-0">
-      <div className="flex items-center justify-between gap-2">
-        <div className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-muted">Payments</div>
-        {payments.length ? (
-          <button type="button" className="text-[11px] font-semibold text-danger hover:underline" onClick={() => clearPayments()}>
-            Clear pays
-          </button>
-        ) : null}
-      </div>
+      <div className="text-[11px] font-bold uppercase tracking-[0.08em] text-text-muted">Payment</div>
 
-      <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-6">
-        {MODES.map((m) => (
+      <div className="grid grid-cols-4 gap-1.5">
+        {(
+          [
+            ["cash", "Cash"],
+            ["upi", "UPI"],
+            ["split", "Split"],
+            ["paylater", "Pay later"]
+          ] as const
+        ).map(([id, label]) => (
           <button
-            key={m}
+            key={id}
             type="button"
-            onClick={() => quickPay(m)}
-            className={
-              mode === m
-                ? "rounded-lg bg-primary px-1.5 py-2 text-[11px] font-semibold capitalize text-white"
-                : "rounded-lg border border-stroke-0 bg-bg-1 px-1.5 py-2 text-[11px] font-semibold capitalize text-text-secondary hover:border-primary/40"
-            }
+            onClick={() => {
+              setMode(id);
+              clearPayments();
+            }}
+            className={clsx(
+              "rounded-lg px-1.5 py-2 text-[11px] font-semibold",
+              mode === id
+                ? "bg-primary text-white"
+                : "border border-stroke-0 bg-bg-1 text-text-secondary hover:border-primary/40"
+            )}
           >
-            {m}
+            {label}
           </button>
         ))}
       </div>
 
-      <div className="grid grid-cols-[1fr_auto] gap-1.5">
-        <input
-          type="number"
-          className="kg-input !py-2"
-          placeholder={`Amount · due ${inr(due || t.total)}`}
-          value={amount}
-          onChange={(e) => setAmount(e.target.value)}
-        />
-        <button
-          type="button"
-          className="kg-btn kg-btn-secondary"
-          onClick={() => {
-            const a = num(amount);
-            if (a <= 0) return;
-            addPayment(mode, a, refNo || undefined);
-            setAmount("");
-            setRefNo("");
-          }}
-        >
-          Add
-        </button>
-      </div>
-
-      <input
-        className="kg-input !py-1.5 !text-[12px]"
-        placeholder="UPI / card reference (optional)"
-        value={refNo}
-        onChange={(e) => setRefNo(e.target.value)}
-      />
-
-      {payments.length ? (
-        <div className="flex flex-wrap gap-1.5">
-          {payments.map((p) => (
-            <span key={p.id} className="rounded-md bg-bg-1 px-2 py-1 text-[11px] font-semibold capitalize text-text-secondary">
-              {p.mode} {inr(p.amount)}
-            </span>
-          ))}
+      {mode === "split" ? (
+        <div className="grid grid-cols-2 gap-1.5">
+          <input
+            type="number"
+            className="kg-input !py-2"
+            placeholder={`Cash · due ${inr(due)}`}
+            value={cashAmt}
+            onChange={(e) => setCashAmt(e.target.value)}
+          />
+          <input
+            type="number"
+            className="kg-input !py-2"
+            placeholder="UPI"
+            value={upiAmt}
+            onChange={(e) => setUpiAmt(e.target.value)}
+          />
         </div>
       ) : null}
 
       <button
         type="button"
-        disabled={props.busy || t.total <= 0}
+        disabled={props.busy || t.total <= 0 || !platformOk}
         className="kg-btn kg-btn-primary w-full !py-3 !text-[14px] disabled:opacity-60"
-        onClick={() => void props.onCharge()}
+        onClick={() => void charge()}
       >
-        {props.busy ? <LoadingLabel>Processing…</LoadingLabel> : `Charge ${inr(t.total)}`}
+        {props.busy ? (
+          <LoadingLabel>Processing…</LoadingLabel>
+        ) : mode === "paylater" ? (
+          `Send to kitchen · ${inr(t.total)}`
+        ) : (
+          `Settle ${inr(t.total)}`
+        )}
       </button>
     </div>
   );

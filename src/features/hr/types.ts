@@ -175,6 +175,8 @@ export type AdvanceDoc = AuditFields & {
   staffId?: string | null;
   amount: number;
   method?: "cash" | "online" | "bank" | "upi";
+  /** Classic: cash → cash, online → bank — for pay-channel history */
+  paidFrom?: "cash" | "bank" | "online";
   note?: string;
   recovered?: number;
   syncStatus?: SyncStatus;
@@ -307,10 +309,17 @@ export type PayrollResult = {
   monthlyFixed: number;
   earned: number;
   advances: number;
+  directAdvances?: number;
+  carryIn?: number;
+  /** Advance still owed after this month's salary is fully cut (shown as minus net). */
+  carryOut?: number;
+  leaveDeduction?: number;
   incentives: number;
   tips: number;
   deductions: number;
   net: number;
+  monthEndPayable?: number;
+  settled?: boolean;
   absent: number;
   half: number;
 };

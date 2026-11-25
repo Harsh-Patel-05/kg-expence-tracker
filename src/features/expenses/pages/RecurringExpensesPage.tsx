@@ -68,7 +68,7 @@ export function RecurringExpensesPage() {
               setForm({ title: "", category: "rent", amount: "", dayOfMonth: "1", paymentMethod: "online" });
             }}
           >
-            Save
+            Add recurring
           </button>
         </Card>
 

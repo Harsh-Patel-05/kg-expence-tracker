@@ -6,7 +6,7 @@ import { pushNotification } from "@/features/orders/services/orderEngine";
 import { upsertVendor } from "@/features/inventory/services/purchaseService";
 import type { SupplierContactLogDoc, SupplierPaymentDoc, SupplierRatingDoc } from "../types";
 import { validateGstin } from "../types";
-import type { VendorDoc } from "@/features/inventory/types";
+import type { PurchaseEntryDoc, VendorDoc } from "@/features/inventory/types";
 
 function supplierCode() {
   return `SUP-${Date.now().toString(36).toUpperCase()}`;
@@ -285,4 +285,77 @@ export async function syncSupplierOutstanding(supplierId: string, outstanding: n
     { outstanding, creditUsed: outstanding, ...auditUpdate() },
     { merge: true }
   );
+}
+
+/** Classic addPurchase — supplier bill row (no stock movement). */
+export async function createClassicSupplierBill(input: {
+  date: string;
+  seller: string;
+  supplierId?: string | null;
+  item: string;
+  qty: number;
+  rate: number;
+  price: number;
+  expiryDate?: string;
+  paidStatus: "paid" | "unpaid";
+  paymentMethod: "cash" | "online";
+}) {
+  if (!input.seller?.trim()) throw new Error("Select supplier");
+  if (!input.item?.trim()) throw new Error("Item required");
+  if (!(num(input.price) > 0)) throw new Error("Amount required");
+
+  const ref = doc(collection(db, "purchases"));
+  const paid = input.paidStatus === "paid";
+  const method = paid ? (input.paymentMethod === "online" ? "online" : "cash") : "unpaid";
+
+  const payload: PurchaseEntryDoc = {
+    date: input.date,
+    invoiceDate: input.date,
+    seller: input.seller.trim(),
+    vendorName: input.seller.trim(),
+    vendorId: input.supplierId || null,
+    item: input.item.trim(),
+    qty: num(input.qty),
+    price: num(input.price),
+    lines: [],
+    total: num(input.price),
+    paidStatus: paid ? "paid" : "unpaid",
+    paymentStatus: paid ? "paid" : "unpaid",
+    paymentMethod: method as PurchaseEntryDoc["paymentMethod"],
+    notes: input.expiryDate ? `Expiry ${input.expiryDate}` : "",
+    syncStatus: "synced",
+    ...auditCreate({ status: paid ? "paid" : "unpaid" })
+  };
+  await setDoc(ref, payload);
+
+  if (input.supplierId && !paid) {
+    const sref = doc(db, "suppliers", input.supplierId);
+    const s = await getDoc(sref);
+    if (s.exists()) {
+      const outstanding = num(s.data().outstanding) + num(input.price);
+      await setDoc(sref, { outstanding, creditUsed: outstanding, ...auditUpdate() }, { merge: true });
+    }
+  }
+
+  await logActivity({
+    action: "purchase_created",
+    entityType: "purchases",
+    entityId: ref.id,
+    message: `${input.seller} · ${input.item} · ${input.price}`
+  });
+
+  return ref.id;
+}
+
+export async function addSupplierWithItems(input: {
+  name: string;
+  items: Array<{ name: string; rate?: number }>;
+}) {
+  const name = input.name.trim();
+  if (!name) throw new Error("Enter supplier name");
+  return upsertSupplier({
+    name,
+    gstin: "",
+    items: input.items.map((it) => ({ name: it.name, rate: num(it.rate) }))
+  });
 }

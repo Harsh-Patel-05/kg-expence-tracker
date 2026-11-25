@@ -22,13 +22,13 @@ const TRANSITIONS: Record<string, OrderStatus[]> = {
 };
 
 const KITCHEN_TRANSITIONS: Record<string, KitchenStatus[]> = {
-  new: ["accepted", "preparing"],
-  accepted: ["preparing", "cooking"],
-  preparing: ["cooking", "plating", "ready"],
-  cooking: ["plating", "ready"],
-  plating: ["ready", "packed"],
-  ready: ["packed", "served", "completed"],
-  packed: ["served", "completed"],
+  new: ["accepted", "preparing", "ready"],
+  accepted: ["preparing", "cooking", "ready", "new"],
+  preparing: ["cooking", "plating", "ready", "accepted", "new"],
+  cooking: ["plating", "ready", "preparing"],
+  plating: ["ready", "packed", "preparing"],
+  ready: ["packed", "served", "completed", "preparing"],
+  packed: ["served", "completed", "ready"],
   served: ["completed"],
   completed: []
 };
@@ -72,12 +72,10 @@ export function mapOrderToKitchenStatus(status: OrderStatus): KitchenStatus {
 }
 
 export function expectedPrepMinutes(orderType: string, itemCount: number): number {
-  const base =
-    orderType === "swiggy" || orderType === "zomato" || orderType === "express"
-      ? 18
-      : orderType === "bulk" || orderType === "catering"
-        ? 90
-        : 25;
+  const t = String(orderType || "").toLowerCase();
+  // Swiggy / Zomato: fixed 18 min reverse countdown (no item bump)
+  if (t.includes("swiggy") || t.includes("zomato") || t === "express") return 18;
+  const base = t === "bulk" || t === "catering" ? 90 : 25;
   return base + Math.max(0, itemCount - 3) * 2;
 }
 
@@ -91,6 +89,7 @@ export const BOARD_COLUMNS: Array<{ id: OrderStatus; label: string }> = [
   { id: "cancelled", label: "Cancelled" }
 ];
 
+/** Full kitchen statuses (history / transitions). */
 export const KDS_COLUMNS: Array<{ id: KitchenStatus; label: string }> = [
   { id: "new", label: "New" },
   { id: "accepted", label: "Accepted" },
@@ -98,6 +97,12 @@ export const KDS_COLUMNS: Array<{ id: KitchenStatus; label: string }> = [
   { id: "cooking", label: "Cooking" },
   { id: "ready", label: "Ready" },
   { id: "packed", label: "Packed" }
+];
+
+/** Simplified kitchen board: Waiting + Preparing only. */
+export const KDS_BOARD_LANES: Array<{ id: "waiting" | "preparing"; label: string }> = [
+  { id: "waiting", label: "Waiting" },
+  { id: "preparing", label: "Preparing" }
 ];
 
 export const ORDER_TYPE_LABELS: Record<string, string> = {

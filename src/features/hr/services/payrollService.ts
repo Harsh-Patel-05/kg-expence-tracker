@@ -80,13 +80,15 @@ export async function createAdvance(input: {
   const date = input.date || isoDate();
   const month = input.month || date.slice(0, 7);
   const ref = doc(collection(db, "advances"));
+  const method = input.method === "online" || input.method === "bank" || input.method === "upi" ? "online" : "cash";
   const payload: AdvanceDoc = {
     date,
     month,
     name: input.name,
     staffId: input.staffId || null,
     amount: num(input.amount),
-    method: input.method || "cash",
+    method,
+    paidFrom: method === "online" ? "bank" : "cash",
     note: input.note || "",
     recovered: 0,
     syncStatus: "synced",
@@ -207,4 +209,57 @@ export async function toggleSalaryPaid(id: string, paid: boolean, method?: Salar
     },
     { merge: true }
   );
+}
+
+/** Classic payFullStaffSalary — posts/updates salary as paid with net after advances. */
+export async function payFullStaffSalary(input: {
+  name: string;
+  staffId?: string | null;
+  month: string;
+  earned: number;
+  netPay: number;
+  advanceAdjusted: number;
+  paymentMethod?: SalaryDoc["paymentMethod"];
+  existingSalaryId?: string | null;
+}) {
+  const net = Math.round(Math.max(0, num(input.netPay)));
+  const earned = Math.round(Math.max(0, num(input.earned)));
+  const advanceAdjusted = Math.round(Math.max(0, num(input.advanceAdjusted)));
+  const method = input.paymentMethod || "cash";
+
+  if (input.existingSalaryId) {
+    await setDoc(
+      doc(db, "salaries", input.existingSalaryId),
+      {
+        amount: earned,
+        basic: earned,
+        netSalary: net,
+        advanceAdjusted,
+        status: "paid",
+        paidAt: isoDate(),
+        paymentMethod: method,
+        ...auditUpdate()
+      },
+      { merge: true }
+    );
+    await logActivity({
+      action: "salary_paid_full",
+      entityType: "salaries",
+      entityId: input.existingSalaryId,
+      message: `${input.name} ${input.month} net ${net}`
+    });
+    return input.existingSalaryId;
+  }
+
+  return postSalary({
+    name: input.name,
+    staffId: input.staffId,
+    month: input.month,
+    amount: earned,
+    basic: earned,
+    netSalary: net,
+    advanceAdjusted,
+    status: "paid",
+    paymentMethod: method
+  });
 }

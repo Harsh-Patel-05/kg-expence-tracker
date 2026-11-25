@@ -28,7 +28,11 @@ export function useRealtimeCollection<T extends DocumentData>(args: {
           q,
           (snap) => {
             if (cancelled) return;
-            setData(snap.docs.map((d) => ({ id: d.id, ...(d.data() as T) })));
+            setData(
+              snap.docs
+                .map((d) => ({ id: d.id, ...(d.data() as T) }))
+                .filter((r) => !(r as any).isDeleted && !(r as any).deleted)
+            );
             setLoading(false);
           },
           (e) => {

@@ -43,8 +43,11 @@ const EMPTY_FORECAST: ForecastResult = {
   from: "",
   to: "",
   expectedRevenue: 0,
+  expectedCash: 0,
+  expectedOnline: 0,
   expectedOrders: 0,
   expectedProfit: 0,
+  expectedExpenses: 0,
   expectedCustomers: 0,
   expectedAov: 0,
   expectedFoodCost: 0,
@@ -56,10 +59,19 @@ const EMPTY_FORECAST: ForecastResult = {
   riskReasons: [],
   insights: [],
   recommendations: [],
+  whatItDoes: [],
   series: [],
   history: [],
   actualVsForecast: [],
-  model: { baselineDaily: 0, dowFactors: [1, 1, 1, 1, 1, 1, 1], trendSlope: 0, sampleDays: 0, cancelRate: 0 }
+  model: {
+    baselineDaily: 0,
+    cashShare: 50,
+    onlineShare: 50,
+    dowFactors: [1, 1, 1, 1, 1, 1, 1],
+    trendSlope: 0,
+    sampleDays: 0,
+    cancelRate: 0
+  }
 };
 
 /** Keep chart payloads small so Recharts does not freeze the tab. */
@@ -93,11 +105,11 @@ export function ForecastDashboardPage() {
   const [forecast, setForecast] = useState<ForecastResult>(EMPTY_FORECAST);
   const [computing, setComputing] = useState(false);
 
-  const { data: sales, loading } = useRestaurantCollection<SaleLike>({ path: "sales", max: 250 });
-  const { data: expenses } = useRestaurantCollection<ExpenseDoc>({ path: "expenses", max: 200 });
-  const { data: purchases } = useRestaurantCollection<PurchaseEntryDoc>({ path: "purchases", max: 200 });
-  const { data: inventory } = useRestaurantCollection<InventoryItemDoc>({ path: "inventory", max: 150 });
-  const { data: orders } = useRestaurantCollection<OrderLike>({ path: "orders", max: 250 });
+  const { data: sales, loading } = useRestaurantCollection<SaleLike>({ path: "sales", max: 900 });
+  const { data: expenses } = useRestaurantCollection<ExpenseDoc>({ path: "expenses", max: 500 });
+  const { data: purchases } = useRestaurantCollection<PurchaseEntryDoc>({ path: "purchases", max: 400 });
+  const { data: inventory } = useRestaurantCollection<InventoryItemDoc>({ path: "inventory", max: 300 });
+  const { data: orders } = useRestaurantCollection<OrderLike>({ path: "orders", max: 500 });
   const { data: accuracy } = useRestaurantCollection<{
     date?: string;
     horizon?: string;
@@ -222,20 +234,20 @@ export function ForecastDashboardPage() {
   return (
     <div className="grid gap-4">
       <PageHeader
-        eyebrow="AI Sales Forecast"
-        title="Enterprise Forecast Engine"
+        eyebrow="AI Forecast"
+        title="Sales & cash forecast"
         description={
           computing || loading
-            ? "Building forecast…"
-            : `${forecast.from} → ${forecast.to} · bias ×${bias.toFixed(3)} · ${forecast.model.sampleDays} history days`
+            ? "Building forecast from your sales, expenses, purchases & inventory…"
+            : `${forecast.from} → ${forecast.to} · ${forecast.model.sampleDays} history days · Cash ${forecast.model.cashShare}% / Online ${forecast.model.onlineShare}%`
         }
         actions={
           <>
             <Link to="/analytics" className="kg-btn kg-btn-secondary">
               Analytics
             </Link>
-            <Link to="/reports" className="kg-btn kg-btn-secondary">
-              Reports
+            <Link to="/sales" className="kg-btn kg-btn-secondary">
+              Sales
             </Link>
             <button
               disabled={saving || computing}
@@ -259,6 +271,28 @@ export function ForecastDashboardPage() {
       />
 
       {msg ? <div className="rounded-lg border border-primary/20 bg-primary-light px-3 py-2 text-[13px] text-primary">{msg}</div> : null}
+
+      <Card hover={false} className="!p-4">
+        <SectionTitle
+          title="What AI Forecast does here"
+          description="Uses The Kilogram’s real modules — not dummy numbers."
+        />
+        <ul className="mt-2 grid gap-2 sm:grid-cols-2 text-[13px] text-text-secondary">
+          {(forecast.whatItDoes.length
+            ? forecast.whatItDoes
+            : [
+                "Reads Sales (Cash / Online / Swiggy / Zomato) like Dashboard.",
+                "Projects revenue, orders, profit for Tomorrow → Year.",
+                "Uses Expenses + Purchases for cost & food-cost %.",
+                "Flags stock gaps from Inventory + weekend/festival peaks."
+              ]
+          ).map((line) => (
+            <li key={line} className="rounded-lg border border-stroke-0 bg-bg-1 px-3 py-2">
+              {line}
+            </li>
+          ))}
+        </ul>
+      </Card>
 
       <Card hover={false} className="!p-3">
         <div className="flex flex-wrap gap-2">
@@ -290,11 +324,14 @@ export function ForecastDashboardPage() {
                   downloadText(
                     `forecast-${horizon}.csv`,
                     toCsv(
-                      ["Date", "Forecast revenue", "Orders", "Profit", "Factors"],
+                      ["Date", "Revenue", "Cash", "Online", "Orders", "Expenses", "Profit", "Factors"],
                       forecast.series.map((d) => [
                         d.date,
                         d.forecastRevenue,
+                        d.forecastCash,
+                        d.forecastOnline,
                         d.forecastOrders,
+                        d.forecastExpenses,
                         d.forecastProfit,
                         d.factors.join("; ")
                       ])
@@ -312,7 +349,8 @@ export function ForecastDashboardPage() {
                   printReport(
                     `AI Sales Forecast · ${horizon}`,
                     `<h2>${forecast.from} → ${forecast.to}</h2>
-                     <p>Revenue ${inr(forecast.expectedRevenue)} · Orders ${forecast.expectedOrders} · Profit ${inr(forecast.expectedProfit)}</p>`
+                     <p>Revenue ${inr(forecast.expectedRevenue)} · Cash ${inr(forecast.expectedCash)} · Online ${inr(forecast.expectedOnline)}</p>
+                     <p>Orders ${forecast.expectedOrders} · Expenses ${inr(forecast.expectedExpenses)} · Profit ${inr(forecast.expectedProfit)}</p>`
                   )
                 }
               >
@@ -327,12 +365,15 @@ export function ForecastDashboardPage() {
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
         <Kpi label="Forecast revenue" value={inr(forecast.expectedRevenue)} />
+        <Kpi label="Forecast cash" value={inr(forecast.expectedCash)} />
+        <Kpi label="Forecast online" value={inr(forecast.expectedOnline)} />
         <Kpi label="Forecast orders" value={String(forecast.expectedOrders)} />
         <Kpi
           label="Forecast profit"
           value={inr(forecast.expectedProfit)}
           tone={forecast.expectedProfit >= 0 ? "good" : "bad"}
         />
+        <Kpi label="Forecast expenses" value={inr(forecast.expectedExpenses)} />
         <Kpi
           label="Growth %"
           value={`${forecast.growthPct > 0 ? "+" : ""}${forecast.growthPct}%`}

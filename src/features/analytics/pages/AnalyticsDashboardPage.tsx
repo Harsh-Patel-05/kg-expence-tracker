@@ -70,7 +70,19 @@ export function AnalyticsDashboardPage() {
   const { data: purchases } = useRestaurantCollection<PurchaseEntryDoc>({ path: "purchases" });
   const { data: inventory } = useRestaurantCollection<InventoryItemDoc>({ path: "inventory" });
   const { data: wastage } = useRestaurantCollection<WastageDoc>({ path: "wastage" });
-  const { data: orders } = useRestaurantCollection<{ date?: string; total?: number; grandTotal?: number; status?: string }>({ path: "orders" });
+  const { data: orders } = useRestaurantCollection<{
+    date?: string;
+    total?: number;
+    grandTotal?: number;
+    status?: string;
+    orderType?: string;
+    readyAt?: string;
+    acceptedAt?: string;
+    preparingAt?: string;
+    createdAt?: string;
+    invoiceNo?: string;
+    tokenNumber?: string;
+  }>({ path: "orders", max: 2000 });
   const { data: suppliers } = useRestaurantCollection<{ name?: string }>({ path: "suppliers" });
 
   useEffect(() => {
@@ -98,6 +110,46 @@ export function AnalyticsDashboardPage() {
 
   const waste = useMemo(() => wastageReport(wastage, { from: range.from, to: range.to }), [wastage, range.from, range.to]);
   const slow = useMemo(() => slowMovingItems(inventory), [inventory]);
+
+  const prepAnalytics = useMemo(() => {
+    const inRange = orders.filter((o) => {
+      const d = String(o.date || "").slice(0, 10);
+      return d >= range.from && d <= range.to;
+    });
+    const samples = inRange
+      .map((o) => {
+        const start = Date.parse(String(o.acceptedAt || o.preparingAt || o.createdAt || ""));
+        const end = Date.parse(String(o.readyAt || ""));
+        if (!Number.isFinite(start) || !Number.isFinite(end) || end < start) return null;
+        const mins = (end - start) / 60_000;
+        if (mins < 0 || mins > 240) return null;
+        return {
+          mins,
+          orderType: String(o.orderType || "takeaway"),
+          token: String(o.tokenNumber || o.invoiceNo || "").replace(/^0+/, "") || "—"
+        };
+      })
+      .filter(Boolean) as Array<{ mins: number; orderType: string; token: string }>;
+
+    const avg = samples.length ? samples.reduce((s, x) => s + x.mins, 0) / samples.length : 0;
+    const byType = new Map<string, number[]>();
+    for (const s of samples) {
+      const k = s.orderType.toLowerCase();
+      if (!byType.has(k)) byType.set(k, []);
+      byType.get(k)!.push(s.mins);
+    }
+    const typeRows = [...byType.entries()]
+      .map(([type, arr]) => ({
+        type,
+        avg: arr.reduce((a, b) => a + b, 0) / arr.length,
+        count: arr.length
+      }))
+      .sort((a, b) => b.avg - a.avg);
+    const slowest = [...samples].sort((a, b) => b.mins - a.mins).slice(0, 8);
+    const under15 = samples.filter((s) => s.mins <= 15).length;
+    const over25 = samples.filter((s) => s.mins > 25).length;
+    return { avg, count: samples.length, typeRows, slowest, under15, over25 };
+  }, [orders, range.from, range.to]);
 
   if (!canAccess) {
     return <EmptyState title="No access to analytics" description="Your role cannot open this module." />;
@@ -164,6 +216,77 @@ export function AnalyticsDashboardPage() {
       </div></Card>
 
       {loading ? <ContentLoading variant="block" label="Loading" /> : null}
+
+      <Card hover={false} padding="sm">
+        <SectionTitle
+          title="Order preparation time"
+          description="Average kitchen ready time — use this to prioritise first-out tickets on KDS / POS"
+        />
+        <div className="mt-2 grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <div className="rounded-xl border border-stroke-0 bg-bg-1 px-3 py-3">
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-text-muted">Avg prep time</div>
+            <div className="mt-1 text-[22px] font-bold tabular-nums text-primary">
+              {prepAnalytics.count ? `${prepAnalytics.avg.toFixed(1)} min` : "—"}
+            </div>
+            <div className="mt-1 text-[11px] text-text-muted">{prepAnalytics.count} ready samples in range</div>
+          </div>
+          <div className="rounded-xl border border-stroke-0 bg-bg-1 px-3 py-3">
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-text-muted">Ready ≤ 15 min</div>
+            <div className="mt-1 text-[22px] font-bold tabular-nums text-success">{prepAnalytics.under15}</div>
+            <div className="mt-1 text-[11px] text-text-muted">On-target tickets</div>
+          </div>
+          <div className="rounded-xl border border-stroke-0 bg-bg-1 px-3 py-3">
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-text-muted">Over 25 min</div>
+            <div className="mt-1 text-[22px] font-bold tabular-nums text-danger">{prepAnalytics.over25}</div>
+            <div className="mt-1 text-[11px] text-text-muted">Need first priority</div>
+          </div>
+          <div className="rounded-xl border border-stroke-0 bg-bg-1 px-3 py-3">
+            <div className="text-[11px] font-semibold uppercase tracking-wide text-text-muted">Slowest channel</div>
+            <div className="mt-1 text-[18px] font-bold capitalize text-text-primary">
+              {prepAnalytics.typeRows[0]
+                ? `${prepAnalytics.typeRows[0].type} · ${prepAnalytics.typeRows[0].avg.toFixed(1)}m`
+                : "—"}
+            </div>
+            <div className="mt-1 text-[11px] text-text-muted">Focus kitchen capacity here</div>
+          </div>
+        </div>
+        {prepAnalytics.typeRows.length || prepAnalytics.slowest.length ? (
+          <div className="mt-3 grid gap-3 lg:grid-cols-2">
+            <div>
+              <div className="mb-1.5 text-[12px] font-bold text-text-primary">Avg by order type</div>
+              <div className="space-y-1">
+                {prepAnalytics.typeRows.map((r) => (
+                  <div key={r.type} className="flex items-center justify-between rounded-lg border border-stroke-0 px-2.5 py-1.5 text-[12px]">
+                    <span className="font-semibold capitalize">{r.type}</span>
+                    <span className="tabular-nums font-bold">
+                      {r.avg.toFixed(1)} min · {r.count}
+                    </span>
+                  </div>
+                ))}
+                {!prepAnalytics.typeRows.length ? (
+                  <div className="text-[12px] text-text-muted">No prep samples yet — mark orders Ready on KDS.</div>
+                ) : null}
+              </div>
+            </div>
+            <div>
+              <div className="mb-1.5 text-[12px] font-bold text-text-primary">Slowest tickets (priority review)</div>
+              <div className="space-y-1">
+                {prepAnalytics.slowest.map((s, i) => (
+                  <div key={`${s.token}-${i}`} className="flex items-center justify-between rounded-lg border border-stroke-0 px-2.5 py-1.5 text-[12px]">
+                    <span className="font-semibold">
+                      #{s.token} · <span className="capitalize text-text-muted">{s.orderType}</span>
+                    </span>
+                    <span className="tabular-nums font-bold text-danger">{s.mins.toFixed(1)} min</span>
+                  </div>
+                ))}
+                {!prepAnalytics.slowest.length ? (
+                  <div className="text-[12px] text-text-muted">No slow tickets in this range.</div>
+                ) : null}
+              </div>
+            </div>
+          </div>
+        ) : null}
+      </Card>
 
       <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-5">
         {bundle.kpis.map((k) => (

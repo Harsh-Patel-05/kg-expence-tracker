@@ -108,6 +108,8 @@ export type CartLine = {
   menuItemId: string;
   name: string;
   nameHi?: string;
+  nameHead?: string;
+  nameSub?: string;
   price: number;
   qty: number;
   note?: string;
@@ -123,6 +125,19 @@ export type CartLine = {
   diet?: DietType;
   category?: string;
   isCustom?: boolean;
+  /** Grouped catalog product id (combo/bhaji/…) */
+  productId?: string;
+  /** Stable merge key for configured variants */
+  configKey?: string;
+  selection?: {
+    productId: string;
+    size: string;
+    options: Record<string, string>;
+    addons: string[];
+    qty: number;
+    note?: string;
+  };
+  punjabiType?: string;
 };
 
 export type CustomerDoc = AuditFields & {
@@ -237,6 +252,11 @@ export type OrderDoc = AuditFields & {
   taxMode: TaxMode;
   held?: boolean;
   heldAt?: string | null;
+  /** Classic pay-later: kitchen ticket sent, payment collected later */
+  payLater?: boolean;
+  paymentStatus?: "paid" | "unpaid" | "partial";
+  /** False for Swiggy/Zomato kitchen tickets — sales entered manually weekly */
+  countsAsRevenue?: boolean;
   cancelledReason?: string | null;
   refundedAmount?: number;
   saleId?: string | null;
@@ -244,6 +264,9 @@ export type OrderDoc = AuditFields & {
   mergedOrderIds?: string[];
   kotSentAt?: string | null;
   kotVersion?: number;
+  /** Set when cashier edits items after ticket already on KDS */
+  kitchenUpdatedAt?: string | null;
+  kitchenModified?: boolean;
   /** OMS / KDS extensions */
   syncStatus?: SyncStatus;
   kitchenStatus?: KitchenStatus;

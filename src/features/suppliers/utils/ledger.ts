@@ -24,6 +24,72 @@ export function supplierRemaining(
   return buy - paid;
 }
 
+export type OutstandingPurchaseDue = {
+  id: string;
+  seller: string;
+  item: string;
+  date: string;
+  amount: number;
+};
+
+/**
+ * Unpaid purchase rows after applying supplier payment pool (FIFO by bill date).
+ * Matches Supplier Remaining: payments cover dues even if bill status stays "unpaid".
+ */
+export function outstandingPurchaseDues(args: {
+  purchases: Array<{
+    id?: string;
+    seller?: string;
+    vendorName?: string;
+    item?: string;
+    price?: number;
+    total?: number;
+    date?: string;
+    invoiceDate?: string;
+    paidStatus?: string;
+    paymentStatus?: string;
+    status?: string;
+  }>;
+  payments: Array<{ seller?: string; amount?: number }>;
+}): OutstandingPurchaseDue[] {
+  const payLeft = new Map<string, number>();
+  for (const p of args.payments) {
+    const k = String(p.seller || "")
+      .toLowerCase()
+      .trim();
+    if (!k) continue;
+    payLeft.set(k, (payLeft.get(k) || 0) + num(p.amount));
+  }
+
+  const unpaid = args.purchases
+    .filter((p) => !isPurchasePaid(p))
+    .slice()
+    .sort((a, b) =>
+      String(a.date || a.invoiceDate || "").localeCompare(String(b.date || b.invoiceDate || ""))
+    );
+
+  const dues: OutstandingPurchaseDue[] = [];
+  for (const p of unpaid) {
+    const seller = String(p.seller || p.vendorName || "").trim();
+    const key = seller.toLowerCase();
+    const billAmt = num(p.price ?? p.total);
+    if (!(billAmt > 0.009)) continue;
+    const pool = payLeft.get(key) || 0;
+    const cover = Math.min(pool, billAmt);
+    if (cover > 0) payLeft.set(key, pool - cover);
+    const remaining = billAmt - cover;
+    if (remaining <= 0.009) continue;
+    dues.push({
+      id: String(p.id || `${key}-${p.date}-${billAmt}`),
+      seller: seller || "Supplier",
+      item: String(p.item || "Bill"),
+      date: String(p.date || p.invoiceDate || "").slice(0, 10),
+      amount: remaining
+    });
+  }
+  return dues;
+}
+
 export function buildSupplierLedger(args: {
   suppliers: Array<WithId<SupplierDoc>>;
   purchases: Array<WithId<PurchaseEntryDoc> | PurchaseEntryDoc & { id?: string }>;

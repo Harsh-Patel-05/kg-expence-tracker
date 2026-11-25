@@ -1,10 +1,49 @@
 import { createContext, useCallback, useContext, useEffect, useMemo, useState, type ReactNode } from "react";
-import { onAuthStateChanged, signInAnonymously, signOut, type User } from "firebase/auth";
+import {
+  createUserWithEmailAndPassword,
+  onAuthStateChanged,
+  signInAnonymously,
+  signInWithEmailAndPassword,
+  signOut,
+  type User
+} from "firebase/auth";
 import { doc, getDoc, setDoc } from "firebase/firestore";
 import { auth, db } from "@/lib/firebase";
 import { normalizePosRole, isFullAdmin } from "../utils/permissions";
 import type { PosRole } from "../types";
 import { BRAND } from "@/lib/brand";
+
+/** Used when Firebase Anonymous auth is disabled — still lets POS/KDS open. */
+const SHOP_GUEST_EMAIL = "pos-guest@thekilogram.local";
+const SHOP_GUEST_PASS = "KilogramPOS-Guest-2024";
+
+async function signInShopGuest() {
+  try {
+    await signInAnonymously(auth);
+    return;
+  } catch {
+    /* Anonymous disabled — fall through to email guest */
+  }
+  try {
+    await signInWithEmailAndPassword(auth, SHOP_GUEST_EMAIL, SHOP_GUEST_PASS);
+  } catch (err: unknown) {
+    const code = (err as { code?: string })?.code || "";
+    if (code === "auth/user-not-found" || code === "auth/invalid-credential" || code === "auth/wrong-password") {
+      try {
+        await createUserWithEmailAndPassword(auth, SHOP_GUEST_EMAIL, SHOP_GUEST_PASS);
+        return;
+      } catch (createErr: unknown) {
+        const c2 = (createErr as { code?: string })?.code || "";
+        if (c2 === "auth/email-already-in-use") {
+          await signInWithEmailAndPassword(auth, SHOP_GUEST_EMAIL, SHOP_GUEST_PASS);
+          return;
+        }
+        throw createErr;
+      }
+    }
+    throw err;
+  }
+}
 
 type AuthState = {
   user: User | null;
@@ -79,10 +118,10 @@ export function PosAuthProvider({ children }: { children: ReactNode }) {
           return;
         }
         try {
-          await signInAnonymously(auth);
+          await signInShopGuest();
           return;
         } catch (e) {
-          console.warn("Anonymous sign-in failed — enable Anonymous Auth in Firebase Console", e);
+          console.warn("Guest sign-in failed", e);
           setUser(null);
           setProfile(null);
           setLoading(false);
@@ -108,7 +147,7 @@ export function PosAuthProvider({ children }: { children: ReactNode }) {
   const continueAsGuest = useCallback(async () => {
     sessionStorage.removeItem("kg_signed_out");
     sessionStorage.setItem("kg_guest", "1");
-    await signInAnonymously(auth);
+    await signInShopGuest();
   }, []);
 
   const logout = useCallback(async () => {

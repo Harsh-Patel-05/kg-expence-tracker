@@ -3,13 +3,16 @@ import { Link, Outlet, useLocation, useNavigate } from "react-router-dom";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import {
   AlarmClock,
+  ArrowLeftRight,
   BarChart3,
   Bell,
+  CalendarClock,
   CalendarDays,
   CheckSquare,
   ClipboardList,
   Command,
   CreditCard,
+  Database,
   FileStack,
   Home,
   IndianRupee,
@@ -18,12 +21,15 @@ import {
   Menu,
   MonitorSmartphone,
   Package,
+  PiggyBank,
   Plus,
   Receipt,
   Search,
   ShoppingBag,
   Sparkles,
+  TrendingUp,
   Users,
+  UtensilsCrossed,
   X
 } from "lucide-react";
 import { clsx } from "clsx";
@@ -33,52 +39,42 @@ import { usePosAuth } from "@/features/pos/auth/PosAuthProvider";
 import { BRAND } from "@/lib/brand";
 import { LoadingLabel } from "@/components/ui/Loading";
 
-type NavItem = { to: string; label: string; icon: typeof Home };
+type NavItem = { to: string; label: string; icon: typeof Home; external?: boolean };
 type NavGroup = { id: string; label: string; items: NavItem[] };
 
 const groups: NavGroup[] = [
   {
-    id: "dash",
-    label: "Overview",
-    items: [{ to: "/", label: "Dashboard", icon: Home }]
+    id: "main",
+    label: "Main",
+    items: [
+      { to: "/", label: "Dashboard", icon: Home },
+      { to: "/sales", label: "Sales", icon: IndianRupee },
+      { to: "/expenses", label: "Expenses", icon: CreditCard },
+      { to: "/suppliers", label: "Suppliers", icon: Receipt },
+      { to: "/hr", label: "Employees", icon: Users },
+      { to: "/pos", label: "POS", icon: ShoppingBag },
+      { to: "/scheduled", label: "Advance orders", icon: CalendarClock },
+      { to: "/analytics", label: "Analytics", icon: LineChart },
+      { to: "/reports", label: "Reports", icon: BarChart3 }
+    ]
   },
   {
     id: "ops",
-    label: "Operations",
+    label: "More",
     items: [
-      { to: "/pos", label: "POS", icon: ShoppingBag },
+      { to: "/menu", label: "Menu", icon: UtensilsCrossed },
       { to: "/orders", label: "Orders", icon: ClipboardList },
-      { to: "/kds", label: "Kitchen", icon: MonitorSmartphone },
-      { to: "/sales", label: "Sales", icon: IndianRupee }
-    ]
-  },
-  {
-    id: "supply",
-    label: "Supply chain",
-    items: [
-      { to: "/inventory", label: "Inventory", icon: Package },
-      { to: "/suppliers", label: "Suppliers", icon: Receipt },
-      { to: "/expenses", label: "Expenses", icon: CreditCard }
-    ]
-  },
-  {
-    id: "people",
-    label: "People",
-    items: [
-      { to: "/hr", label: "Employees", icon: Users },
+      { to: "/kds", label: "Kitchen (KDS)", icon: MonitorSmartphone, external: true },
       { to: "/tasks", label: "Tasks", icon: CheckSquare },
       { to: "/reminders", label: "Reminders", icon: AlarmClock },
       { to: "/calendar", label: "Calendar", icon: CalendarDays },
-      { to: "/documents", label: "Documents", icon: FileStack }
-    ]
-  },
-  {
-    id: "intel",
-    label: "Insights",
-    items: [
-      { to: "/analytics", label: "Analytics", icon: LineChart },
-      { to: "/reports", label: "Reports", icon: BarChart3 },
-      { to: "/forecast", label: "AI Forecast", icon: Sparkles }
+      { to: "/documents", label: "Documents", icon: FileStack },
+      { to: "/profit-analysis", label: "Profit analysis", icon: TrendingUp },
+      { to: "/forecast", label: "AI Forecast", icon: Sparkles },
+      { to: "/inventory", label: "Inventory", icon: Package },
+      { to: "/investments", label: "Investments", icon: PiggyBank },
+      { to: "/balance-transfer", label: "Balance transfer", icon: ArrowLeftRight },
+      { to: "/backup", label: "Backup", icon: Database }
     ]
   }
 ];
@@ -88,13 +84,21 @@ const flatNav = groups.flatMap((g) => g.items);
 function titleFor(pathname: string) {
   const exact = flatNav.find((n) => n.to === pathname)?.label;
   if (exact) return exact;
+  if (pathname.startsWith("/transactions")) return "Transactions";
   if (pathname.startsWith("/notifications")) return "Notifications";
   if (pathname.startsWith("/forecast")) return "AI Forecast";
+  if (pathname.startsWith("/menu")) return "Menu Management";
   if (pathname.startsWith("/orders")) return "Orders";
+  if (pathname.startsWith("/scheduled")) return "Advance orders";
   if (pathname.startsWith("/hr")) return "Employees";
   if (pathname.startsWith("/inventory")) return "Inventory";
   if (pathname.startsWith("/suppliers")) return "Suppliers";
   if (pathname.startsWith("/expenses")) return "Expenses";
+  if (pathname.startsWith("/investments")) return "Investments";
+  if (pathname.startsWith("/balance-transfer") || pathname.startsWith("/finance/balance")) return "Balance transfer";
+  if (pathname.startsWith("/finance")) return "Finance";
+  if (pathname.startsWith("/profit-analysis")) return "Profit analysis";
+  if (pathname.startsWith("/backup")) return "Backup";
   if (pathname.startsWith("/analytics")) return "Analytics";
   if (pathname.startsWith("/reports")) return "Reports";
   return "Dashboard";
@@ -177,6 +181,10 @@ function CommandPalette({ open, onClose }: { open: boolean; onClose: () => void 
                     className="flex w-full items-center gap-3 rounded-lg px-3 py-2 text-left hover:bg-bg-1"
                     onClick={() => {
                       onClose();
+                      if (n.external) {
+                        window.open(n.to, "_blank", "noopener,noreferrer");
+                        return;
+                      }
                       startTransition(() => navigate(n.to));
                     }}
                   >
@@ -208,18 +216,34 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
             {g.items.map((n) => {
               const Icon = n.icon;
               const active = n.to === "/" ? loc.pathname === "/" : loc.pathname === n.to || loc.pathname.startsWith(n.to + "/");
+              const className = clsx(
+                "flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium no-underline transition",
+                active
+                  ? "bg-primary text-white shadow-[var(--shadow-neonCyan)]"
+                  : "text-text-secondary hover:bg-bg-1 hover:text-text-primary"
+              );
+              if (n.external) {
+                return (
+                  <a
+                    key={n.to}
+                    href={n.to}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    onClick={() => onNavigate?.()}
+                    className={className}
+                  >
+                    <Icon size={17} strokeWidth={2} className={active ? "text-white" : "text-text-muted"} aria-hidden />
+                    <span className="truncate">{n.label}</span>
+                  </a>
+                );
+              }
               return (
                 <Link
                   key={n.to}
                   to={n.to}
                   aria-current={active ? "page" : undefined}
                   onClick={() => onNavigate?.()}
-                  className={clsx(
-                    "flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium no-underline transition",
-                    active
-                      ? "bg-primary text-white shadow-[var(--shadow-neonCyan)]"
-                      : "text-text-secondary hover:bg-bg-1 hover:text-text-primary"
-                  )}
+                  className={className}
                 >
                   <Icon size={17} strokeWidth={2} className={active ? "text-white" : "text-text-muted"} aria-hidden />
                   <span className="truncate">{n.label}</span>
@@ -240,10 +264,13 @@ export function AppShell() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [cmdOpen, setCmdOpen] = useState(false);
   const [loggingOut, setLoggingOut] = useState(false);
+  const [posNavOpen, setPosNavOpen] = useState(false);
+  const [navBusy, setNavBusy] = useState(false);
   const reduceMotion = useReducedMotion();
   const clock = useClock();
   const title = titleFor(loc.pathname);
   const isPos = loc.pathname === "/pos";
+  const showDesktopSidebar = !isPos || posNavOpen;
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -256,53 +283,75 @@ export function AppShell() {
     return () => window.removeEventListener("keydown", onKey);
   }, []);
 
+  // Top progress bar on every route change (page refresh / navigation)
+  useEffect(() => {
+    setNavBusy(true);
+    const t = window.setTimeout(() => setNavBusy(false), 450);
+    return () => window.clearTimeout(t);
+  }, [loc.pathname]);
+
   return (
     <div className="flex h-dvh overflow-hidden bg-bg-0">
-      {authLoading ? (
+      {authLoading || navBusy ? (
         <div className="fixed inset-x-0 top-0 z-[60] h-1 overflow-hidden bg-stroke-0" role="progressbar" aria-label="Loading">
-          <div className="h-full w-1/3 kg-shimmer bg-primary" />
+          <div className="h-full w-1/3 animate-pulse bg-primary" />
         </div>
       ) : null}
 
-      {/* Desktop sidebar — always open, fixed width, full labels */}
-      <aside className="hidden h-full w-[260px] shrink-0 flex-col border-r border-stroke-0 bg-card-0 md:flex">
-        <div className="flex items-center gap-3 border-b border-stroke-0 px-4 py-4">
-          <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary text-[13px] font-bold text-white shadow-[var(--shadow-neonCyan)]" aria-hidden>
-            {BRAND.restaurantShort}
+      {/* Desktop sidebar — hidden on POS for cashier focus (FAB reopens) */}
+      {showDesktopSidebar ? (
+        <aside className={clsx("h-full w-[260px] shrink-0 flex-col border-r border-stroke-0 bg-card-0", isPos ? "fixed inset-y-0 left-0 z-50 flex shadow-float" : "hidden md:flex")}>
+          <div className="flex items-center gap-3 border-b border-stroke-0 px-4 py-4">
+            <div className="grid h-10 w-10 shrink-0 place-items-center rounded-xl bg-primary text-[13px] font-bold text-white shadow-[var(--shadow-neonCyan)]" aria-hidden>
+              {BRAND.restaurantShort}
+            </div>
+            <div className="min-w-0 flex-1">
+              <div className="truncate text-[14px] font-bold text-text-primary">{appName}</div>
+              <div className="truncate text-[12px] text-text-muted">{restaurantName}</div>
+            </div>
+            {isPos ? (
+              <button
+                type="button"
+                className="grid h-9 w-9 place-items-center rounded-full hover:bg-bg-1"
+                aria-label="Close menu"
+                onClick={() => setPosNavOpen(false)}
+              >
+                <X size={18} aria-hidden />
+              </button>
+            ) : null}
           </div>
-          <div className="min-w-0">
-            <div className="truncate text-[14px] font-bold text-text-primary">{appName}</div>
-            <div className="truncate text-[12px] text-text-muted">{restaurantName}</div>
+
+          <div className="flex-1 overflow-y-auto px-3 py-4 kg-hide-scrollbar">
+            <SidebarNav onNavigate={isPos ? () => setPosNavOpen(false) : undefined} />
           </div>
-        </div>
 
-        <div className="flex-1 overflow-y-auto px-3 py-4 kg-hide-scrollbar">
-          <SidebarNav />
-        </div>
-
-        <div className="border-t border-stroke-0 p-3">
-          <button
-            type="button"
-            disabled={loggingOut}
-            onClick={() => {
-              setLoggingOut(true);
-              void logout().finally(() => setLoggingOut(false));
-            }}
-            className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13px] font-medium text-text-secondary transition hover:bg-danger-bg hover:text-danger"
-            title="Sign out"
-            aria-label="Sign out"
-          >
-            {loggingOut ? (
-              <LoadingLabel>Signing out…</LoadingLabel>
-            ) : (
-              <>
-                <LogOut size={16} aria-hidden />
-                <span>Sign out</span>
-              </>
-            )}
-          </button>
-        </div>
-      </aside>
+          <div className="border-t border-stroke-0 p-3">
+            <button
+              type="button"
+              disabled={loggingOut}
+              onClick={() => {
+                setLoggingOut(true);
+                void logout().finally(() => setLoggingOut(false));
+              }}
+              className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-[13px] font-medium text-text-secondary transition hover:bg-danger-bg hover:text-danger"
+              title="Sign out"
+              aria-label="Sign out"
+            >
+              {loggingOut ? (
+                <LoadingLabel>Signing out…</LoadingLabel>
+              ) : (
+                <>
+                  <LogOut size={16} aria-hidden />
+                  <span>Sign out</span>
+                </>
+              )}
+            </button>
+          </div>
+        </aside>
+      ) : null}
+      {isPos && posNavOpen ? (
+        <button type="button" className="fixed inset-0 z-40 bg-[color:var(--rp-overlay)] md:block" aria-label="Close menu" onClick={() => setPosNavOpen(false)} />
+      ) : null}
 
       {/* Mobile drawer */}
       <AnimatePresence>
@@ -358,11 +407,11 @@ export function AppShell() {
 
       {/* Main column */}
       <div className="flex min-h-0 min-w-0 flex-1 flex-col">
-        <header className="z-40 flex shrink-0 flex-wrap items-center gap-3 border-b border-stroke-0 bg-card-0 px-3 py-3 md:px-5">
+        <header className={clsx("z-40 flex shrink-0 flex-wrap items-center gap-3 border-b border-stroke-0 bg-card-0 px-3 py-3 md:px-5", isPos && "md:py-2")}>
           <button
             type="button"
-            className="grid h-10 w-10 place-items-center rounded-xl bg-primary text-white md:hidden"
-            onClick={() => setMobileOpen(true)}
+            className={clsx("grid h-10 w-10 place-items-center rounded-xl bg-primary text-white", isPos ? "" : "md:hidden")}
+            onClick={() => (isPos ? setPosNavOpen(true) : setMobileOpen(true))}
             aria-label="Open navigation"
           >
             <Menu size={18} aria-hidden />
@@ -409,11 +458,12 @@ export function AppShell() {
             <NotificationBell />
             <button
               type="button"
-              onClick={() => navigate("/sales")}
+              onClick={() => navigate("/expenses#daily-expense-add")}
               className="inline-flex items-center gap-1.5 rounded-xl bg-primary px-3.5 py-2.5 text-[12px] font-semibold text-white shadow-[var(--shadow-neonCyan)] hover:bg-primary-hover"
+              title="Add daily expense"
             >
               <Plus size={14} aria-hidden />
-              <span className="hidden sm:inline">Quick Add</span>
+              <span className="hidden sm:inline">Add expense</span>
             </button>
           </div>
         </header>

@@ -62,6 +62,7 @@ export function useRestaurantCollection<T extends DocumentData>(args: {
 
     let cancelled = false;
     let unsub: Unsubscribe | null = null;
+    // Always show loader until first snapshot (covers page refresh + navigation)
     setLoading(true);
     setError(null);
 
@@ -78,6 +79,7 @@ export function useRestaurantCollection<T extends DocumentData>(args: {
 
         unsub = onSnapshot(
           q,
+          { includeMetadataChanges: false },
           (snap) => {
             if (cancelled) return;
             const rows = snap.docs
@@ -89,6 +91,32 @@ export function useRestaurantCollection<T extends DocumentData>(args: {
           },
           (e) => {
             if (cancelled) return;
+            // orderBy on missing field / index can fail — fall back to unordered listen
+            if (orderByField && /index|FAILED_PRECONDITION|requires an index/i.test(String(e?.message || ""))) {
+              try {
+                unsub = onSnapshot(
+                  collection(db, path),
+                  (snap) => {
+                    if (cancelled) return;
+                    const rows = snap.docs
+                      .map((d) => ({ id: d.id, ...(d.data() as T) }))
+                      .filter((r) => !(r as any).isDeleted && !(r as any).deleted);
+                    setData(rows);
+                    setLoading(false);
+                    setError(null);
+                  },
+                  (e2) => {
+                    if (cancelled) return;
+                    setError(e2?.message ?? "Failed to load");
+                    setLoading(false);
+                    setData([]);
+                  }
+                );
+                return;
+              } catch {
+                /* fall through */
+              }
+            }
             setError(e?.message ?? "Failed to load");
             setLoading(false);
             setData([]);

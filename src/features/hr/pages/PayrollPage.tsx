@@ -15,10 +15,19 @@ import type {
 } from "../types";
 import { calcPayrollForMonth, monthISO } from "../utils/payroll";
 import { canRunPayroll } from "../utils/permissions";
-import { createAdvance, createIncentive, createTip, postSalary, toggleSalaryPaid } from "../services/payrollService";
+import {
+  createAdvance,
+  createIncentive,
+  createTip,
+  payFullStaffSalary,
+  postSalary,
+  toggleSalaryPaid
+} from "../services/payrollService";
+import { softDeleteAdvance } from "@/lib/softDelete";
 import { EmptyState, PageHeader } from "@/components/ui/PageHeader";
 import { Card } from "@/components/ui/Card";
 import { KpiCard } from "@/components/ui/KpiCard";
+import { downloadStaffSalaryPdf } from "../utils/salarySlipPdf";
 
 export function PayrollPage() {
   const { role } = usePosAuth();
@@ -27,6 +36,7 @@ export function PayrollPage() {
   const [tab, setTab] = useState<"run" | "history" | "advances" | "incentives" | "tips">("run");
   const [msg, setMsg] = useState<string | null>(null);
   const [busy, setBusy] = useState(false);
+  const [payMethod, setPayMethod] = useState<"cash" | "online" | "bank" | "upi">("cash");
 
   const { data: staff } = useRestaurantCollection<EmployeeDoc>({ path: "staff" });
   const { data: attendance } = useRestaurantCollection<AttendanceDoc>({ path: "attendance" });
@@ -48,28 +58,25 @@ export function PayrollPage() {
           fixedSalaries: fixed,
           attendance,
           advances,
+          salaries,
           incentives,
           tips
         })
       ),
-    [active, month, fixed, attendance, advances, incentives, tips]
+    [active, month, fixed, attendance, advances, salaries, incentives, tips]
   );
 
   const payrollTotals = useMemo(
     () =>
       payrollRows.reduce(
-        (a, r) => {
-          const leaveDays = num(r.absent) + num(r.half) * 0.5;
-          const leaveDeduction = (num(r.monthlyFixed) / 30) * leaveDays;
-          const monthEnd = num(r.monthlyFixed) - num(r.advances) - leaveDeduction;
-          return {
-            monthly: a.monthly + num(r.monthlyFixed),
-            advances: a.advances + num(r.advances),
-            leave: a.leave + leaveDeduction,
-            net: a.net + monthEnd
-          };
-        },
-        { monthly: 0, advances: 0, leave: 0, net: 0 }
+        (a, r) => ({
+          monthly: a.monthly + num(r.monthlyFixed),
+          earned: a.earned + num(r.earned),
+          advances: a.advances + num(r.advances),
+          leave: a.leave + num(r.leaveDeduction),
+          net: a.net + num(r.monthEndPayable ?? r.net)
+        }),
+        { monthly: 0, earned: 0, advances: 0, leave: 0, net: 0 }
       ),
     [payrollRows]
   );
@@ -79,9 +86,16 @@ export function PayrollPage() {
     [salaries, month]
   );
 
-  const [advForm, setAdvForm] = useState({ name: "", amount: "", method: "cash" as const, note: "" });
+  const [advForm, setAdvForm] = useState({
+    name: "",
+    amount: "",
+    method: "cash" as "cash" | "online",
+    note: ""
+  });
   const [incForm, setIncForm] = useState({ name: "", amount: "", type: "performance" as const, note: "" });
   const [tipForm, setTipForm] = useState({ name: "", amount: "", mode: "cash" as const });
+  const [salaryPdfOpen, setSalaryPdfOpen] = useState(false);
+  const [salaryPdfStaff, setSalaryPdfStaff] = useState("");
 
   async function generateAll() {
     if (!canRun) return;
@@ -119,10 +133,76 @@ export function PayrollPage() {
         title="Payroll & advances"
         actions={
           <>
-          <input type="month" className="kg-input !w-auto" value={month} onChange={(e) => setMonth(e.target.value)} />
+            <input type="month" className="kg-input !w-auto" value={month} onChange={(e) => setMonth(e.target.value)} />
+            <button type="button" className="kg-btn kg-btn-secondary" onClick={() => setSalaryPdfOpen(true)}>
+              Download salary slip PDF
+            </button>
           </>
         }
       />
+
+      {salaryPdfOpen ? (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+          <Card hover={false} className="w-full max-w-md">
+            <div className="mb-3 text-[15px] font-bold text-text-primary">Download salary slip PDF</div>
+            <select
+              className="kg-input mb-2 w-full"
+              value={salaryPdfStaff}
+              onChange={(e) => setSalaryPdfStaff(e.target.value)}
+            >
+              <option value="">— Select employee —</option>
+              <option value="__ALL__">All employees</option>
+              {active.map((s) => (
+                <option key={s.id} value={s.name}>
+                  {s.name}
+                </option>
+              ))}
+            </select>
+            <input type="month" className="kg-input mb-3 w-full" value={month} onChange={(e) => setMonth(e.target.value)} />
+            <div className="flex flex-wrap justify-end gap-2">
+              <button type="button" className="kg-btn kg-btn-secondary" onClick={() => setSalaryPdfOpen(false)}>
+                Cancel
+              </button>
+              <button
+                type="button"
+                className="kg-btn kg-btn-primary"
+                onClick={() => {
+                  const selected = salaryPdfStaff.trim();
+                  if (!selected) {
+                    setMsg("Please select an employee");
+                    return;
+                  }
+                  const names =
+                    selected === "__ALL__" ? active.map((s) => s.name).filter(Boolean) : [selected];
+                  if (!names.length) {
+                    setMsg("No employees");
+                    return;
+                  }
+                  try {
+                    downloadStaffSalaryPdf({
+                      names,
+                      month,
+                      staff: active,
+                      fixedSalaries: fixed,
+                      attendance,
+                      advances,
+                      salaries,
+                      incentives,
+                      tips
+                    });
+                    setSalaryPdfOpen(false);
+                    setMsg("Print dialog opened — Save as PDF (no pop-up needed)");
+                  } catch (e: unknown) {
+                    setMsg(e instanceof Error ? e.message : "PDF failed");
+                  }
+                }}
+              >
+                Download PDF
+              </button>
+            </div>
+          </Card>
+        </div>
+      ) : null}
 
       {msg ? <div className="rounded-lg border border-primary/20 bg-primary-light px-3 py-2 text-[13px] text-primary">{msg}</div> : null}
 
@@ -140,43 +220,104 @@ export function PayrollPage() {
 
       {tab === "run" ? (
         <div className="space-y-3">
-          <div className="grid gap-3 sm:grid-cols-3">
-            <KpiCard title="Total monthly salary" value={inr(Math.round(payrollTotals.monthly))} />
-            <KpiCard title="Total advances given" value={inr(Math.round(payrollTotals.advances))} />
+          <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+            <KpiCard title="Fixed monthly" value={inr(Math.round(payrollTotals.monthly))} />
+            <KpiCard title="Earned (attendance)" value={inr(Math.round(payrollTotals.earned))} />
+            <KpiCard title="Advances + carry" value={inr(Math.round(payrollTotals.advances))} />
             <KpiCard title="To pay at month end" value={inr(Math.round(payrollTotals.net))} tone={payrollTotals.net >= 0 ? "good" : "bad"} />
           </div>
-          <div className="flex justify-end">
-            <button
-              disabled={!canRun || busy}
-              onClick={generateAll}
-              className="kg-btn kg-btn-primary disabled:opacity-50"
-            >
-              {busy ? "Generating…" : "Generate payslips"}
+          <div className="flex flex-wrap items-center justify-end gap-2">
+            <select className="kg-input !w-auto" value={payMethod} onChange={(e) => setPayMethod(e.target.value as any)}>
+              <option value="cash">Pay from cash</option>
+              <option value="online">Pay from online/UPI</option>
+              <option value="bank">Pay from bank</option>
+            </select>
+            <button disabled={!canRun || busy} onClick={generateAll} className="kg-btn kg-btn-secondary disabled:opacity-50">
+              {busy ? "Working…" : "Generate unpaid slips"}
             </button>
           </div>
-          <Card hover={false} className="!p-0">
+          <Card hover={false} className="!p-0 overflow-x-auto">
             <table className="w-full text-left text-[13px]">
               <thead className="bg-bg-1 text-[11px] font-semibold uppercase tracking-[0.06em] text-text-muted">
                 <tr>
                   <th className="px-3 py-2">Employee</th>
-                  <th className="px-3 py-2">Present eq</th>
+                  <th className="px-3 py-2">Present</th>
                   <th className="px-3 py-2">Earned</th>
-                  <th className="px-3 py-2">Advances</th>
-                  <th className="px-3 py-2">Incentives</th>
-                  <th className="px-3 py-2">Net</th>
+                  <th className="px-3 py-2">Adv + carry</th>
+                  <th className="px-3 py-2">Leave ded.</th>
+                  <th className="px-3 py-2">Net payable</th>
+                  <th className="px-3 py-2" />
                 </tr>
               </thead>
               <tbody>
-                {payrollRows.map((r) => (
-                  <tr key={r.name} className="border-t border-stroke-0">
-                    <td className="px-3 py-2 font-semibold">{r.name}</td>
-                    <td className="px-3 py-2">{r.presentEquivalent}</td>
-                    <td className="px-3 py-2">{inr(r.earned)}</td>
-                    <td className="px-3 py-2">{inr(r.advances)}</td>
-                    <td className="px-3 py-2">{inr(r.incentives + r.tips)}</td>
-                    <td className="px-3 py-2 font-bold">{inr(r.net)}</td>
-                  </tr>
-                ))}
+                {payrollRows.map((r) => {
+                  const slip = monthSalaries.find((s) => s.name.toLowerCase() === r.name.toLowerCase());
+                  const settled = r.settled || slip?.status === "paid";
+                  return (
+                    <tr key={r.name} className="border-t border-stroke-0">
+                      <td className="px-3 py-2 font-semibold">
+                        {r.name}
+                        {settled ? <span className="ml-1 text-[10px] font-bold text-success">PAID</span> : null}
+                      </td>
+                      <td className="px-3 py-2">{r.presentEquivalent}</td>
+                      <td className="px-3 py-2">{inr(Math.round(r.earned))}</td>
+                      <td className="px-3 py-2">
+                        {inr(Math.round(r.advances))}
+                        {num(r.carryIn) > 0 ? (
+                          <div className="text-[10px] text-text-muted">incl. carry {inr(Math.round(num(r.carryIn)))}</div>
+                        ) : null}
+                      </td>
+                      <td className="px-3 py-2">{inr(Math.round(r.leaveDeduction || 0))}</td>
+                      <td
+                        className={`px-3 py-2 font-bold ${num(r.monthEndPayable ?? r.net) < 0 ? "text-danger" : ""}`}
+                      >
+                        {inr(Math.round(r.monthEndPayable ?? r.net))}
+                        {num(r.carryOut) > 0 ? (
+                          <div className="text-[10px] font-semibold text-danger">
+                            runs −{inr(Math.round(num(r.carryOut)))} → next month
+                          </div>
+                        ) : null}
+                      </td>
+                      <td className="px-3 py-2 text-right">
+                        {canRun && !settled ? (
+                          <button
+                            disabled={busy}
+                            className="text-xs font-semibold text-primary disabled:opacity-50"
+                            onClick={async () => {
+                              try {
+                                setBusy(true);
+                                const emp = active.find((s) => s.name.toLowerCase() === r.name.toLowerCase());
+                                const payable = num(r.monthEndPayable ?? r.net);
+                                await payFullStaffSalary({
+                                  name: r.name,
+                                  staffId: emp?.id,
+                                  month,
+                                  earned: Math.round(r.earned),
+                                  // Pay only what's due; leftover advance stays for next month
+                                  netPay: Math.max(0, Math.round(payable)),
+                                  advanceAdjusted: Math.round(r.advances),
+                                  paymentMethod: payMethod,
+                                  existingSalaryId: slip?.id
+                                });
+                                setMsg(
+                                  payable < 0
+                                    ? `Marked ${r.name} paid ₹0 · ${inr(Math.abs(Math.round(payable)))} advance carries to next month`
+                                    : `Paid full salary for ${r.name}`
+                                );
+                              } catch (e: any) {
+                                setMsg(e?.message || "Pay failed");
+                              } finally {
+                                setBusy(false);
+                              }
+                            }}
+                          >
+                            {num(r.monthEndPayable ?? r.net) < 0 ? "Clear month (₹0)" : "Pay full"}
+                          </button>
+                        ) : null}
+                      </td>
+                    </tr>
+                  );
+                })}
               </tbody>
             </table>
           </Card>
@@ -239,13 +380,25 @@ export function PayrollPage() {
                 </option>
               ))}
             </select>
+            <select
+              className="kg-input mb-2 w-full"
+              value={advForm.method}
+              onChange={(e) => setAdvForm((f) => ({ ...f, method: e.target.value as "cash" | "online" }))}
+            >
+              <option value="cash">Cash</option>
+              <option value="online">Online</option>
+            </select>
             <input
               type="number"
-              placeholder="Amount"
+              placeholder="Advance amount"
               className="kg-input mb-2 w-full"
               value={advForm.amount}
               onChange={(e) => setAdvForm((f) => ({ ...f, amount: e.target.value }))}
             />
+            <p className="mb-2 text-[11px] leading-snug text-text-muted">
+              Cash / Online advance deducts from that pocket now. Delete restores the balance.{" "}
+              <strong>Pay full</strong> pays remaining = earned − advances (no double count).
+            </p>
             <button
               disabled={!canRun || !advForm.name}
               className="w-full kg-btn kg-btn-primary disabled:opacity-50"
@@ -260,7 +413,7 @@ export function PayrollPage() {
                   method: advForm.method,
                   note: advForm.note
                 });
-                setMsg("Advance recorded");
+                setMsg(`Advance recorded (${advForm.method === "online" ? "Online" : "Cash"})`);
                 setAdvForm({ name: "", amount: "", method: "cash", note: "" });
               }}
             >
@@ -273,21 +426,50 @@ export function PayrollPage() {
                 <tr>
                   <th className="px-3 py-2">Date</th>
                   <th className="px-3 py-2">Name</th>
+                  <th className="px-3 py-2">Paid from</th>
                   <th className="px-3 py-2">Amount</th>
                   <th className="px-3 py-2">Month</th>
+                  <th className="px-3 py-2" />
                 </tr>
               </thead>
               <tbody>
                 {advances
                   .filter((a) => String(a.month || "").slice(0, 7) === month)
-                  .map((a) => (
-                    <tr key={a.id} className="border-t border-stroke-0">
-                      <td className="px-3 py-2">{a.date}</td>
-                      <td className="px-3 py-2 font-semibold">{a.name}</td>
-                      <td className="px-3 py-2">{inr(a.amount)}</td>
-                      <td className="px-3 py-2">{a.month}</td>
-                    </tr>
-                  ))}
+                  .map((a) => {
+                    const from =
+                      a.paidFrom === "bank" || a.method === "online" || a.method === "bank" || a.method === "upi"
+                        ? "Online"
+                        : "Cash";
+                    return (
+                      <tr key={a.id} className="border-t border-stroke-0">
+                        <td className="px-3 py-2">{a.date}</td>
+                        <td className="px-3 py-2 font-semibold">{a.name}</td>
+                        <td className="px-3 py-2">{from}</td>
+                        <td className="px-3 py-2">{inr(a.amount)}</td>
+                        <td className="px-3 py-2">{a.month}</td>
+                        <td className="px-3 py-2 text-right">
+                          {canRun ? (
+                            <button
+                              type="button"
+                              className="text-xs font-semibold text-danger"
+                              onClick={() => {
+                                if (
+                                  !window.confirm(
+                                    `Delete advance ${inr(a.amount)} for ${a.name}? ${from} balance will be restored.`
+                                  )
+                                ) {
+                                  return;
+                                }
+                                void softDeleteAdvance(a.id).then(() => setMsg("Advance deleted — balance restored."));
+                              }}
+                            >
+                              Delete
+                            </button>
+                          ) : null}
+                        </td>
+                      </tr>
+                    );
+                  })}
               </tbody>
             </table>
           </Card>

@@ -130,33 +130,60 @@ export type ExpenseCategoryDoc = AuditFields & {
   syncStatus?: SyncStatus;
 };
 
+/** Classic kitchen + fixed cost groups (plus extra ops categories). */
+export const EXPENSE_CATEGORY_GROUPS: Record<string, Array<{ value: string; label: string }>> = {
+  kitchen: [
+    { value: "vegetables", label: "Vegetables" },
+    { value: "kirana", label: "Kirana / grocery" },
+    { value: "milk", label: "Milk / dairy" },
+    { value: "tea", label: "Tea / chai" },
+    { value: "limbu_marcha", label: "Limbu marcha bill" },
+    { value: "paneer", label: "Paneer" },
+    { value: "cheese", label: "Cheese" },
+    { value: "dhaniya", label: "Dhaniya" },
+    { value: "capsicum", label: "Capsicum" },
+    { value: "groundnut_oil", label: "Groundnut oil" },
+    { value: "cotton_seed_oil", label: "Cotton seed oil" },
+    { value: "butter", label: "Butter" },
+    { value: "salt", label: "Salt" },
+    { value: "gas", label: "Gas" },
+    { value: "packaging", label: "Packaging" },
+    { value: "kitchen", label: "Kitchen / supplies" },
+    { value: "staff_food", label: "Staffs food" }
+  ],
+  fixed: [
+    { value: "rent", label: "Rent" },
+    { value: "shop_rent", label: "Shop rent" },
+    { value: "light_bill", label: "Light bill" },
+    { value: "electricity", label: "Electricity" },
+    { value: "water_bill", label: "Water bill" },
+    { value: "water", label: "Water" },
+    { value: "internet", label: "Internet" },
+    { value: "utilities", label: "Utilities" },
+    { value: "cleaning", label: "Cleaning" },
+    { value: "kachara", label: "Kachara bill" },
+    { value: "maintenance", label: "Maintenance" },
+    { value: "salary", label: "Salary" },
+    { value: "advance", label: "Advance" },
+    { value: "vendor_payment", label: "Vendor payment" },
+    { value: "transport", label: "Transport" },
+    { value: "fuel", label: "Fuel" },
+    { value: "marketing", label: "Marketing" },
+    { value: "software", label: "Software" },
+    { value: "subscriptions", label: "Subscriptions" },
+    { value: "taxes", label: "Taxes" },
+    { value: "insurance", label: "Insurance" },
+    { value: "bank_charges", label: "Bank charges" },
+    { value: "office", label: "Office" },
+    { value: "shop_other", label: "Shop / unexpected" },
+    { value: "misc", label: "Miscellaneous" },
+    { value: "other", label: "Other" }
+  ]
+};
+
 export const EXPENSE_CATEGORIES: Array<{ value: string; label: string }> = [
-  { value: "rent", label: "Rent" },
-  { value: "electricity", label: "Electricity" },
-  { value: "gas", label: "Gas" },
-  { value: "water", label: "Water" },
-  { value: "internet", label: "Internet" },
-  { value: "utilities", label: "Utilities" },
-  { value: "salary", label: "Salary" },
-  { value: "advance", label: "Advance" },
-  { value: "vendor_payment", label: "Vendor payment" },
-  { value: "kitchen", label: "Kitchen material" },
-  { value: "vegetables", label: "Vegetables" },
-  { value: "kirana", label: "Kirana" },
-  { value: "packaging", label: "Packaging" },
-  { value: "cleaning", label: "Cleaning" },
-  { value: "transport", label: "Transport" },
-  { value: "fuel", label: "Fuel" },
-  { value: "maintenance", label: "Maintenance" },
-  { value: "marketing", label: "Marketing" },
-  { value: "software", label: "Software" },
-  { value: "subscriptions", label: "Subscriptions" },
-  { value: "taxes", label: "Taxes" },
-  { value: "insurance", label: "Insurance" },
-  { value: "bank_charges", label: "Bank charges" },
-  { value: "office", label: "Office" },
-  { value: "misc", label: "Miscellaneous" },
-  { value: "other", label: "Other" }
+  ...EXPENSE_CATEGORY_GROUPS.kitchen,
+  ...EXPENSE_CATEGORY_GROUPS.fixed
 ];
 
 export const TASK_TYPES = [

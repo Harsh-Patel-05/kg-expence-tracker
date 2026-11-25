@@ -4,16 +4,20 @@ import type { ExpenseDoc } from "@/features/tasks/types";
 import type { InventoryItemDoc, PurchaseEntryDoc } from "@/features/inventory/types";
 import { availableQty } from "@/features/inventory/utils/alerts";
 import { profitReport } from "@/features/reports/utils/reportEngine";
+import { countsAsRevenueSale, saleAmounts } from "@/lib/balanceMath";
 
 export type ForecastHorizon = "tomorrow" | "7d" | "30d" | "month" | "quarter" | "year";
 
-export type DailyPoint = { date: string; revenue: number; orders: number };
+export type DailyPoint = { date: string; revenue: number; cash: number; online: number; orders: number };
 
 export type ForecastDay = {
   date: string;
   forecastRevenue: number;
+  forecastCash: number;
+  forecastOnline: number;
   forecastOrders: number;
   forecastProfit: number;
+  forecastExpenses: number;
   dow: number;
   factors: string[];
 };
@@ -23,8 +27,11 @@ export type ForecastResult = {
   from: string;
   to: string;
   expectedRevenue: number;
+  expectedCash: number;
+  expectedOnline: number;
   expectedOrders: number;
   expectedProfit: number;
+  expectedExpenses: number;
   expectedCustomers: number;
   expectedAov: number;
   expectedFoodCost: number;
@@ -36,11 +43,15 @@ export type ForecastResult = {
   riskReasons: string[];
   insights: string[];
   recommendations: string[];
+  /** Plain-language “what this module does” for The Kilogram */
+  whatItDoes: string[];
   series: ForecastDay[];
   history: DailyPoint[];
   actualVsForecast?: Array<{ date: string; actual: number; forecast: number; errorPct: number }>;
   model: {
     baselineDaily: number;
+    cashShare: number;
+    onlineShare: number;
     dowFactors: number[];
     trendSlope: number;
     sampleDays: number;
@@ -69,8 +80,11 @@ function addDays(iso: string, n: number) {
   return ymd(d);
 }
 
-function saleAmount(s: SaleLike) {
-  return num(s.total) || num(s.amount) || num(s.cashAmount) + num(s.onlineAmount);
+/** Shop revenue only — skips advances and excludes Swiggy/Zomato from totals. */
+function saleSplit(s: SaleLike | Record<string, unknown>) {
+  if (!countsAsRevenueSale(s)) return { cash: 0, online: 0, total: 0 };
+  const a = saleAmounts(s);
+  return { cash: a.cash, online: a.retail - a.cash, total: a.retail };
 }
 
 function orderAmount(o: OrderLike) {
@@ -113,8 +127,12 @@ export function buildDailySeries(args: { sales: SaleLike[]; orders?: OrderLike[]
   for (const s of args.sales) {
     const date = String(s.date || "").slice(0, 10);
     if (!date) continue;
-    const cur = map.get(date) || { date, revenue: 0, orders: 0 };
-    cur.revenue += saleAmount(s);
+    const split = saleSplit(s);
+    if (!(split.total > 0)) continue;
+    const cur = map.get(date) || { date, revenue: 0, cash: 0, online: 0, orders: 0 };
+    cur.revenue += split.total;
+    cur.cash += split.cash;
+    cur.online += split.online;
     cur.orders += 1;
     map.set(date, cur);
   }
@@ -123,10 +141,17 @@ export function buildDailySeries(args: { sales: SaleLike[]; orders?: OrderLike[]
     const date = String(o.date || "").slice(0, 10);
     if (!date) continue;
     const st = String(o.status || "").toLowerCase();
-    if (st === "cancelled" || st === "canceled") continue;
-    const cur = map.get(date) || { date, revenue: 0, orders: 0 };
+    if (st === "cancelled" || st === "canceled" || st === "void") continue;
+    const cur = map.get(date) || { date, revenue: 0, cash: 0, online: 0, orders: 0 };
     // Prefer sales ledger when present; orders fill gaps / add volume signal
-    if (cur.revenue <= 0) cur.revenue += orderAmount(o);
+    if (cur.revenue <= 0) {
+      const amt = orderAmount(o);
+      const ch = String(o.channel || "").toLowerCase();
+      const onlineish = ch.includes("swiggy") || ch.includes("zomato") || ch.includes("online") || ch.includes("upi");
+      cur.revenue += amt;
+      if (onlineish) cur.online += amt;
+      else cur.cash += amt;
+    }
     cur.orders += 1;
     map.set(date, cur);
   }
@@ -212,9 +237,15 @@ export function runSalesForecast(args: {
   const history = buildDailySeries({ sales: args.sales, orders: args.orders });
   const recent = history.filter((p) => p.date <= today);
   const sampleDays = recent.length;
-  const baselineDaily = mean(recent.slice(-28).map((p) => p.revenue)) || mean(recent.map((p) => p.revenue));
-  const baselineOrders = mean(recent.slice(-28).map((p) => p.orders)) || mean(recent.map((p) => p.orders)) || 1;
-  const factorsDow = dowFactors(recent.length ? recent : [{ date: today, revenue: 0, orders: 0 }]);
+  const last28 = recent.slice(-28);
+  const baselineDaily = mean(last28.map((p) => p.revenue)) || mean(recent.map((p) => p.revenue));
+  const baselineCash = mean(last28.map((p) => p.cash)) || mean(recent.map((p) => p.cash));
+  const baselineOnline = mean(last28.map((p) => p.online)) || mean(recent.map((p) => p.online));
+  const cashShare = baselineDaily > 0 ? baselineCash / baselineDaily : 0.5;
+  const onlineShare = baselineDaily > 0 ? baselineOnline / baselineDaily : 0.5;
+  const baselineOrders = mean(last28.map((p) => p.orders)) || mean(recent.map((p) => p.orders)) || 1;
+  const emptyDay: DailyPoint = { date: today, revenue: 0, cash: 0, online: 0, orders: 0 };
+  const factorsDow = dowFactors(recent.length ? recent : [emptyDay]);
   const slope = trendSlope(recent, 28);
   const aov = baselineOrders > 0 ? baselineDaily / baselineOrders : baselineDaily;
 
@@ -222,16 +253,19 @@ export function runSalesForecast(args: {
   const totalOrders = (args.orders || []).length || 1;
   const cancelRate = cancelled / totalOrders;
 
-  // Food cost estimate from purchases vs sales (last 30d)
+  // Food cost estimate from purchases vs sales (last 30d) — same idea as inventory/supplier spend
   const from30 = addDays(today, -29);
   const sales30 = recent.filter((p) => p.date >= from30).reduce((s, p) => s + p.revenue, 0) || baselineDaily * 30;
   const purch30 = (args.purchases || [])
     .filter((p) => String(p.date || p.invoiceDate || "").slice(0, 10) >= from30)
     .reduce((s, p) => s + num(p.price ?? p.total), 0);
-  const foodCostPct = sales30 > 0 ? Math.min(0.75, Math.max(0.15, purch30 / sales30)) : 0.32;
+  const foodCostPct = sales30 > 0 ? Math.min(0.75, Math.max(0.15, purch30 / sales30 || 0.32)) : 0.32;
 
   const exp30 = (args.expenses || [])
-    .filter((e) => e.status === "paid" && String(e.date || "").slice(0, 10) >= from30)
+    .filter((e) => {
+      const st = String(e.status || e.paymentStatus || "paid").toLowerCase();
+      return (st === "paid" || st === "" || st === "completed") && String(e.date || "").slice(0, 10) >= from30;
+    })
     .reduce((s, e) => s + num(e.amount), 0);
   const dailyExpense = exp30 / 30;
 
@@ -263,37 +297,44 @@ export function runSalesForecast(args: {
       if (fest.label) dayFactors.push(fest.label);
     }
 
-    // trend: project days ahead from last history point
     const daysAhead = Math.max(1, Math.round((Date.parse(date) - Date.parse(today)) / 86400000));
     const trendAdj = baselineDaily + slope * daysAhead;
-    let revenue = Math.max(0, trendAdj * factor * (1 - cancelRate * 0.35) * bias);
-    let orders = Math.max(1, Math.round((revenue / Math.max(aov, 1)) * factor * 0.95));
-
+    const revenue = Math.max(0, trendAdj * factor * (1 - cancelRate * 0.35) * bias);
+    const cash = revenue * cashShare;
+    const online = revenue * onlineShare;
+    const orders = Math.max(0, Math.round((revenue / Math.max(aov, 1)) * 0.95));
+    const expenses = dailyExpense;
     const cogs = revenue * foodCostPct;
-    const profit = Math.max(0, revenue - cogs - dailyExpense);
+    const profit = revenue - cogs - expenses;
 
     series.push({
       date,
       forecastRevenue: Math.round(revenue),
+      forecastCash: Math.round(cash),
+      forecastOnline: Math.round(online),
       forecastOrders: orders,
       forecastProfit: Math.round(profit),
+      forecastExpenses: Math.round(expenses),
       dow,
       factors: dayFactors
     });
   }
 
   const expectedRevenue = series.reduce((s, d) => s + d.forecastRevenue, 0);
+  const expectedCash = series.reduce((s, d) => s + d.forecastCash, 0);
+  const expectedOnline = series.reduce((s, d) => s + d.forecastOnline, 0);
   const expectedOrders = series.reduce((s, d) => s + d.forecastOrders, 0);
   const expectedProfit = series.reduce((s, d) => s + d.forecastProfit, 0);
+  const expectedExpenses = series.reduce((s, d) => s + d.forecastExpenses, 0);
   const expectedAov = expectedOrders ? expectedRevenue / expectedOrders : aov;
   const expectedFoodCost = expectedRevenue * foodCostPct;
-  const expectedCustomers = Math.round(expectedOrders * 0.72); // approx unique customers
+  const expectedCustomers = Math.round(expectedOrders * 0.72);
 
   const prevWindow = recent.slice(-range.days);
   const prevRevenue = prevWindow.reduce((s, p) => s + p.revenue, 0) || baselineDaily * range.days;
   const growthPct = prevRevenue > 0 ? ((expectedRevenue - prevRevenue) / prevRevenue) * 100 : 0;
 
-  const revenues = recent.slice(-28).map((p) => p.revenue);
+  const revenues = last28.map((p) => p.revenue);
   const cv = baselineDaily > 0 ? stdev(revenues) / baselineDaily : 1;
   let confidenceScore = 55;
   if (sampleDays >= 60) confidenceScore += 20;
@@ -313,7 +354,7 @@ export function runSalesForecast(args: {
   let risk: ForecastResult["risk"] = "low";
   if (sampleDays < 14) {
     risk = "high";
-    riskReasons.push("Limited historical sales data for stable prediction");
+    riskReasons.push("Limited historical sales data for stable prediction — keep entering daily sales");
   }
   if (cv > 0.55) {
     risk = risk === "low" ? "medium" : risk;
@@ -328,7 +369,7 @@ export function runSalesForecast(args: {
     riskReasons.push("Projected decline vs recent comparable window");
   }
   if (foodCostPct > 0.4) {
-    riskReasons.push("Food cost ratio is elevated — profit risk");
+    riskReasons.push("Food cost ratio is elevated — profit risk (check supplier purchases)");
     if (risk === "low") risk = "medium";
   }
   if (!riskReasons.length) riskReasons.push("Demand pattern looks stable relative to recent history");
@@ -341,12 +382,13 @@ export function runSalesForecast(args: {
   if (sat > 1.05 || sun > 1.05) {
     insights.push(`Weekend demand is stronger (Sat ×${sat.toFixed(2)}, Sun ×${sun.toFixed(2)} vs baseline).`);
   }
-  insights.push(`Baseline daily revenue ≈ ₹${Math.round(baselineDaily).toLocaleString("en-IN")} from ${sampleDays} history days.`);
+  insights.push(
+    `Baseline daily revenue ≈ ₹${Math.round(baselineDaily).toLocaleString("en-IN")} (Cash ~${Math.round(cashShare * 100)}% / Online ~${Math.round(onlineShare * 100)}%) from ${sampleDays} history days.`
+  );
   insights.push(`Trend slope ≈ ₹${slope.toFixed(0)}/day over the last ${Math.min(28, sampleDays)} days.`);
-  insights.push(`Estimated food cost share ≈ ${(foodCostPct * 100).toFixed(1)}% of sales.`);
+  insights.push(`Estimated food cost (purchases÷sales) ≈ ${(foodCostPct * 100).toFixed(1)}%. Daily expenses ≈ ₹${Math.round(dailyExpense).toLocaleString("en-IN")}.`);
   if (cancelRate > 0) insights.push(`Cancellations currently affect ~${(cancelRate * 100).toFixed(1)}% of orders.`);
 
-  // Item / inventory recommendations from stock + purchase velocity
   const recommendations: string[] = [];
   const inv = args.inventory || [];
   const low = inv.filter((i) => {
@@ -370,8 +412,19 @@ export function runSalesForecast(args: {
     recommendations.push("Protect inventory cover for top sellers; forecast shows positive demand.");
   }
   if (foodCostPct > 0.38) recommendations.push("Review recipe costing and portioning — food cost forecast is high.");
+  if (cashShare > 0.65) recommendations.push("Most sales are Cash — plan change float for peak days.");
+  if (onlineShare > 0.55) recommendations.push("Online/Swiggy/Zomato share is high — watch settlement delays vs Cash balance.");
 
-  // Actual vs forecast for last completed days if history exists (self-learning input surface)
+  const whatItDoes = [
+    "Reads your real Sales (Cash / Online / Swiggy / Zomato) — same split as Dashboard balances.",
+    "Skips customer advance bookings so revenue forecast matches true daily sales.",
+    "Uses paid Expenses + Purchases to estimate daily costs and food-cost %.",
+    "Projects orders, customers, profit, and Cash vs Online for Tomorrow → Year.",
+    "Flags weekend/festival peaks and low stock from Inventory.",
+    "Learns from past forecast accuracy (Save snapshot) to correct future bias.",
+    "Exports CSV/PDF for planning purchases, staffing, and kitchen prep."
+  ];
+
   const actualVsForecast = recent.slice(-14).map((p, idx, arr) => {
     const dow = new Date(p.date + "T00:00:00").getDay();
     const back = arr.length - 1 - idx;
@@ -385,8 +438,11 @@ export function runSalesForecast(args: {
     from: range.from,
     to: range.to,
     expectedRevenue: Math.round(expectedRevenue),
+    expectedCash: Math.round(expectedCash),
+    expectedOnline: Math.round(expectedOnline),
     expectedOrders,
     expectedProfit: Math.round(expectedProfit),
+    expectedExpenses: Math.round(expectedExpenses),
     expectedCustomers,
     expectedAov: Math.round(expectedAov),
     expectedFoodCost: Math.round(expectedFoodCost),
@@ -398,11 +454,14 @@ export function runSalesForecast(args: {
     riskReasons,
     insights,
     recommendations,
+    whatItDoes,
     series,
     history: recent.slice(-60),
     actualVsForecast,
     model: {
       baselineDaily: Math.round(baselineDaily),
+      cashShare: Math.round(cashShare * 1000) / 10,
+      onlineShare: Math.round(onlineShare * 1000) / 10,
       dowFactors: factorsDow.map((x) => Math.round(x * 100) / 100),
       trendSlope: Math.round(slope * 100) / 100,
       sampleDays,

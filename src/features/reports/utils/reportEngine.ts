@@ -1,4 +1,5 @@
 import { num } from "@/lib/utils";
+import { countsAsRevenueSale, isPaidExpense } from "@/lib/balanceMath";
 import type { ExpenseDoc } from "@/features/tasks/types";
 import type { InventoryItemDoc, PurchaseEntryDoc, WastageDoc } from "@/features/inventory/types";
 import { availableQty } from "@/features/inventory/utils/alerts";
@@ -38,7 +39,9 @@ export function inDateRange(date: string | undefined, from: string, to: string) 
 }
 
 export function salesSummary(sales: SaleLike[], filters: ReportFilters) {
-  const rows = sales.filter((s) => inDateRange(s.date, filters.from, filters.to));
+  const rows = sales.filter(
+    (s) => countsAsRevenueSale(s) && inDateRange(s.date, filters.from, filters.to)
+  );
   const cash = rows.reduce((a, s) => a + num(s.cashAmount), 0);
   const online = rows.reduce((a, s) => a + num(s.onlineAmount), 0);
   const total = rows.reduce((a, s) => a + (num(s.total) || num(s.amount) || num(s.cashAmount) + num(s.onlineAmount)), 0);
@@ -66,8 +69,8 @@ export function expenseReport(expenses: ExpenseDoc[], filters: ReportFilters) {
   const vendorFiltered =
     filters.supplier && filters.supplier !== "all" ? filtered.filter((e) => (e.vendorName || "") === filters.supplier) : filtered;
   const total = vendorFiltered.reduce((a, e) => a + num(e.amount), 0);
-  const paid = vendorFiltered.filter((e) => e.status === "paid").reduce((a, e) => a + num(e.amount), 0);
-  const unpaid = vendorFiltered.filter((e) => e.status !== "paid").reduce((a, e) => a + num(e.amount), 0);
+  const paid = vendorFiltered.filter((e) => isPaidExpense(e)).reduce((a, e) => a + num(e.amount), 0);
+  const unpaid = vendorFiltered.filter((e) => !isPaidExpense(e)).reduce((a, e) => a + num(e.amount), 0);
   return {
     total,
     paid,
@@ -201,13 +204,28 @@ export function escapeHtml(s: unknown) {
 }
 
 export function printReport(title: string, htmlBody: string) {
-  const w = window.open("", "_blank", "noopener,noreferrer,width=900,height=700");
-  if (!w) return;
+  // Lazy import path avoided — duplicate thin wrapper using same iframe approach as printHtmlDocument
+  const iframe = document.createElement("iframe");
+  iframe.style.cssText = "position:fixed;right:0;bottom:0;width:0;height:0;border:0;opacity:0;";
+  document.body.appendChild(iframe);
+  const win = iframe.contentWindow;
+  const idoc = iframe.contentDocument || win?.document;
+  if (!win || !idoc) {
+    iframe.remove();
+    return;
+  }
   const safeTitle = escapeHtml(title);
-  w.document.write(`<!doctype html><html><head><title>${safeTitle}</title>
+  idoc.open();
+  idoc.write(`<!doctype html><html><head><meta charset="utf-8"/><title>${safeTitle}</title>
     <style>body{font-family:system-ui,sans-serif;padding:24px;color:#111} table{width:100%;border-collapse:collapse} th,td{border:1px solid #ddd;padding:8px;text-align:left} h1{font-size:18px}</style>
     </head><body><h1>${safeTitle}</h1>${htmlBody}</body></html>`);
-  w.document.close();
-  w.focus();
-  w.print();
+  idoc.close();
+  window.setTimeout(() => {
+    try {
+      win.focus();
+      win.print();
+    } finally {
+      window.setTimeout(() => iframe.remove(), 1500);
+    }
+  }, 300);
 }

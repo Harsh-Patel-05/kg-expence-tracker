@@ -12,15 +12,18 @@ import type {
 } from "../types";
 import { computeBillTotals, paidTotal } from "../utils/pricing";
 import { num } from "@/lib/utils";
+import type { CatalogProduct, ProductSelection } from "../domain/productPricing";
+import { buildCartLinePayload } from "../domain/productPricing";
+import { recordFromConfiguredLines } from "../domain/orderSuggestions";
 
 function uid(prefix = "ln") {
   return `${prefix}_${Math.random().toString(36).slice(2, 10)}_${Date.now().toString(36)}`;
 }
 
 const defaultTax: TaxConfig = {
-  cgstRate: 2.5,
-  sgstRate: 2.5,
-  igstRate: 5,
+  cgstRate: 0,
+  sgstRate: 0,
+  igstRate: 0,
   mode: "exclusive",
   enableIgst: false
 };
@@ -28,6 +31,9 @@ const defaultTax: TaxConfig = {
 type PosState = {
   orderId: string | null;
   invoiceNo: string | null;
+  tokenNumber: string | null;
+  platformOrderId: string | null;
+  kotVersion: number | null;
   orderType: OrderType;
   search: string;
   category: string;
@@ -55,6 +61,7 @@ type PosState = {
   setSearch: (v: string) => void;
   setCategory: (v: string) => void;
   setOrderType: (v: OrderType) => void;
+  setPlatformOrderId: (v: string | null) => void;
   setTaxConfig: (t: Partial<TaxConfig> & { maxDiscountPct?: number; roundOffEnabled?: boolean }) => void;
   setCustomer: (c: { id?: string | null; name?: string | null; phone?: string | null } | null) => void;
   setTable: (t: { id?: string | null; name?: string | null } | null) => void;
@@ -66,6 +73,8 @@ type PosState = {
   addPayment: (mode: PaymentMode, amount: number, reference?: string) => void;
   clearPayments: () => void;
   addProduct: (item: MenuItemDoc & { id: string }, opts?: { qty?: number; note?: string }) => void;
+  addConfiguredProduct: (product: CatalogProduct, selection: ProductSelection) => void;
+  recordSuggestionsFromCart: () => void;
   addCustomItem: (name: string, price: number) => void;
   setQty: (lineId: string, qty: number) => void;
   bumpQty: (lineId: string, delta: number) => void;
@@ -85,7 +94,10 @@ export const usePosStore = create<PosState>()(
     (set, get) => ({
       orderId: null,
       invoiceNo: null,
-      orderType: "dine_in",
+      tokenNumber: null,
+      platformOrderId: null,
+      kotVersion: null,
+      orderType: "takeaway",
       search: "",
       category: "All",
       lines: [],
@@ -111,7 +123,14 @@ export const usePosStore = create<PosState>()(
 
       setSearch: (v) => set({ search: v }),
       setCategory: (v) => set({ category: v }),
-      setOrderType: (v) => set({ orderType: v }),
+      setOrderType: (v) =>
+        set((s) => ({
+          orderType: v,
+          // Clear platform id when leaving Swiggy/Zomato
+          platformOrderId:
+            v === "swiggy" || v === "zomato" ? s.platformOrderId : null
+        })),
+      setPlatformOrderId: (v) => set({ platformOrderId: v ? String(v).trim() : null }),
       setTaxConfig: (t) =>
         set((s) => ({
           tax: { ...s.tax, ...t },
@@ -139,15 +158,24 @@ export const usePosStore = create<PosState>()(
         set((s) => ({
           payments: [
             ...s.payments,
-            { id: uid("pay"), mode, amount: num(amount), reference, paidAt: new Date().toISOString() }
+            {
+              id: uid("pay"),
+              mode,
+              amount: num(amount),
+              paidAt: new Date().toISOString(),
+              ...(reference ? { reference } : {})
+            }
           ]
         })),
       clearPayments: () => set({ payments: [] }),
 
       addProduct: (item, opts) => {
         const qty = Math.max(1, Math.floor(num(opts?.qty) || 1));
+        const note = opts?.note || "";
         set((s) => {
-          const existing = s.lines.find((l) => l.menuItemId === item.id && !l.complimentary && !l.note && !opts?.note);
+          const existing = s.lines.find(
+            (l) => l.menuItemId === item.id && !l.complimentary && (l.note || "") === note
+          );
           let lines: CartLine[];
           if (existing) {
             lines = s.lines.map((l) => (l.lineId === existing.lineId ? { ...l, qty: l.qty + qty } : l));
@@ -159,10 +187,12 @@ export const usePosStore = create<PosState>()(
                 menuItemId: item.id,
                 name: item.name,
                 nameHi: item.nameHi,
+                nameHead: (item as { nameHead?: string }).nameHead,
+                nameSub: (item as { nameSub?: string }).nameSub,
                 price: num(item.price),
                 qty,
-                note: opts?.note || "",
-                taxRate: num(item.taxRate) || s.tax.cgstRate + s.tax.sgstRate,
+                note,
+                taxRate: 0,
                 hsnCode: item.hsnCode,
                 diet: item.diet,
                 category: item.category
@@ -172,6 +202,47 @@ export const usePosStore = create<PosState>()(
           const recentIds = [item.id, ...s.recentIds.filter((id) => id !== item.id)].slice(0, 24);
           return { lines, recentIds };
         });
+      },
+
+      addConfiguredProduct: (product, selection) => {
+        const payload = buildCartLinePayload(product, selection);
+        set((s) => {
+          const note = payload.note || "";
+          const existing = s.lines.find((l) => l.configKey === payload.configKey && !l.complimentary && !(l.note || "") && !note);
+          let lines: CartLine[];
+          if (existing) {
+            lines = s.lines.map((l) =>
+              l.lineId === existing.lineId ? { ...l, qty: l.qty + payload.qty, price: payload.price } : l
+            );
+          } else {
+            lines = [
+              ...s.lines,
+              {
+                lineId: uid(),
+                menuItemId: payload.menuItemId,
+                productId: payload.productId,
+                name: payload.name,
+                nameHi: payload.nameHi,
+                nameHead: payload.nameHead,
+                nameSub: payload.nameSub,
+                price: payload.price,
+                qty: payload.qty,
+                note,
+                selection: payload.selection,
+                configKey: payload.configKey,
+                category: payload.category,
+                diet: payload.diet,
+                taxRate: 0
+              }
+            ];
+          }
+          const recentIds = [payload.menuItemId, ...s.recentIds.filter((id) => id !== payload.menuItemId)].slice(0, 24);
+          return { lines, recentIds, toast: `Added ${payload.name}` };
+        });
+      },
+
+      recordSuggestionsFromCart: () => {
+        recordFromConfiguredLines(get().lines);
       },
 
       addCustomItem: (name, price) =>
@@ -185,7 +256,7 @@ export const usePosStore = create<PosState>()(
               price: Math.max(0, num(price)),
               qty: 1,
               isCustom: true,
-              taxRate: s.tax.cgstRate + s.tax.sgstRate
+              taxRate: 0
             }
           ]
         })),
@@ -227,6 +298,9 @@ export const usePosStore = create<PosState>()(
         set({
           orderId: null,
           invoiceNo: null,
+          tokenNumber: null,
+          platformOrderId: null,
+          kotVersion: null,
           lines: [],
           removedStack: [],
           discount: { type: "none", value: 0 },
@@ -248,6 +322,9 @@ export const usePosStore = create<PosState>()(
           ...s,
           orderId: payload.orderId ?? null,
           invoiceNo: payload.invoiceNo ?? null,
+          tokenNumber: payload.tokenNumber ?? null,
+          platformOrderId: payload.platformOrderId ?? null,
+          kotVersion: payload.kotVersion ?? null,
           orderType: payload.orderType || s.orderType,
           lines: payload.lines || [],
           customerId: payload.customerId ?? null,

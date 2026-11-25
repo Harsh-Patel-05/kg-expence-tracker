@@ -1,15 +1,54 @@
 <!doctype html>
 <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <title>The Kilogram · RestaurantPilot</title>
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-    <link href="https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500&display=swap" rel="stylesheet" />
-  </head>
-  <body>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Devanagari:wght@400;600;700;800;900&family=Plus+Jakarta+Sans:ital,wght@0,400;0,500;0,600;0,700;0,800;1,500&display=swap" rel="stylesheet" />
+    <script>
+      /* Remove legacy kds-sw that broke POS — unregister only, never re-register */
+      (function () {
+        if (!("serviceWorker" in navigator)) return;
+        var FLAG = "kg_sw_purged_20261124d";
+        var controlled = !!navigator.serviceWorker.controller;
+        navigator.serviceWorker.getRegistrations().then(function (regs) {
+          if (!regs.length && !controlled) return;
+          return Promise.all(
+            regs.map(function (r) {
+              return r.unregister().catch(function () {
+                return false;
+              });
+            })
+          ).then(function () {
+            var clear =
+              typeof caches !== "undefined"
+                ? caches.keys().then(function (keys) {
+                    return Promise.all(
+                      keys.map(function (k) {
+                        return caches.delete(k).catch(function () {
+                          return false;
+                        });
+                      })
+                    );
+                  })
+                : Promise.resolve();
+            return clear.then(function () {
+              try {
+                if (!sessionStorage.getItem(FLAG)) {
+                  sessionStorage.setItem(FLAG, "1");
+                  location.reload();
+                }
+              } catch (e) {}
+            });
+          });
+        });
+      })();
+    </script>
+</head>
+<body>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
-  </body>
+</body>
 </html>

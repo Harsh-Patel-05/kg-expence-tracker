@@ -7,6 +7,8 @@ import { EmptyState } from "@/components/ui/PageHeader";
 
 export function CartLines(props: {
   lines: CartLine[];
+  activeLineId?: string | null;
+  onSelectLine?: (lineId: string) => void;
   onBump: (lineId: string, delta: number) => void;
   onRemove: (lineId: string) => void;
   onEditNote: (lineId: string, note: string) => void;
@@ -29,16 +31,27 @@ export function CartLines(props: {
     <div className={clsx("space-y-1.5", props.className)}>
       {props.lines.map((line) => {
         const noteOpen = openNote === line.lineId || Boolean(line.note);
+        const active = props.activeLineId === line.lineId;
         return (
-          <div key={line.lineId} className="rounded-lg border border-stroke-0 bg-bg-1/60 px-2 py-1.5">
+          <div
+            key={line.lineId}
+            role="option"
+            aria-selected={active}
+            onClick={() => props.onSelectLine?.(line.lineId)}
+            className={clsx(
+              "rounded-lg border px-2 py-1.5 transition",
+              active ? "border-primary bg-primary-light/70 ring-1 ring-primary/25" : "border-stroke-0 bg-bg-1/60"
+            )}
+          >
             <div className="flex items-center gap-2">
               <div className="min-w-0 flex-1">
                 <div className="truncate text-[12px] font-semibold leading-tight text-text-primary">
-                  {line.name}
+                  {line.nameHead || line.name}
                   {line.complimentary ? (
                     <span className="ml-1 rounded bg-primary-light px-1 py-0.5 text-[9px] font-bold text-primary">COMP</span>
                   ) : null}
                 </div>
+                {line.nameSub ? <div className="truncate text-[10px] text-text-secondary">{line.nameSub}</div> : null}
                 <div className="text-[10px] text-text-muted">{inr(line.price)} × {line.qty}</div>
               </div>
 

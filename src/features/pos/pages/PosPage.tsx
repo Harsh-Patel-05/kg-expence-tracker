@@ -1,66 +1,101 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Link } from "react-router-dom";
 import { EmptyState, PageHeader } from "@/components/ui/PageHeader";
-import { AnimatePresence, motion } from "framer-motion";
 import {
-  PauseCircle,
-  QrCode,
   RotateCcw,
-  Search,
-  Users,
-  UtensilsCrossed
+  Search
 } from "lucide-react";
 import { clsx } from "clsx";
-import { inr } from "@/lib/utils";
+import { inr, num } from "@/lib/utils";
 import { useRestaurantCollection } from "../hooks/useRestaurantCollection";
-import type { CouponDoc, CustomerDoc, MenuItemDoc, OrderDoc, OrderType, TableDoc } from "../types";
+import type { CouponDoc, MenuItemDoc, OrderType } from "../types";
 import { usePosStore } from "../store/posStore";
 import { usePosAuth } from "../auth/PosAuthProvider";
-import { ProductGrid } from "../components/ProductGrid";
+import { ProductGrid, type PosGridItem } from "../components/ProductGrid";
 import { CartLines } from "../components/CartLines";
 import { PaymentPanel } from "../components/PaymentPanel";
-import { chargeCurrentBill, holdCurrentBill, splitLinesByEqual } from "../services/checkout";
-import { getPosSettings, upsertCustomer, upsertTable } from "../services/posFirestore";
+import { QuickPickModal } from "../components/QuickPickModal";
+import { PunjabiSelectModal, type PunjabiSelection } from "../components/PunjabiSelectModal";
+import {
+  cancelOrder,
+  chargeCurrentBill,
+  collectUnpaidOrder,
+  deliverPaidOrder,
+  payLaterCurrentBill
+} from "../services/checkout";
+import { PosKdsStrip } from "../components/PosKdsStrip";
+import { getPosSettings, needsShopCollect } from "../services/posFirestore";
+import type { PosSettingsDoc } from "../types";
+import { buildLastPosBillPayload, getLastPosBill, setLastPosBill } from "../utils/lastPosBill";
+import { type WhatsAppBillPayload, type WhatsAppShopSettings } from "../utils/whatsappBill";
+import { WhatsAppShareModal } from "../components/WhatsAppShareModal";
+import { liveOrderToWhatsAppBill } from "../utils/orderToWhatsAppBill";
+// liveOrderToWhatsAppBill used when sharing from kitchen strip / history callbacks
+import {
+  connectThermalPrinter,
+  disconnectThermalPrinter,
+  printLastBillThermal,
+  thermalPrinterConnected,
+  thermalPrinterSupported,
+  tryReconnectThermalPrinter
+} from "../utils/thermalPrinter";
 import { canAccessPos, canManualPrice } from "../utils/permissions";
-import { printGstReceipt, printKitchenTicket } from "../utils/printReceipt";
-import { createSplitOrders } from "../services/orderOps";
 import { PageLoading } from "@/components/ui/Loading";
 import { BRAND } from "@/lib/brand";
+import type { LiveOrder } from "@/features/orders/hooks/useLiveOrders";
+import { updateKitchenStatus } from "@/features/orders/services/orderEngine";
+import {
+  defaultSelection,
+  getProducts,
+  isSingleConfig,
+  shouldHideLegacyItem
+} from "../domain/productsCatalog";
+import {
+  deriveBaseAndVariant,
+  findGroupForMenuItem,
+  groupMenuItems,
+  isExtraSabjiItem,
+  isPunjabiCategory,
+  type MenuGroup
+} from "../domain/menuGrouping";
+import type { CatalogProduct } from "../domain/productPricing";
+import type { ProductSelection } from "../domain/productPricing";
 
 const ORDER_TYPES: Array<{ id: OrderType; label: string }> = [
-  { id: "dine_in", label: "Dine-in" },
   { id: "takeaway", label: "Takeaway" },
-  { id: "delivery", label: "Delivery" },
   { id: "swiggy", label: "Swiggy" },
-  { id: "zomato", label: "Zomato" },
-  { id: "direct", label: "Direct" }
+  { id: "zomato", label: "Zomato" }
 ];
+
+function isSnacksCategory(cat: string) {
+  return String(cat || "").trim().toLowerCase() === "snacks";
+}
+
+const HIDDEN_FILTER_CATEGORIES = new Set(["hotshots", "beverages", "general", "snacks"]);
+
+function isHiddenFilterCategory(cat: string) {
+  return HIDDEN_FILTER_CATEGORIES.has(String(cat || "").trim().toLowerCase());
+}
 
 export function PosPage() {
   const { role, loading: authLoading } = usePosAuth();
   const searchRef = useRef<HTMLInputElement>(null);
   const [busy, setBusy] = useState(false);
   const [banner, setBanner] = useState<string | null>(null);
-  const [showHeld, setShowHeld] = useState(false);
-  const [showCustomer, setShowCustomer] = useState(false);
-  const [showTable, setShowTable] = useState(false);
-  const [discPct, setDiscPct] = useState("");
+  const [discAmt, setDiscAmt] = useState("");
   const [discReason, setDiscReason] = useState("");
-  const [couponInput, setCouponInput] = useState("");
-
+  const [quickPick, setQuickPick] = useState<CatalogProduct | null>(null);
+  const [punjabiPick, setPunjabiPick] = useState<MenuGroup | null>(null);
+  const [cartFocusId, setCartFocusId] = useState<string | null>(null);
+  const [posSettings, setPosSettings] = useState<(PosSettingsDoc & { id: string }) | null>(null);
+  const [thermalReady, setThermalReady] = useState(() => thermalPrinterConnected());
+  const [waBill, setWaBill] = useState<WhatsAppBillPayload | null>(null);
   const store = usePosStore();
   const {
     data: menuItems,
     loading: menuLoading,
     error: menuError
   } = useRestaurantCollection<MenuItemDoc>({ path: "menuItems" });
-  const { data: heldOrders } = useRestaurantCollection<OrderDoc>({
-    path: "orders",
-    whereField: "status",
-    whereValue: "held"
-  });
-  const { data: customers } = useRestaurantCollection<CustomerDoc>({ path: "customers" });
-  const { data: tables } = useRestaurantCollection<TableDoc>({ path: "tables" });
   const { data: coupons } = useRestaurantCollection<CouponDoc>({ path: "coupons" });
 
   const sortedMenu = useMemo(
@@ -68,18 +103,51 @@ export function PosPage() {
     [menuItems]
   );
 
+  const punjabiGroups = useMemo(
+    () =>
+      groupMenuItems(
+        sortedMenu.filter(
+          (m) =>
+            isPunjabiCategory(String(m.category || "")) &&
+            !shouldHideLegacyItem(m.name) &&
+            !isExtraSabjiItem(m.name)
+        )
+      ),
+    [sortedMenu]
+  );
+
   useEffect(() => {
     void getPosSettings()
       .then((s) => {
+        setPosSettings(s);
         store.setTaxConfig({
-          ...s.tax,
+          cgstRate: 0,
+          sgstRate: 0,
+          igstRate: 0,
+          mode: "exclusive",
+          enableIgst: false,
           maxDiscountPct: s.maxDiscountPct,
           roundOffEnabled: s.roundOffEnabled
         });
       })
       .catch(() => undefined);
+    void tryReconnectThermalPrinter().then(() => setThermalReady(thermalPrinterConnected()));
+    if (store.orderType === "direct" || store.orderType === "dine_in" || store.orderType === "delivery") {
+      store.setOrderType("takeaway");
+    }
+    if (isHiddenFilterCategory(store.category) || store.category === "Hotshots") store.setCategory("All");
     searchRef.current?.focus();
   }, []);
+
+  useEffect(() => {
+    if (!store.lines.length) {
+      setCartFocusId(null);
+      return;
+    }
+    if (!cartFocusId || !store.lines.some((l) => l.lineId === cartFocusId)) {
+      setCartFocusId(store.lines[store.lines.length - 1]?.lineId || null);
+    }
+  }, [store.lines, cartFocusId]);
 
   useEffect(() => {
     const onKey = (e: KeyboardEvent) => {
@@ -90,51 +158,154 @@ export function PosPage() {
         tag === "TEXTAREA" ||
         tag === "SELECT" ||
         Boolean(target?.isContentEditable);
+      const modalOpen = Boolean(quickPick || punjabiPick);
 
-      if (e.key === "/" && !typing) {
+      if (e.key === "/" && !typing && !modalOpen) {
         e.preventDefault();
         searchRef.current?.focus();
         return;
       }
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "enter") {
+      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "enter" && !modalOpen) {
         e.preventDefault();
         void onCharge();
         return;
       }
-      if (typing) return;
-      if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "h") {
-        e.preventDefault();
-        void onHold();
-      }
+      if (typing || modalOpen) return;
+
       if ((e.metaKey || e.ctrlKey) && e.key.toLowerCase() === "z") {
         e.preventDefault();
         store.undoRemove();
+        return;
+      }
+
+      const lines = store.lines;
+      if (!lines.length) return;
+
+      const idx = Math.max(
+        0,
+        lines.findIndex((l) => l.lineId === cartFocusId)
+      );
+
+      if (e.key === "ArrowUp") {
+        e.preventDefault();
+        const next = Math.max(0, idx - 1);
+        setCartFocusId(lines[next].lineId);
+        return;
+      }
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        const next = Math.min(lines.length - 1, idx + 1);
+        setCartFocusId(lines[next].lineId);
+        return;
+      }
+
+      const focusId = cartFocusId || lines[lines.length - 1]?.lineId;
+      if (!focusId) return;
+
+      if (e.key === "+" || e.key === "=" || e.key === "ArrowRight") {
+        e.preventDefault();
+        store.bumpQty(focusId, 1);
+        return;
+      }
+      if (e.key === "-" || e.key === "_" || e.key === "ArrowLeft") {
+        e.preventDefault();
+        store.bumpQty(focusId, -1);
+        return;
+      }
+      if (e.key === "Delete" || e.key === "Backspace") {
+        e.preventDefault();
+        store.removeLine(focusId);
+        return;
       }
     };
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   });
 
+  const catalogProducts = useMemo(() => getProducts(), []);
+
   const categories = useMemo(() => {
     const set = new Set<string>();
-    sortedMenu.forEach((m) => set.add(String(m.category || "General")));
+    catalogProducts.forEach((p) =>
+      p.categories.forEach((c) => {
+        if (!isHiddenFilterCategory(c)) set.add(c);
+      })
+    );
+    sortedMenu.forEach((m) => {
+      const cat = String(m.category || "General");
+      if (!shouldHideLegacyItem(m.name) && !isHiddenFilterCategory(cat)) set.add(cat);
+    });
     return ["All", "Favorites", "Recent", ...[...set].sort()];
-  }, [sortedMenu]);
+  }, [sortedMenu, catalogProducts]);
 
   const filtered = useMemo(() => {
     const q = store.search.trim().toLowerCase();
-    let list = sortedMenu.filter((m) => m.available !== false);
-    if (store.category === "Favorites") list = list.filter((m) => store.favoriteIds.includes(m.id) || m.favorite);
-    else if (store.category === "Recent") list = list.filter((m) => store.recentIds.includes(m.id));
-    else if (store.category !== "All") list = list.filter((m) => String(m.category || "General") === store.category);
+    const items: PosGridItem[] = [];
+
+    const catalogMatch = (p: CatalogProduct) => {
+      if (!q) return true;
+      const blob = `${p.name} ${(p.aliases || []).join(" ")} ${p.categories.join(" ")}`.toLowerCase();
+      return blob.includes(q);
+    };
+
+    let catalogs = catalogProducts.filter(
+      (p) => catalogMatch(p) && !p.categories.some(isSnacksCategory)
+    );
+    if (store.category === "Favorites") {
+      catalogs = catalogs.filter((p) => store.favoriteIds.includes(`product:${p.id}`) || p.favourite);
+    } else if (store.category === "Hotshots") {
+      catalogs = catalogs.filter((p) => p.favourite);
+    } else if (store.category === "Recent") {
+      catalogs = catalogs.filter((p) => store.recentIds.includes(`product:${p.id}`));
+    } else if (store.category !== "All") {
+      catalogs = catalogs.filter((p) => p.categories.includes(store.category));
+    }
+    catalogs.forEach((product) => items.push({ kind: "catalog", product }));
+
+    let groups = punjabiGroups.slice();
+    if (store.category === "Favorites") {
+      groups = groups.filter(
+        (g) =>
+          store.favoriteIds.includes(`group:${g.key}`) ||
+          g.favorite ||
+          g.variants.some((v) => store.favoriteIds.includes(v.id))
+      );
+    } else if (store.category === "Hotshots") {
+      groups = [];
+    } else if (store.category === "Recent") {
+      groups = groups.filter((g) => g.variants.some((v) => store.recentIds.includes(v.id)));
+    } else if (store.category !== "All" && store.category !== "Punjabi") {
+      groups = [];
+    }
     if (q) {
-      list = list.filter((m) => {
+      groups = groups.filter((g) => {
+        const blob = `${g.baseName} ${g.nameHi || ""} ${g.variants.map((v) => v.name).join(" ")}`.toLowerCase();
+        return blob.includes(q);
+      });
+    }
+    groups.forEach((group) => items.push({ kind: "group", group }));
+
+    let menu = sortedMenu.filter(
+      (m) =>
+        m.available !== false &&
+        !shouldHideLegacyItem(m.name) &&
+        !isExtraSabjiItem(m.name) &&
+        !isPunjabiCategory(String(m.category || "General")) &&
+        !isSnacksCategory(String(m.category || "General"))
+    );
+    if (store.category === "Favorites") menu = menu.filter((m) => store.favoriteIds.includes(m.id) || m.favorite);
+    else if (store.category === "Hotshots") menu = [];
+    else if (store.category === "Recent") menu = menu.filter((m) => store.recentIds.includes(m.id));
+    else if (store.category !== "All") menu = menu.filter((m) => String(m.category || "General") === store.category);
+    if (q) {
+      menu = menu.filter((m) => {
         const blob = `${m.name} ${m.nameHi || ""} ${m.barcode || ""} ${m.qrCode || ""}`.toLowerCase();
         return blob.includes(q);
       });
     }
-    return list;
-  }, [sortedMenu, store.search, store.category, store.favoriteIds, store.recentIds]);
+    menu.forEach((item) => items.push({ kind: "menu", item }));
+    return items;
+  }, [sortedMenu, catalogProducts, punjabiGroups, store.search, store.category, store.favoriteIds, store.recentIds]);
 
   const totals = store.totals();
 
@@ -145,38 +316,256 @@ export function PosPage() {
       (m) => String(m.barcode || "") === q || String(m.qrCode || "") === q || String(m.id) === q
     );
     if (byBarcode) {
+      if (isPunjabiCategory(String(byBarcode.category || ""))) {
+        const group = findGroupForMenuItem(punjabiGroups, byBarcode);
+        if (group) {
+          setPunjabiPick(group);
+          store.setSearch("");
+          return;
+        }
+      }
       store.addProduct(byBarcode);
       store.setSearch("");
-      setBanner(`Added ${byBarcode.name}`);
       return;
     }
-    const byTable = tables.find((t) => String(t.name).toLowerCase() === q.toLowerCase() || t.id === q);
-    if (byTable) {
-      store.setTable({ id: byTable.id, name: byTable.name });
-      store.setSearch("");
-      setBanner(`Table ${byTable.name} assigned`);
-      return;
-    }
-    const byCustomer = customers.find(
-      (c) => String(c.phone || "") === q || String(c.name).toLowerCase() === q.toLowerCase()
-    );
-    if (byCustomer) {
-      store.setCustomer({ id: byCustomer.id, name: byCustomer.name, phone: byCustomer.phone });
-      store.setSearch("");
-      setBanner(`Customer ${byCustomer.name}`);
-      return;
-    }
-    if (q.length >= 3 && !filtered.length) setBanner("Product not found");
   }
 
-  async function onHold() {
+  function openPunjabiGroup(group: MenuGroup) {
+    setPunjabiPick(group);
+  }
+
+  function addPunjabiSelection(selection: PunjabiSelection) {
+    const { variant, prep, qty } = selection;
+    const baseEn = punjabiPick?.baseName || deriveBaseAndVariant(variant.name).base || variant.name;
+    const baseHi = String(punjabiPick?.nameHi || variant.nameHi || "").trim();
+    const sizeLabel = variant.sizeLabel && variant.sizeLabel !== "Regular" ? variant.sizeLabel : "";
+    const prepLabel = prep === "swaminarayan" ? "Swaminarayan" : "";
+    const detailParts = [sizeLabel, prepLabel].filter(Boolean);
+    const detail = detailParts.join(" · ");
+    const name = detail ? `${baseEn} · ${detail}` : baseEn;
+    store.addProduct(
+      {
+        ...variant,
+        name,
+        nameHi: baseHi || undefined,
+        nameHead: baseEn,
+        nameSub: detail
+      } as typeof variant & { nameHead?: string; nameSub?: string },
+      {
+        qty,
+        note: prep === "swaminarayan" ? "Swaminarayan" : ""
+      }
+    );
+    setPunjabiPick(null);
+  }
+
+  function onEditKitchenOrder(o: LiveOrder) {
+    store.loadHeld({
+      orderId: o.id,
+      invoiceNo: o.invoiceNo || null,
+      tokenNumber: o.tokenNumber || null,
+      platformOrderId: o.platformOrderId || null,
+      kotVersion: num(o.kotVersion) || null,
+      orderType: o.orderType,
+      lines: o.items || [],
+      customerId: o.customerId,
+      customerName: o.customerName,
+      customerPhone: o.customerPhone,
+      tableId: o.tableId,
+      tableName: o.tableName,
+      notes: o.notes,
+      kitchenNote: o.kitchenNote,
+      customerNote: o.customerNote,
+      discount: o.discount,
+      couponCode: o.couponCode,
+      charges: o.charges
+    });
+    setBanner(`Editing #${o.tokenNumber || o.invoiceNo || o.id.slice(0, 6)} · update items then Settle or Pay later`);
+  }
+
+  async function onCancelKitchenOrder(o: LiveOrder) {
     try {
       setBusy(true);
-      const id = await holdCurrentBill(store, role);
-      store.clearCart();
-      setBanner(`Bill held (${id.slice(0, 6)})`);
+      await cancelOrder(o.id, "Cancelled from POS kitchen strip", role);
+      if (store.orderId === o.id) store.clearCart();
+      setBanner(`Cancelled #${o.tokenNumber || o.invoiceNo || o.id.slice(0, 6)}`);
     } catch (e: any) {
-      setBanner(e?.message || "Hold failed");
+      setBanner(e?.message || "Cancel failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onPayLater() {
+    try {
+      setBusy(true);
+      setBanner(null);
+      const live = usePosStore.getState();
+      try {
+        live.recordSuggestionsFromCart();
+      } catch {
+        /* non-blocking */
+      }
+      const res = await payLaterCurrentBill(live, role);
+      live.clearCart();
+      setDiscAmt("");
+      setDiscReason("");
+      const noteBit = res.notes.length ? ` · Notes: ${res.notes.join(" · ")}` : "";
+      setBanner(`Sent to kitchen · #${res.tokenNumber} (${res.invoiceNo}) · Pay later ${inr(res.totals.total)}${noteBit}`);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e || "Pay later failed");
+      console.error("Pay later failed", e);
+      setBanner(msg || "Pay later failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onCollectKitchen(
+    o: LiveOrder,
+    args: { mode?: "cash" | "upi"; cash?: number; upi?: number }
+  ) {
+    try {
+      setBusy(true);
+      const laneReady =
+        o.kitchenStatus === "ready" || o.kitchenStatus === "packed" || o.status === "ready" || o.status === "packed";
+      const res = await collectUnpaidOrder({
+        orderId: o.id,
+        mode: args.mode,
+        cash: args.cash,
+        upi: args.upi,
+        role,
+        markServed: laneReady
+      });
+      setBanner(
+        res.balanceDue > 0.01
+          ? `Collected ${inr(res.amount)} · still due ${inr(res.balanceDue)}`
+          : laneReady
+            ? `Paid & delivered · #${o.tokenNumber || res.invoiceNo || o.id.slice(0, 6)} · ${inr(res.amount)}`
+            : `Paid ${inr(res.amount)} · #${o.tokenNumber || res.invoiceNo || o.id.slice(0, 6)}`
+      );
+    } catch (e: any) {
+      setBanner(e?.message || "Collect failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onDeliverKitchen(o: LiveOrder) {
+    try {
+      setBusy(true);
+      await deliverPaidOrder(o.id, role);
+      setBanner(`Delivered #${o.tokenNumber || o.invoiceNo || o.id.slice(0, 6)}`);
+    } catch (e: any) {
+      setBanner(e?.message || "Deliver failed");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onMarkKitchenReady(o: LiveOrder) {
+    try {
+      setBusy(true);
+      await updateKitchenStatus({ orderId: o.id, toStatus: "ready", role });
+      setBanner(
+        isUnpaidOrder(o)
+          ? `Ready #${o.tokenNumber || o.invoiceNo || o.id.slice(0, 6)} · collect unpaid ${inr(o.balanceDue || o.total)}`
+          : `Ready #${o.tokenNumber || o.invoiceNo || o.id.slice(0, 6)}${
+              String(o.orderType || "").toLowerCase().match(/swiggy|zomato/) ? " · platform kitchen" : ""
+            }`
+      );
+    } catch (e: any) {
+      setBanner(e?.message || "Could not mark ready");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onMarkKitchenPreparing(o: LiveOrder) {
+    try {
+      setBusy(true);
+      await updateKitchenStatus({ orderId: o.id, toStatus: "preparing", role });
+      setBanner(`Preparing #${o.tokenNumber || o.invoiceNo || o.id.slice(0, 6)}`);
+    } catch (e: any) {
+      setBanner(e?.message || "Could not mark preparing");
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  function openCatalogProduct(product: CatalogProduct) {
+    if (isSingleConfig(product)) {
+      const sel = defaultSelection(product);
+      if (sel) store.addConfiguredProduct(product, sel);
+      return;
+    }
+    setQuickPick(product);
+  }
+
+  function addConfigured(selection: ProductSelection, productOverride?: CatalogProduct | null) {
+    const product = productOverride || catalogProducts.find((p) => p.id === selection.productId);
+    if (!product) return;
+    store.addConfiguredProduct(product, selection);
+  }
+
+  function whatsAppShopSettings(): WhatsAppShopSettings {
+    return {
+      shopName: posSettings?.restaurantName || BRAND.restaurantName,
+      address: posSettings?.address,
+      phone: posSettings?.phone
+    };
+  }
+
+  function onWhatsAppBill(bill?: WhatsAppBillPayload | null) {
+    const last = bill || getLastPosBill();
+    if (!last?.items?.length) {
+      setBanner("Settle a bill first, then share on WhatsApp");
+      return;
+    }
+    setWaBill({
+      ...last,
+      customerName: last.customerName || store.customerName || "",
+      customerPhone: last.customerPhone || store.customerPhone || ""
+    });
+  }
+
+  async function onThermalConnect() {
+    try {
+      setBusy(true);
+      if (thermalPrinterConnected()) await disconnectThermalPrinter();
+      const r = await connectThermalPrinter();
+      setThermalReady(thermalPrinterConnected());
+      setBanner(`Printer connected: ${r.name}`);
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Could not connect printer";
+      setBanner(msg);
+    } finally {
+      setBusy(false);
+    }
+  }
+
+  async function onPrintLastBill() {
+    const last = getLastPosBill();
+    if (!last) {
+      setBanner("Settle a bill first");
+      return;
+    }
+    if (!thermalPrinterSupported()) {
+      setBanner("Bluetooth printing not supported in this browser (use Chrome)");
+      return;
+    }
+    try {
+      setBusy(true);
+      if (!thermalPrinterConnected()) {
+        const re = await tryReconnectThermalPrinter();
+        if (!re) throw new Error("Connect thermal printer first");
+        setThermalReady(thermalPrinterConnected());
+      }
+      await printLastBillThermal(last, posSettings?.restaurantName || BRAND.restaurantName);
+      setBanner("Last bill sent to thermal printer");
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : "Print failed";
+      setBanner(msg);
     } finally {
       setBusy(false);
     }
@@ -185,34 +574,37 @@ export function PosPage() {
   async function onCharge() {
     try {
       setBusy(true);
-      const res = await chargeCurrentBill({ store, role, menuItems: sortedMenu, coupons });
+      setBanner(null);
+      const live = usePosStore.getState();
       try {
-        printGstReceipt({
-          ...res.totals,
-          invoiceNo: res.invoiceNo,
-          date: new Date().toISOString().slice(0, 10),
-          items: store.lines,
-          orderType: store.orderType,
-          tableName: store.tableName,
-          customerName: store.customerName,
-          subtotal: res.totals.subtotal,
-          cgst: res.totals.cgst,
-          sgst: res.totals.sgst,
-          total: res.totals.total
-        });
-        printKitchenTicket({
-          items: store.lines,
-          tableName: store.tableName,
-          orderType: store.orderType
-        });
+        live.recordSuggestionsFromCart();
       } catch {
-        /* print optional */
+        /* non-blocking */
       }
-      store.clearCart();
-      setBanner(`Bill ${res.invoiceNo} completed · ${inr(res.totals.total)}`);
-      if (res.missingRecipes.length) setBanner((b) => `${b} · recipe missing: ${res.missingRecipes.join(", ")}`);
-    } catch (e: any) {
-      setBanner(e?.message || "Charge failed");
+      const res = await chargeCurrentBill({ store: live, role, menuItems: sortedMenu, coupons });
+      setLastPosBill(
+        buildLastPosBillPayload({
+          invoiceNo: res.invoiceNo,
+          orderType: live.orderType,
+          lines: live.lines,
+          customerName: live.customerName,
+          customerPhone: live.customerPhone,
+          totals: res.totals,
+          payments: live.payments
+        })
+      );
+      live.clearCart();
+      setDiscAmt("");
+      setDiscReason("");
+      setBanner(
+        `Paid · sent to kitchen · #${res.tokenNumber || res.invoiceNo} · ${inr(res.totals.total)}${
+          res.missingRecipes.length ? ` · recipe missing: ${res.missingRecipes.join(", ")}` : ""
+        }`
+      );
+    } catch (e: unknown) {
+      const msg = e instanceof Error ? e.message : String(e || "Charge failed");
+      console.error("Charge failed", e);
+      setBanner(msg || "Charge failed");
     } finally {
       setBusy(false);
     }
@@ -240,6 +632,28 @@ export function PosPage() {
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-2 overflow-hidden">
+      {banner ? (
+        <div
+          className={clsx(
+            "flex shrink-0 items-start justify-between gap-3 rounded-xl border px-3 py-2.5 text-[13px] font-semibold shadow-panel",
+            /fail|error|denied|required|incomplete|cannot|could not/i.test(banner)
+              ? "border-danger/40 bg-danger-bg text-danger"
+              : "border-success/35 bg-success-bg text-success"
+          )}
+          role="status"
+        >
+          <span className="min-w-0 flex-1 leading-snug">{banner}</span>
+          <button
+            type="button"
+            className="shrink-0 text-[12px] font-bold opacity-70 hover:opacity-100"
+            onClick={() => setBanner(null)}
+            aria-label="Dismiss"
+          >
+            ✕
+          </button>
+        </div>
+      ) : null}
+
       {/* Slim POS toolbar */}
       <div className="flex shrink-0 flex-wrap items-center gap-2 rounded-[var(--radius-xl)] border border-stroke-0 bg-card-0 px-3 py-2 shadow-panel">
         <div className="mr-1 min-w-0">
@@ -247,7 +661,7 @@ export function PosPage() {
           <div className="text-[15px] font-bold leading-tight text-text-primary">POS Billing</div>
         </div>
 
-        <div className="flex flex-wrap gap-1">
+        <div className="flex flex-wrap items-center gap-1">
           {ORDER_TYPES.map((t) => (
             <button
               key={t.id}
@@ -263,114 +677,152 @@ export function PosPage() {
               {t.label}
             </button>
           ))}
+          {store.orderType === "swiggy" || store.orderType === "zomato" ? (
+            <input
+              className="kg-input !w-[148px] !py-1.5 !text-[12px] font-semibold"
+              inputMode="numeric"
+              autoComplete="off"
+              placeholder={store.orderType === "zomato" ? "Zomato order ID *" : "Swiggy order ID *"}
+              value={store.platformOrderId || ""}
+              onChange={(e) => store.setPlatformOrderId(e.target.value.replace(/[^\dA-Za-z-]/g, "").slice(0, 24))}
+              title="Required — shown on kitchen display"
+            />
+          ) : null}
         </div>
 
         <div className="ml-auto flex flex-wrap items-center gap-1.5">
+          <button
+            type="button"
+            disabled={busy || !thermalPrinterSupported()}
+            onClick={() => void onThermalConnect()}
+            className="kg-btn kg-btn-secondary !py-1.5 !text-[12px]"
+            title={thermalPrinterSupported() ? (thermalReady ? "Reconnect printer" : "Connect thermal printer") : "Use Chrome for Bluetooth printer"}
+          >
+            {thermalReady ? "Reconnect printer" : "Connect thermal printer"}
+          </button>
+          <button
+            type="button"
+            disabled={busy}
+            onClick={() => onWhatsAppBill()}
+            className="kg-btn kg-btn-secondary !py-1.5 !text-[12px] kg-pos-wa-btn"
+            title="Share last bill on WhatsApp"
+          >
+            WhatsApp bill
+          </button>
+          <button
+            type="button"
+            disabled={busy || !thermalPrinterSupported()}
+            onClick={() => void onPrintLastBill()}
+            className="kg-btn kg-btn-secondary !py-1.5 !text-[12px]"
+            title="Print last settled bill on Bluetooth thermal printer"
+          >
+            Print last bill
+          </button>
           <Link to="/orders" className="kg-btn kg-btn-secondary !py-1.5 !text-[12px]">
             Orders
           </Link>
-          <Link to="/kds" className="kg-btn kg-btn-secondary !py-1.5 !text-[12px]">
+          <a href="/kds" target="_blank" rel="noopener noreferrer" className="kg-btn kg-btn-secondary !py-1.5 !text-[12px]">
             Kitchen
-          </Link>
-          <button type="button" className="kg-btn kg-btn-secondary !p-2" title="Held bills" onClick={() => setShowHeld(true)}>
-            <PauseCircle size={15} />
-          </button>
+          </a>
         </div>
       </div>
 
-      <AnimatePresence>
-        {banner ? (
-          <motion.div className="shrink-0" initial={{ y: -8, opacity: 0 }} animate={{ y: 0, opacity: 1 }} exit={{ opacity: 0 }}>
-            <div className="rounded-lg border border-primary/20 bg-primary-light px-3 py-2 text-[13px] font-medium text-primary">{banner}</div>
-          </motion.div>
-        ) : null}
-      </AnimatePresence>
+      <div className="grid min-h-0 flex-1 gap-2 overflow-hidden lg:grid-cols-[minmax(0,1.55fr)_minmax(360px,0.9fr)]">
+        {/* LEFT — kitchen strip + catalog (cart stays full-height on the right) */}
+        <div className="flex min-h-0 min-w-0 flex-col gap-2 overflow-hidden">
+          <PosKdsStrip
+            busy={busy}
+            onEditOrder={onEditKitchenOrder}
+            onCancelOrder={(o) => void onCancelKitchenOrder(o)}
+            onCollect={(o, args) => void onCollectKitchen(o, args)}
+            onMarkReady={(o) => void onMarkKitchenReady(o)}
+            onMarkPreparing={(o) => void onMarkKitchenPreparing(o)}
+            onDeliver={(o) => void onDeliverKitchen(o)}
+            onShareWhatsApp={(o) => onWhatsAppBill(liveOrderToWhatsAppBill(o))}
+          />
 
-      <div className="grid min-h-0 flex-1 gap-2 overflow-hidden lg:grid-cols-[minmax(0,1.55fr)_minmax(340px,0.85fr)]">
-        {/* LEFT — catalog */}
-        <section className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-stroke-0 bg-card-0 p-2.5 shadow-panel">
-          <div className="flex shrink-0 flex-wrap items-center gap-1.5">
-            <div className="relative min-w-[200px] flex-1">
-              <Search
-                size={15}
-                strokeWidth={2}
-                className="pointer-events-none absolute left-3 top-1/2 z-[1] -translate-y-1/2 text-text-muted"
-                aria-hidden
-              />
-              <input
-                ref={searchRef}
-                value={store.search}
-                onChange={(e) => store.setSearch(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") void handleBarcodeOrSearchSubmit();
-                }}
-                placeholder="Search item or barcode"
-                aria-label="Search item or barcode"
-                className="kg-input !bg-bg-1 !py-2 !pl-9 !pr-10 text-[13px]"
-              />
-              <kbd className="pointer-events-none absolute right-2.5 top-1/2 hidden -translate-y-1/2 rounded border border-stroke-0 bg-card-0 px-1.5 py-0.5 text-[10px] font-semibold text-text-muted sm:inline-block">
-                /
-              </kbd>
+          <section className="flex min-h-0 min-w-0 flex-1 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-stroke-0 bg-card-0 p-2.5 shadow-panel">
+            <div className="flex shrink-0 flex-wrap items-center gap-1.5">
+              <div className="relative min-w-[200px] flex-1">
+                <Search
+                  size={15}
+                  strokeWidth={2}
+                  className="pointer-events-none absolute left-3 top-1/2 z-[1] -translate-y-1/2 text-text-muted"
+                  aria-hidden
+                />
+                <input
+                  ref={searchRef}
+                  value={store.search}
+                  onChange={(e) => store.setSearch(e.target.value)}
+                  onKeyDown={(e) => {
+                    if (e.key === "Enter") void handleBarcodeOrSearchSubmit();
+                  }}
+                  placeholder="Search item or barcode"
+                  aria-label="Search item or barcode"
+                  className="kg-input !bg-bg-1 !py-2 !pl-9 !pr-10 text-[13px]"
+                />
+              </div>
             </div>
-            <button type="button" className="kg-btn kg-btn-secondary !px-2.5 !py-2" onClick={() => void handleBarcodeOrSearchSubmit()} title="Scan barcode" aria-label="Scan barcode">
-              <QrCode size={15} aria-hidden />
-            </button>
-            <button type="button" className="kg-btn kg-btn-secondary !px-2.5 !py-2 text-[12px]" onClick={() => setShowCustomer(true)}>
-              <Users size={14} aria-hidden />
-              <span className="max-w-[88px] truncate">{store.customerName || "Customer"}</span>
-            </button>
-            <button type="button" className="kg-btn kg-btn-secondary !px-2.5 !py-2 text-[12px]" onClick={() => setShowTable(true)}>
-              <UtensilsCrossed size={14} aria-hidden />
-              <span className="max-w-[72px] truncate">{store.tableName || "Table"}</span>
-            </button>
-          </div>
 
-          <div className="mt-2 flex shrink-0 gap-1 overflow-x-auto pb-0.5">
-            {categories.map((c) => (
-              <button
-                key={c}
-                type="button"
-                onClick={() => store.setCategory(c)}
-                className={clsx(
-                  "shrink-0 rounded-lg px-2.5 py-1 text-[11px] font-semibold",
-                  store.category === c
-                    ? "bg-primary text-white"
-                    : "border border-stroke-0 bg-bg-1 text-text-secondary hover:border-primary/35"
-                )}
-              >
-                {c}
-              </button>
-            ))}
-          </div>
+            <div className="mt-2 flex shrink-0 gap-1 overflow-x-auto pb-0.5">
+              {categories.map((c) => (
+                <button
+                  key={c}
+                  type="button"
+                  onClick={() => store.setCategory(c)}
+                  className={clsx(
+                    "shrink-0 rounded-lg px-2.5 py-1 text-[11px] font-semibold",
+                    store.category === c
+                      ? "bg-primary text-white"
+                      : "border border-stroke-0 bg-bg-1 text-text-secondary hover:border-primary/35"
+                  )}
+                >
+                  {c}
+                </button>
+              ))}
+            </div>
 
-          {menuError ? (
-            <div className="mt-2 shrink-0 rounded-lg border border-red-200 bg-danger-bg p-2 text-[12px] text-danger">{menuError}</div>
-          ) : null}
+            {menuError ? (
+              <div className="mt-2 shrink-0 rounded-lg border border-red-200 bg-danger-bg p-2 text-[12px] text-danger">{menuError}</div>
+            ) : null}
 
-          <div className="mt-2 min-h-0 flex-1 overflow-y-auto pr-0.5 kg-hide-scrollbar">
-            <ProductGrid
-              items={filtered}
-              favoriteIds={store.favoriteIds}
-              loading={menuLoading}
-              totalMenuCount={sortedMenu.length}
-              search={store.search}
-              category={store.category}
-              onAdd={(item) => store.addProduct(item)}
-              onToggleFavorite={(id) => store.toggleFavorite(id)}
-              onClearSearch={() => store.setSearch("")}
-              onResetCategory={() => store.setCategory("All")}
-            />
-          </div>
-        </section>
+            <div className="mt-2 min-h-0 flex-1 overflow-y-auto pr-0.5 kg-hide-scrollbar">
+              <ProductGrid
+                items={filtered}
+                favoriteIds={store.favoriteIds}
+                loading={menuLoading}
+                totalMenuCount={sortedMenu.length + catalogProducts.length}
+                search={store.search}
+                category={store.category}
+                onAddCatalog={openCatalogProduct}
+                onAddMenu={(item) => {
+                  if (isPunjabiCategory(String(item.category || ""))) {
+                    const group = findGroupForMenuItem(punjabiGroups, item);
+                    if (group) {
+                      openPunjabiGroup(group);
+                      return;
+                    }
+                  }
+                  store.addProduct(item);
+                }}
+                onAddGroup={openPunjabiGroup}
+                onToggleFavorite={(id) => store.toggleFavorite(id)}
+                onClearSearch={() => store.setSearch("")}
+                onResetCategory={() => store.setCategory("All")}
+              />
+            </div>
+          </section>
+        </div>
 
-        {/* RIGHT — cart scrolls alone; totals + pay stay below (no overlap) */}
-        <aside className="flex min-h-0 min-w-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-stroke-0 bg-card-0 shadow-panel">
+        {/* RIGHT — full-height cart summary (uses space beside kitchen strip) */}
+        <aside className="flex h-full min-h-0 min-w-0 flex-col overflow-hidden rounded-[var(--radius-xl)] border border-stroke-0 bg-card-0 shadow-panel">
           <div className="flex shrink-0 items-center justify-between gap-2 border-b border-stroke-0 px-2.5 py-2">
             <div className="min-w-0">
               <div className="text-[13px] font-bold text-text-primary">Current cart</div>
-              <div className="truncate text-[11px] text-text-muted">
-                {store.lines.reduce((s, l) => s + l.qty, 0)} items · {store.customerName || "Walk-in"}
-                {store.tableName ? ` · ${store.tableName}` : ""} · {store.orderType.replace("_", " ")}
+              <div className="truncate text-[11px] capitalize text-text-muted">
+                {store.tableName ? `${store.tableName} · ` : ""}
+                {store.orderType.replace("_", " ")}
+                {store.platformOrderId ? ` · #${store.platformOrderId}` : ""}
               </div>
             </div>
             <div className="flex shrink-0 gap-1">
@@ -390,238 +842,170 @@ export function PosPage() {
             </div>
           </div>
 
-          <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain px-2.5 py-2 kg-hide-scrollbar">
+          <div className="min-h-0 flex-[1.1] overflow-y-auto overscroll-contain border-b border-stroke-0 px-2.5 py-2 kg-hide-scrollbar">
             <CartLines
               lines={store.lines}
-              onBump={(id, d) => store.bumpQty(id, d)}
+              activeLineId={cartFocusId}
+              onSelectLine={setCartFocusId}
+              onBump={(id, d) => {
+                setCartFocusId(id);
+                store.bumpQty(id, d);
+              }}
               onRemove={(id) => store.removeLine(id)}
               onEditNote={(id, note) => store.updateLine(id, { note })}
             />
           </div>
 
-          <div className="flex max-h-[55%] shrink-0 flex-col overflow-y-auto overscroll-contain border-t border-stroke-0 bg-card-0 kg-hide-scrollbar">
-          <div className="space-y-2 px-2.5 py-2">
-            <div className="space-y-0.5 text-[12px]">
-              <Row label="Subtotal" value={inr(totals.subtotal)} />
-              {totals.itemDiscountTotal > 0 ? <Row label="Item discounts" value={`- ${inr(totals.itemDiscountTotal)}`} /> : null}
-              {totals.billDiscount > 0 ? <Row label="Bill discount" value={`- ${inr(totals.billDiscount)}`} /> : null}
-              {totals.couponDiscount > 0 ? <Row label="Coupon" value={`- ${inr(totals.couponDiscount)}`} /> : null}
-              <Row label="Tax (CGST+SGST)" value={inr(totals.cgst + totals.sgst)} />
-              {totals.igst > 0 ? <Row label="IGST" value={inr(totals.igst)} /> : null}
-              {totals.chargesTotal > 0 ? <Row label="Charges" value={inr(totals.chargesTotal)} /> : null}
-              {totals.roundOff ? <Row label="Round off" value={inr(totals.roundOff)} /> : null}
-              <div className="flex items-center justify-between rounded-lg bg-primary-light px-2.5 py-2 text-[14px] font-bold text-text-primary">
-                <span>Grand total</span>
-                <span className="tabular-nums text-primary">{inr(totals.total)}</span>
+          <div className="flex min-h-0 flex-[1.35] flex-col overflow-y-auto overscroll-contain bg-card-0 kg-hide-scrollbar">
+            <div className="space-y-2 px-2.5 py-2">
+              <div className="space-y-0.5 text-[12px]">
+                <Row label="Subtotal" value={inr(totals.subtotal)} />
+                {totals.itemDiscountTotal > 0 ? <Row label="Item discounts" value={`- ${inr(totals.itemDiscountTotal)}`} /> : null}
+                {totals.billDiscount > 0 ? <Row label="Bill discount" value={`- ${inr(totals.billDiscount)}`} /> : null}
+                {totals.chargesTotal > 0 ? <Row label="Charges" value={inr(totals.chargesTotal)} /> : null}
+                {totals.roundOff ? <Row label="Round off" value={inr(totals.roundOff)} /> : null}
+                <div className="flex items-center justify-between rounded-lg bg-primary-light px-2.5 py-2 text-[14px] font-bold text-text-primary">
+                  <span>Grand total</span>
+                  <span className="tabular-nums text-primary">{inr(totals.total)}</span>
+                </div>
               </div>
-              <div className="flex justify-between text-[11px] text-text-muted">
-                <span>Paid {inr(totals.paid)}</span>
-                <span>Balance {inr(totals.balance)}</span>
-              </div>
-            </div>
 
-            <div className="grid grid-cols-[1fr_1fr_auto] gap-1.5">
-              <input className="kg-input !py-1.5 !text-[12px]" placeholder="Disc %" value={discPct} onChange={(e) => setDiscPct(e.target.value)} />
-              <input className="kg-input !py-1.5 !text-[12px]" placeholder="Reason" value={discReason} onChange={(e) => setDiscReason(e.target.value)} />
-              <button
-                type="button"
-                className="kg-btn kg-btn-primary !px-2.5 !text-[12px]"
-                onClick={() => store.setDiscount({ type: "percent", value: Number(discPct) || 0, reason: discReason })}
-              >
-                Apply
-              </button>
-            </div>
-
-            <div className="grid grid-cols-[1fr_auto] gap-1.5">
-              <input
-                className="kg-input !py-1.5 !text-[12px] uppercase"
-                placeholder="Coupon"
-                value={couponInput}
-                onChange={(e) => setCouponInput(e.target.value)}
-              />
-              <button type="button" className="kg-btn kg-btn-secondary !text-[12px]" onClick={() => store.setCouponCode(couponInput.trim() || null)}>
-                Coupon
-              </button>
-            </div>
-
-            <div className="grid grid-cols-4 gap-1.5">
-              <button type="button" className="rounded-lg border border-stroke-0 bg-bg-1 px-1 py-1.5 text-[10px] font-semibold text-text-secondary hover:border-primary/35" onClick={() => store.addCharge({ label: "Packing", amount: 10, type: "packing" })}>
-                +Pack
-              </button>
-              <button type="button" className="rounded-lg border border-stroke-0 bg-bg-1 px-1 py-1.5 text-[10px] font-semibold text-text-secondary hover:border-primary/35" onClick={() => store.addCharge({ label: "Delivery", amount: 30, type: "delivery" })}>
-                +Deliv
-              </button>
-              <button type="button" className="rounded-lg border border-stroke-0 bg-bg-1 px-1 py-1.5 text-[10px] font-semibold text-text-secondary hover:border-primary/35" onClick={() => store.addCharge({ label: "Service", amount: Math.round(totals.subtotal * 0.05), type: "service" })}>
-                +Svc
-              </button>
-              <button
-                type="button"
-                disabled={busy}
-                className="rounded-lg border border-stroke-0 bg-bg-1 px-1 py-1.5 text-[10px] font-semibold text-text-secondary hover:border-primary/35 disabled:opacity-50"
-                onClick={() => void onHold()}
-              >
-                Hold
-              </button>
-            </div>
-
-            {canManualPrice(role) ? (
-              <button
-                type="button"
-                className="w-full rounded-lg border border-dashed border-stroke-1 py-1.5 text-[11px] font-semibold text-text-secondary hover:bg-bg-1"
-                onClick={() => {
-                  const name = prompt("Custom item name");
-                  const price = Number(prompt("Price") || 0);
-                  if (name) store.addCustomItem(name, price);
-                }}
-              >
-                + Custom item
-              </button>
-            ) : null}
-
-            <div className="grid grid-cols-2 gap-1.5">
-              <button
-                type="button"
-                disabled={busy || store.lines.length < 2}
-                className="kg-btn kg-btn-secondary !py-2 !text-[12px] disabled:opacity-50"
-                onClick={async () => {
-                  const parts = Number(prompt("Split into how many equal bills?", "2") || 0);
-                  if (parts < 2) return;
-                  try {
-                    setBusy(true);
-                    const buckets = splitLinesByEqual(store.lines, parts);
-                    const settings = await getPosSettings();
-                    const parentId = await holdCurrentBill(store, role);
-                    await createSplitOrders({
-                      parent: {
-                        id: parentId,
-                        date: new Date().toISOString().slice(0, 10),
-                        orderType: store.orderType,
-                        items: store.lines,
-                        customerId: store.customerId,
-                        customerName: store.customerName,
-                        tableId: store.tableId,
-                        tableName: store.tableName,
-                        taxMode: store.tax.mode,
-                        subtotal: 0,
-                        itemDiscountTotal: 0,
-                        billDiscount: 0,
-                        couponDiscount: 0,
-                        taxAmount: 0,
-                        cgst: 0,
-                        sgst: 0,
-                        igst: 0,
-                        charges: [],
-                        chargesTotal: 0,
-                        roundOff: 0,
-                        total: 0,
-                        paidTotal: 0,
-                        balanceDue: 0,
-                        payments: [],
-                        discount: { type: "none", value: 0 }
-                      },
-                      buckets,
-                      tax: settings.tax
+              <div className="grid grid-cols-[1fr_1fr_auto] gap-1.5">
+                <input
+                  className="kg-input !py-1.5 !text-[12px]"
+                  placeholder="Discount ₹"
+                  inputMode="decimal"
+                  value={discAmt}
+                  onChange={(e) => setDiscAmt(e.target.value)}
+                />
+                <input
+                  className="kg-input !py-1.5 !text-[12px]"
+                  placeholder="Reason (optional)"
+                  value={discReason}
+                  onChange={(e) => setDiscReason(e.target.value)}
+                />
+                <button
+                  type="button"
+                  className="kg-btn kg-btn-primary !px-2.5 !text-[12px]"
+                  onClick={() => {
+                    const value = Math.max(0, Number(discAmt) || 0);
+                    if (!(value > 0)) {
+                      store.setDiscount({ type: "none", value: 0, reason: "" });
+                      setDiscAmt("");
+                      return;
+                    }
+                    store.setDiscount({
+                      type: "fixed",
+                      value,
+                      reason: String(discReason || "").trim() || "Bill discount"
                     });
-                    store.clearCart();
-                    setBanner(`Split into ${parts} held bills`);
-                  } catch (e: any) {
-                    setBanner(e?.message || "Split failed");
-                  } finally {
-                    setBusy(false);
-                  }
-                }}
-              >
-                Split bill
-              </button>
-              <button type="button" className="kg-btn kg-btn-secondary !py-2 !text-[12px]" onClick={() => setShowHeld(true)}>
-                Held bills
-              </button>
-            </div>
-          </div>
+                  }}
+                >
+                  Apply
+                </button>
+              </div>
+              {store.discount.type === "fixed" && num(store.discount.value) > 0 ? (
+                <div className="flex items-center justify-between text-[11px] text-text-secondary">
+                  <span>
+                    Discount applied: −{inr(store.discount.value)}
+                    {store.discount.reason ? ` · ${store.discount.reason}` : ""}
+                  </span>
+                  <button
+                    type="button"
+                    className="font-semibold text-danger"
+                    onClick={() => {
+                      store.setDiscount({ type: "none", value: 0, reason: "" });
+                      setDiscAmt("");
+                      setDiscReason("");
+                    }}
+                  >
+                    Clear
+                  </button>
+                </div>
+              ) : null}
 
-          <div className="border-t border-stroke-0 px-2.5 pb-2.5 pt-2">
-            <PaymentPanel busy={busy} onCharge={onCharge} />
-          </div>
+              {canManualPrice(role) ? (
+                <button
+                  type="button"
+                  className="w-full rounded-lg border border-dashed border-stroke-1 py-1.5 text-[11px] font-semibold text-text-secondary hover:bg-bg-1"
+                  onClick={() => {
+                    const name = prompt("Custom item name");
+                    const price = Number(prompt("Price") || 0);
+                    if (name) store.addCustomItem(name, price);
+                  }}
+                >
+                  + Custom item
+                </button>
+              ) : null}
+            </div>
+
+            <div className="mt-auto border-t border-stroke-0 px-2.5 pb-2.5 pt-2">
+              {store.orderType === "swiggy" || store.orderType === "zomato" ? (
+                <div className="mb-2">
+                  <label className="mb-1 block text-[10px] font-bold uppercase tracking-wide text-text-muted">
+                    {store.orderType === "zomato" ? "Zomato order ID" : "Swiggy order ID"}{" "}
+                    <span className="text-danger">*</span>
+                  </label>
+                  <input
+                    className={clsx(
+                      "kg-input !text-[13px] font-bold",
+                      !String(store.platformOrderId || "").trim() && "border-danger/50"
+                    )}
+                    inputMode="numeric"
+                    autoComplete="off"
+                    placeholder="Enter platform order ID to settle"
+                    value={store.platformOrderId || ""}
+                    onChange={(e) => store.setPlatformOrderId(e.target.value.replace(/[^\dA-Za-z-]/g, "").slice(0, 24))}
+                  />
+                  {!String(store.platformOrderId || "").trim() ? (
+                    <div className="mt-1 text-[11px] font-semibold text-danger">
+                      Required before Settle / Pay later · shown on KDS
+                    </div>
+                  ) : (
+                    <div className="mt-1 text-[11px] text-text-muted">KDS will show #{store.platformOrderId} · 18 min countdown</div>
+                  )}
+                </div>
+              ) : null}
+              <PaymentPanel busy={busy} onCharge={onCharge} onPayLater={onPayLater} />
+            </div>
           </div>
         </aside>
       </div>
 
-      {showHeld ? (
-        <Modal title="Held bills" onClose={() => setShowHeld(false)}>
-          <div className="space-y-2">
-            {heldOrders.map((o) => (
-              <button
-                key={o.id}
-                type="button"
-                className="flex w-full items-center justify-between rounded-lg border border-stroke-0 px-3 py-2 text-left text-[13px] hover:bg-bg-1 bg-bg-1 text-text-primary"
-                onClick={() => {
-                  store.loadHeld({
-                    orderId: o.id,
-                    invoiceNo: o.invoiceNo || null,
-                    orderType: o.orderType,
-                    lines: o.items || [],
-                    customerId: o.customerId,
-                    customerName: o.customerName,
-                    customerPhone: o.customerPhone,
-                    tableId: o.tableId,
-                    tableName: o.tableName,
-                    notes: o.notes,
-                    kitchenNote: o.kitchenNote,
-                    customerNote: o.customerNote,
-                    discount: o.discount,
-                    couponCode: o.couponCode,
-                    charges: o.charges
-                  });
-                  setShowHeld(false);
-                  setBanner(`Resumed held bill ${o.invoiceNo || o.id.slice(0, 6)}`);
-                }}
-              >
-                <span>
-                  {o.tableName || o.customerName || "Hold"} · {o.date}
-                </span>
-                <span className="font-bold">{inr(o.total)}</span>
-              </button>
-            ))}
-            {!heldOrders.length ? <div className="text-[13px] text-text-muted">No held bills</div> : null}
-          </div>
-        </Modal>
+      {quickPick ? (
+        <QuickPickModal
+          product={quickPick}
+          cartProductIds={store.lines.map((l) => l.productId).filter(Boolean) as string[]}
+          cartConfigKeys={store.lines.map((l) => l.configKey).filter(Boolean) as string[]}
+          onClose={() => setQuickPick(null)}
+          onAdd={(selection) => {
+            addConfigured(selection, quickPick);
+            setQuickPick(null);
+          }}
+          onAddSuggestion={(selection) => {
+            addConfigured(selection);
+          }}
+        />
       ) : null}
 
-      {showCustomer ? (
-        <Modal title="Customer" onClose={() => setShowCustomer(false)}>
-          <CustomerForm
-            customers={customers}
-            onPick={(c) => {
-              store.setCustomer(c);
-              setShowCustomer(false);
-            }}
-            onGuest={() => {
-              store.setCustomer({ id: null, name: "Guest", phone: null });
-              setShowCustomer(false);
-            }}
-            onWalkIn={() => {
-              store.setCustomer({ id: null, name: "Walk-in", phone: null });
-              setShowCustomer(false);
-            }}
-          />
-        </Modal>
+      {punjabiPick ? (
+        <PunjabiSelectModal
+          group={punjabiPick}
+          onClose={() => setPunjabiPick(null)}
+          onAdd={addPunjabiSelection}
+        />
       ) : null}
 
-      {showTable ? (
-        <Modal title="Tables" onClose={() => setShowTable(false)}>
-          <TableBoard
-            tables={tables}
-            onPick={(t) => {
-              store.setTable(t);
-              setShowTable(false);
-            }}
-            onCreate={async () => {
-              const name = prompt("Table name");
-              if (!name) return;
-              await upsertTable({ name, status: "available" });
-            }}
-          />
-        </Modal>
+      {waBill ? (
+        <WhatsAppShareModal
+          bill={waBill}
+          settings={whatsAppShopSettings()}
+          onClose={() => setWaBill(null)}
+          onShared={({ name, phone }) => {
+            store.setCustomer({ name: name || store.customerName, phone });
+            setBanner("WhatsApp opened with bill");
+          }}
+        />
       ) : null}
     </div>
   );
@@ -636,109 +1020,7 @@ function Row({ label, value }: { label: string; value: string }) {
   );
 }
 
-function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
-  return (
-    <div className="fixed inset-0 z-50 grid place-items-center bg-text-primary/40 p-4" onClick={onClose}>
-      <div className="max-h-[80vh] w-full max-w-lg overflow-auto rounded-[var(--radius-xl)] bg-card-0 p-4 shadow-xl" onClick={(e) => e.stopPropagation()}>
-        <div className="mb-3 flex items-center justify-between">
-          <div className="font-bold">{title}</div>
-          <button type="button" className="text-[13px] text-text-muted" onClick={onClose}>
-            Close
-          </button>
-        </div>
-        {children}
-      </div>
-    </div>
-  );
+function isUnpaidOrder(o: LiveOrder) {
+  return needsShopCollect(o);
 }
 
-function CustomerForm(props: {
-  customers: Array<{ id: string; name: string; phone?: string; pendingBalance?: number; rewardPoints?: number }>;
-  onPick: (c: { id: string; name: string; phone?: string }) => void;
-  onGuest: () => void;
-  onWalkIn: () => void;
-}) {
-  const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
-  return (
-    <div className="space-y-3">
-      <div className="flex gap-2">
-        <button type="button" className="kg-btn kg-btn-secondary" onClick={props.onWalkIn}>
-          Walk-in
-        </button>
-        <button type="button" className="kg-btn kg-btn-secondary" onClick={props.onGuest}>
-          Guest
-        </button>
-      </div>
-      <div className="grid grid-cols-[1fr_1fr_auto] gap-2">
-        <input className="kg-input !w-auto" placeholder="Name" value={name} onChange={(e) => setName(e.target.value)} />
-        <input className="kg-input !w-auto" placeholder="Phone" value={phone} onChange={(e) => setPhone(e.target.value)} />
-        <button
-          type="button"
-          className="kg-btn kg-btn-primary"
-          onClick={async () => {
-            if (!name.trim()) return;
-            const id = await upsertCustomer({ name, phone, type: "regular" });
-            props.onPick({ id, name, phone });
-          }}
-        >
-          Save
-        </button>
-      </div>
-      <div className="max-h-64 space-y-1 overflow-auto">
-        {props.customers.map((c) => (
-          <button
-            key={c.id}
-            type="button"
-            className="flex w-full justify-between rounded-lg border border-stroke-0 px-3 py-2 text-left text-[13px] hover:bg-bg-1 bg-bg-1 text-text-primary"
-            onClick={() => props.onPick(c)}
-          >
-            <span>
-              {c.name}
-              {c.phone ? ` · ${c.phone}` : ""}
-            </span>
-            <span className="text-xs text-text-muted">
-              pts {c.rewardPoints || 0} · due {inr(c.pendingBalance || 0)}
-            </span>
-          </button>
-        ))}
-      </div>
-    </div>
-  );
-}
-
-function TableBoard(props: {
-  tables: Array<{ id: string; name: string; status?: string; capacity?: number }>;
-  onPick: (t: { id: string; name: string }) => void;
-  onCreate: () => Promise<void>;
-}) {
-  return (
-    <div className="space-y-3">
-      <button type="button" className="kg-btn kg-btn-secondary" onClick={() => void props.onCreate()}>
-        + New table
-      </button>
-      <div className="grid grid-cols-2 gap-2 sm:grid-cols-3">
-        {props.tables.map((t) => (
-          <button
-            key={t.id}
-            type="button"
-            onClick={() => props.onPick(t)}
-            className={`rounded-[var(--radius-xl)] border p-3 text-left ${
-              t.status === "occupied"
-                ? "border-danger/30 bg-danger-bg"
-                : t.status === "reserved"
-                  ? "border-warning/30 bg-warning-bg"
-                  : t.status === "cleaning"
-                    ? "border-stroke-0 bg-bg-1"
-                    : "border-success/30 bg-success-bg"
-            }`}
-          >
-            <div className="font-bold">{t.name}</div>
-            <div className="text-[11px] capitalize text-text-secondary">{t.status || "available"} · {t.capacity || 4}p</div>
-          </button>
-        ))}
-      </div>
-      {!props.tables.length ? <div className="text-[13px] text-text-muted">No tables yet — create one.</div> : null}
-    </div>
-  );
-}

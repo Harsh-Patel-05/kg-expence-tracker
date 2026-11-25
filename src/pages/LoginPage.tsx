@@ -53,10 +53,10 @@ export function LoginPage() {
       const code = (err as { code?: string })?.code || "";
       if (code === "auth/operation-not-allowed" || code === "auth/admin-restricted-operation") {
         setError(
-          "Guest sign-in is disabled. In Firebase Console → Authentication → Sign-in method, enable Anonymous."
+          "Guest login needs Email/Password enabled in Firebase Console → Authentication → Sign-in method. Or sign in with your email above."
         );
       } else {
-        setError(err instanceof Error ? err.message : "Guest sign-in failed.");
+        setError(err instanceof Error ? err.message : "Guest sign-in failed. Use email sign-in above.");
       }
     } finally {
       setBusy("idle");
