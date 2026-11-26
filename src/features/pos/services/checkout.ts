@@ -596,6 +596,14 @@ export async function deliverPaidOrder(orderId: string, role: PosRole) {
     message: `Delivered ${orderId}`,
     actorRole: role
   });
+  try {
+    const { syncOnlineOrderFromKitchenOrder } = await import(
+      "@/features/orders/services/onlineOrderBridge"
+    );
+    await syncOnlineOrderFromKitchenOrder(orderId, "delivered");
+  } catch {
+    /* best-effort tracking sync */
+  }
 }
 
 export async function refundOrder(args: {

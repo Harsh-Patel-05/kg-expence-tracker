@@ -290,6 +290,8 @@ export type OrderDoc = AuditFields & {
   deliveryAddress?: string;
   deliveryMapLink?: string;
   deliveryCharge?: number;
+  /** Website onlineOrders doc id — keeps customer tracking in sync */
+  sourceOnlineOrderId?: string | null;
   etaMinutes?: number;
   expectedReadyAt?: string | null;
   acceptedAt?: string | null;

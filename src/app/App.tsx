@@ -1,6 +1,7 @@
 import { Navigate, Route, Routes } from "react-router-dom";
-import { lazy, Suspense } from "react";
+import { lazy, Suspense, useEffect } from "react";
 import { AppShell } from "@/components/layout/AppShell";
+import { installOnlineOrderSoundAutoUnlock } from "@/features/pos/utils/onlineOrderSound";
 import { DashboardPage } from "@/pages/DashboardPage";
 import { TransactionsHistoryPage } from "@/pages/TransactionsHistoryPage";
 import { SalesPage } from "@/pages/SalesPage";
@@ -15,6 +16,7 @@ import { ScheduledOrdersPage } from "@/features/orders/pages/ScheduledOrdersPage
 import { OrderBoardPage } from "@/features/orders/pages/OrderBoardPage";
 import { OrderDetailPage } from "@/features/orders/pages/OrderDetailPage";
 import { StandaloneKdsPage } from "@/features/orders/pages/StandaloneKdsPage";
+import { OnlineOrdersPage } from "@/features/orders/pages/OnlineOrdersPage";
 import { InventoryDashboardPage } from "@/features/inventory/pages/InventoryDashboardPage";
 import { InventoryItemsPage } from "@/features/inventory/pages/InventoryItemsPage";
 import { InventoryPurchasesPage } from "@/features/inventory/pages/InventoryPurchasesPage";
@@ -76,7 +78,9 @@ function AuthedApp() {
         <Route path="/orders/history" element={<OrdersHistoryPage />} />
         <Route path="/scheduled" element={<ScheduledOrdersPage />} />
         <Route path="/orders/board" element={<OrderBoardPage />} />
+        <Route path="/orders/online" element={<OnlineOrdersPage />} />
         <Route path="/orders/:orderId" element={<OrderDetailPage />} />
+
         <Route path="/inventory" element={<InventoryDashboardPage />} />
         <Route path="/inventory/items" element={<InventoryItemsPage />} />
         <Route path="/inventory/purchases" element={<InventoryPurchasesPage />} />
@@ -130,6 +134,11 @@ function AuthedApp() {
 }
 
 export default function App() {
+  // Arm alert audio on first login/nav click so new orders ring without clicking the modal.
+  useEffect(() => {
+    installOnlineOrderSoundAutoUnlock();
+  }, []);
+
   return (
     <PosAuthProvider>
       <AuthedApp />

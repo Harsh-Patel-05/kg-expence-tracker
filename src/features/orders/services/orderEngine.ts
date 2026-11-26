@@ -304,6 +304,16 @@ export async function updateKitchenStatus(args: {
       syncStatus: "synced"
     });
   }
+
+  if (order.sourceOnlineOrderId) {
+    try {
+      const { syncOnlineOrderFromKitchenOrder } = await import("./onlineOrderBridge");
+      await syncOnlineOrderFromKitchenOrder(args.orderId, args.toStatus);
+      if (nextOrder) await syncOnlineOrderFromKitchenOrder(args.orderId, nextOrder);
+    } catch {
+      /* tracking sync is best-effort */
+    }
+  }
 }
 
 export async function assignChef(args: {

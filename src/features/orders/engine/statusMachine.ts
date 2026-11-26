@@ -120,6 +120,6 @@ export const ORDER_TYPE_LABELS: Record<string, string> = {
   scheduled: "Scheduled",
   bulk: "Bulk",
   catering: "Catering",
-  online: "Online",
+  online: "Website",
   direct: "Direct"
 };

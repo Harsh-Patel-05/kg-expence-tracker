@@ -14,6 +14,7 @@ import {
   CreditCard,
   Database,
   FileStack,
+  Globe,
   Home,
   IndianRupee,
   LineChart,
@@ -32,6 +33,7 @@ import {
   UtensilsCrossed,
   X
 } from "lucide-react";
+
 import { clsx } from "clsx";
 import { NotificationBell } from "@/features/notifications/components/NotificationBell";
 import { RouteErrorBoundary } from "@/components/ui/RouteErrorBoundary";
@@ -64,6 +66,7 @@ const groups: NavGroup[] = [
     items: [
       { to: "/menu", label: "Menu", icon: UtensilsCrossed },
       { to: "/orders", label: "Orders", icon: ClipboardList },
+      { to: "/orders/online", label: "Online Orders", icon: Globe },
       { to: "/kds", label: "Kitchen (KDS)", icon: MonitorSmartphone, external: true },
       { to: "/tasks", label: "Tasks", icon: CheckSquare },
       { to: "/reminders", label: "Reminders", icon: AlarmClock },
@@ -81,6 +84,17 @@ const groups: NavGroup[] = [
 
 const flatNav = groups.flatMap((g) => g.items);
 
+/** `/orders` must not stay active on `/orders/online` (sibling nav item). */
+function isNavActive(to: string, pathname: string) {
+  if (to === "/") return pathname === "/";
+  if (to === "/orders") {
+    if (pathname === "/orders") return true;
+    if (!pathname.startsWith("/orders/")) return false;
+    return !pathname.startsWith("/orders/online");
+  }
+  return pathname === to || pathname.startsWith(`${to}/`);
+}
+
 function titleFor(pathname: string) {
   const exact = flatNav.find((n) => n.to === pathname)?.label;
   if (exact) return exact;
@@ -88,6 +102,7 @@ function titleFor(pathname: string) {
   if (pathname.startsWith("/notifications")) return "Notifications";
   if (pathname.startsWith("/forecast")) return "AI Forecast";
   if (pathname.startsWith("/menu")) return "Menu Management";
+  if (pathname.startsWith("/orders/online")) return "Online Orders";
   if (pathname.startsWith("/orders")) return "Orders";
   if (pathname.startsWith("/scheduled")) return "Advance orders";
   if (pathname.startsWith("/hr")) return "Employees";
@@ -215,7 +230,7 @@ function SidebarNav({ onNavigate }: { onNavigate?: () => void }) {
           <div className="grid gap-0.5">
             {g.items.map((n) => {
               const Icon = n.icon;
-              const active = n.to === "/" ? loc.pathname === "/" : loc.pathname === n.to || loc.pathname.startsWith(n.to + "/");
+              const active = isNavActive(n.to, loc.pathname);
               const className = clsx(
                 "flex items-center gap-3 rounded-xl px-3 py-2.5 text-[13px] font-medium no-underline transition",
                 active

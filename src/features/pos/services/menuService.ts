@@ -36,6 +36,15 @@ export type MenuItemInput = {
   recipe?: Array<{ item: string; qty: number }>;
 };
 
+/** Firestore rejects `undefined` field values — drop them before write. */
+function omitUndefined<T extends Record<string, unknown>>(obj: T): Partial<T> {
+  const out: Record<string, unknown> = {};
+  for (const [k, v] of Object.entries(obj)) {
+    if (v !== undefined) out[k] = v;
+  }
+  return out as Partial<T>;
+}
+
 export async function upsertMenuItem(input: MenuItemInput) {
   const name = String(input.name || "").trim();
   if (!name) throw new Error("Enter name");
@@ -43,20 +52,24 @@ export async function upsertMenuItem(input: MenuItemInput) {
   if (!(price >= 0)) throw new Error("Enter valid price");
 
   const recipe = input.recipe?.length ? input.recipe : parseRecipe(input.recipeText || "");
-  const payload: MenuItemDoc = {
+  const nameHi = String(input.nameHi || "").trim();
+  const barcode = String(input.barcode || "").trim();
+  const diet = input.diet || undefined;
+
+  const payload = omitUndefined({
     ...(input.id ? auditUpdate({ status: "active" }) : auditCreate({ status: "active" })),
     name,
-    nameHi: String(input.nameHi || "").trim() || undefined,
+    nameHi: nameHi || undefined,
     price,
     category: String(input.category || "").trim() || "General",
     imageUrl: input.imageUrl || "",
     available: input.available !== false,
     favorite: Boolean(input.favorite),
-    diet: input.diet,
-    barcode: input.barcode || undefined,
+    diet,
+    barcode: barcode || undefined,
     recipe,
     recipeText: formatRecipe(recipe)
-  };
+  });
 
   const id = input.id || doc(collection(db, "menuItems")).id;
   const ref = doc(db, "menuItems", id);

@@ -50,6 +50,7 @@ function channelLabel(o: LiveOrder) {
   const t = String(o.orderType || "").toLowerCase();
   if (t.includes("swiggy")) return "Swiggy";
   if (t.includes("zomato")) return "Zomato";
+  if (t === "online" || o.sourceOnlineOrderId) return "Website";
   return ORDER_TYPE_LABELS[o.orderType] || o.orderType;
 }
 
@@ -105,7 +106,7 @@ export function PosKdsStrip({
 
   const live = useMemo(() => {
     const today = isoDate();
-    return allOrders
+    const open = allOrders
       .filter((o) =>
         ["pending", "confirmed", "accepted", "preparing", "cooking", "ready", "packed", "held"].includes(
           String(o.status)
@@ -118,15 +119,29 @@ export function PosKdsStrip({
         // Drop stale tickets older than 18h
         if ((o.ageMin || 0) > 18 * 60) return false;
         return true;
-      })
+      });
+
+    // One card per website order (collapse accidental duplicate kitchen tickets)
+    const seenWeb = new Set<string>();
+    const deduped: typeof open = [];
+    for (const o of open) {
+      const webKey = o.sourceOnlineOrderId || (o.orderType === "online" ? String(o.platformOrderId || o.invoiceNo || "") : "");
+      if (webKey) {
+        if (seenWeb.has(webKey)) continue;
+        seenWeb.add(webKey);
+      }
+      deduped.push(o);
+    }
+
+    return deduped
       .map((o) => ({ o, lane: kitchenLane(o) }))
       .sort((a, b) => {
-        const au = isUnpaid(a.o) ? 0 : 1;
-        const bu = isUnpaid(b.o) ? 0 : 1;
-        if (au !== bu) return au - bu;
-        const laneRank = { ready: 0, waiting: 1, preparing: 2 } as const;
+        // Newest first
+        const ageDiff = (a.o.ageSec ?? a.o.ageMin * 60) - (b.o.ageSec ?? b.o.ageMin * 60);
+        if (ageDiff !== 0) return ageDiff;
+        const laneRank = { waiting: 0, preparing: 1, ready: 2 } as const;
         if (laneRank[a.lane] !== laneRank[b.lane]) return laneRank[a.lane] - laneRank[b.lane];
-        return (a.o.urgencyScore ?? 0) - (b.o.urgencyScore ?? 0);
+        return (b.o.urgencyScore ?? 0) - (a.o.urgencyScore ?? 0);
       })
       .slice(0, 16);
   }, [allOrders]);

@@ -17,8 +17,13 @@ service cloud.firestore {
       return signedIn() && (userRole() == 'manager' || userRole() == 'admin' || userRole() == 'owner');
     }
 
+    function isStaff() {
+      return signedIn() && userRole() in [
+        'owner', 'admin', 'manager', 'cashier', 'captain', 'kitchen', 'chef', 'delivery'
+      ];
+    }
+
     function canUseApp() {
-      // Signed-in users (including anonymous admin session) can use restaurant collections
       return signedIn();
     }
 
@@ -26,6 +31,61 @@ service cloud.firestore {
       allow read: if signedIn() && (request.auth.uid == userId || isOwner() || isManager());
       allow create: if signedIn() && request.auth.uid == userId;
       allow update: if signedIn() && (request.auth.uid == userId || isOwner());
+      allow delete: if isOwner();
+    }
+
+    /**
+     * Website online orders.
+     * Customers (anonymous auth) may create "placed" orders and read their own order by ID.
+     * Staff manage status; customers cannot change prices, totals, or status after create.
+     */
+    match /onlineOrders/{orderId} {
+      function isValidCreate() {
+        let d = request.resource.data;
+        return d.orderStatus == 'placed'
+          && d.customerUid == request.auth.uid
+          && d.orderId == orderId
+          && d.keys().hasAll([
+            'orderId', 'customerUid', 'customer', 'items', 'pricing',
+            'orderType', 'paymentMethod', 'paymentStatus', 'orderStatus', 'statusHistory'
+          ])
+          && d.orderType in ['delivery', 'pickup']
+          && d.pricing.keys().hasAll(['subtotal', 'discount', 'deliveryCharge', 'total'])
+          && d.pricing.total is number
+          && d.pricing.total >= 0
+          && d.pricing.total <= 100000
+          && d.items is list
+          && d.items.size() > 0
+          && d.items.size() <= 50;
+      }
+
+      allow create: if signedIn() && isValidCreate();
+      // Public get by unguessable order ID so tracking links work without a sticky session.
+      allow get: if true;
+      allow list: if isStaff();
+      allow update: if isStaff();
+      allow delete: if isOwner();
+    }
+
+    /**
+     * Public takeaway menu (website reads; admin POS writes).
+     * Soft-deleted / unavailable filtering is done client-side.
+     * Writes require a registered users/{uid} doc so anonymous website
+     * customers cannot edit the catalog.
+     */
+    match /menuItems/{itemId} {
+      allow read: if true;
+      allow create, update, delete: if signedIn()
+        && exists(/databases/$(database)/documents/users/$(request.auth.uid));
+    }
+
+    /**
+     * Website online-ordering switch (POS writes; public read so the site can gate checkout).
+     */
+    match /settings/onlineOrdering {
+      allow get: if true;
+      allow list: if false;
+      allow create, update: if isStaff();
       allow delete: if isOwner();
     }
 
@@ -38,12 +98,12 @@ service cloud.firestore {
           'staff', 'fixedSalaries', 'reminders', 'balance_transfers', 'daily_closings',
           'investments', 'profit_withdrawals',
           'kds_orders', 'kds_menu', 'kds_settings',
-          'menuItems', 'orders',
+          'orders',
           'customers', 'tables', 'payments', 'discounts', 'coupons', 'taxes',
           'refunds', 'kitchenTickets', 'settings', 'transactions', 'activityLogs',
           'notifications', 'orderItems', 'statusHistory', 'kitchenAssignments',
           'drivers', 'kitchenOrders', 'deliveryOrders', 'scheduledOrders',
-          'bulkOrders', 'cateringOrders', 'phoneOrders', 'onlineOrders',
+          'bulkOrders', 'cateringOrders', 'phoneOrders',
           'recipes', 'recipeVersions', 'recipeIngredients', 'recipeCategories',
           'productionBatches', 'batchTracking', 'expiryTracking', 'physicalStock',
           'wastage', 'unitConversions', 'inventoryLogs', 'stockTransfers',

@@ -24,6 +24,9 @@ import {
   payLaterCurrentBill
 } from "../services/checkout";
 import { PosKdsStrip } from "../components/PosKdsStrip";
+import { PosOnlineOrderAlert } from "../components/PosOnlineOrderAlert";
+import { PosOnlineOrderingSwitch } from "../components/PosOnlineOrderingSwitch";
+import { installOnlineOrderSoundAutoUnlock } from "../utils/onlineOrderSound";
 import { getPosSettings, needsShopCollect } from "../services/posFirestore";
 import type { PosSettingsDoc } from "../types";
 import { buildLastPosBillPayload, getLastPosBill, setLastPosBill } from "../utils/lastPosBill";
@@ -115,6 +118,10 @@ export function PosPage() {
       ),
     [sortedMenu]
   );
+
+  useEffect(() => {
+    installOnlineOrderSoundAutoUnlock();
+  }, []);
 
   useEffect(() => {
     void getPosSettings()
@@ -632,6 +639,7 @@ export function PosPage() {
 
   return (
     <div className="flex h-full min-h-0 flex-col gap-2 overflow-hidden">
+      <PosOnlineOrderAlert />
       {banner ? (
         <div
           className={clsx(
@@ -691,6 +699,7 @@ export function PosPage() {
         </div>
 
         <div className="ml-auto flex flex-wrap items-center gap-1.5">
+          <PosOnlineOrderingSwitch />
           <button
             type="button"
             disabled={busy || !thermalPrinterSupported()}
